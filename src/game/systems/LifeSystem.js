@@ -1,4 +1,5 @@
 import { TILE_EMPTY, DIR_NONE } from '../../config/constants.js'
+import { positionFromTile } from '../entityTiles.js'
 
 export class LifeSystem {
   update(world, dt, scoreSystem) {
@@ -84,12 +85,12 @@ export class LifeSystem {
   respawn(world) {
     const player = world.player
     const spawn = world.playerSpawn
-    const tileSize = world.tileSize
+    const pos = positionFromTile(spawn.x, spawn.y, world.tileSize, player.size)
 
-    player.posX = spawn.x * tileSize + (tileSize - player.size) / 2
-    player.posY = spawn.y * tileSize + (tileSize - player.size) / 2
-    player.tileX = spawn.x
-    player.tileY = spawn.y
+    player.posX = pos.posX
+    player.posY = pos.posY
+    player.tileX = pos.tileX
+    player.tileY = pos.tileY
     player.alive = true
     player.invulnerableTimer = 2
     player.desiredFacing = DIR_NONE

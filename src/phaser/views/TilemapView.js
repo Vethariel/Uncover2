@@ -1,102 +1,59 @@
-import { TILE_DESTRUCTIBLE, HUD_HEIGHT } from '../../config/constants.js'
-import { parseTiledGid, applyTiledTileTransform, placeTiledTile } from '../utils/tiledTransform.js'
+import { BG_LAYER_NAMES, HUD_HEIGHT, TILE_DESTRUCTIBLE } from '../../config/constants.js'
+
+const RENDER_LAYERS = [...BG_LAYER_NAMES, 'Destructible']
 
 export class TilemapView {
   constructor(scene, world) {
     this.scene = scene
     this.world = world
-    this.container = scene.add.container(0, HUD_HEIGHT)
-    this.bgImages = []
-    this.destructibleSprites = new Map()
+    this.map = null
+    this.destructibleLayer = null
     this.build()
   }
 
   build() {
-    const { grid, tileSize, levelVisualConfig } = this.world
-    if (!levelVisualConfig) return
+    const cfg = this.world.levelVisualConfig
+    if (!cfg) return
 
-    const sheet = levelVisualConfig.tilesetKey
-    const cfg = levelVisualConfig
+    const mapKey = `map_${cfg.tilesetKey}`
+    this.map = this.scene.make.tilemap({ key: mapKey })
 
-    for (let y = 0; y < grid.rows; y++) {
-      for (let x = 0; x < grid.cols; x++) {
-        const visual = grid.getVisual(x, y)
-        if (!visual) continue
-
-        const px = x * tileSize
-        const py = y * tileSize
-
-        for (const gid of visual.layers) {
-          if (gid === 0) continue
-          const img = this._createTileImage(sheet, gid, cfg, px, py)
-          if (img) this.bgImages.push(img)
-        }
-      }
+    const tileset = this.map.addTilesetImage(cfg.tilesetName, cfg.tilesetKey)
+    if (!tileset) {
+      throw new Error(`TilemapView: tileset "${cfg.tilesetName}" no encontrado para ${mapKey}`)
     }
 
-    this.container.add(this.bgImages)
+    for (const name of RENDER_LAYERS) {
+      if (this.map.getLayerIndex(name) === -1) continue
 
-    for (let y = 0; y < grid.rows; y++) {
-      for (let x = 0; x < grid.cols; x++) {
-        const visual = grid.getVisual(x, y)
-        if (!visual) continue
+      const layer = this.map.createLayer(name, tileset, 0, HUD_HEIGHT)
+      if (!layer) continue
 
-        if (grid.get(x, y) === TILE_DESTRUCTIBLE && visual.destructibleGid > 0) {
-          const px = x * tileSize
-          const py = y * tileSize
-          const sprite = this._createTileImage(sheet, visual.destructibleGid, cfg, px, py)
-          if (sprite) {
-            this.destructibleSprites.set(`${x},${y}`, { sprite, gid: visual.destructibleGid })
-            this.container.add(sprite)
-          }
-        }
+      layer.setDepth(0)
+
+      if (name === 'Destructible') {
+        this.destructibleLayer = layer
       }
     }
   }
 
   update() {
-    const { grid, levelVisualConfig } = this.world
-    if (!levelVisualConfig) return
+    if (!this.destructibleLayer) return
 
-    this.world.tileAnimTimer += this.scene.game.loop.delta
-
-    for (const [key, entry] of this.destructibleSprites) {
-      const [x, y] = key.split(',').map(Number)
-      const tile = grid.get(x, y)
-
-      if (tile === TILE_DESTRUCTIBLE) {
-        const anim = levelVisualConfig.tileAnims[entry.gid]
-        if (anim) {
-          const frame = Math.floor(this.world.tileAnimTimer / anim.duration) % anim.frames.length
-          this._setTileFrame(entry.sprite, anim.frames[frame], levelVisualConfig)
+    const { grid } = this.world
+    for (let y = 0; y < grid.rows; y++) {
+      for (let x = 0; x < grid.cols; x++) {
+        if (grid.get(x, y) === TILE_DESTRUCTIBLE) continue
+        if (this.destructibleLayer.getTileAt(x, y)) {
+          this.destructibleLayer.removeTileAt(x, y)
         }
-        entry.sprite.setVisible(true)
-      } else {
-        entry.sprite.setVisible(false)
       }
     }
   }
 
   destroy() {
-    this.container.destroy(true)
-    this.bgImages = []
-    this.destructibleSprites.clear()
-  }
-
-  _createTileImage(sheet, rawGid, cfg, px, py) {
-    const parsed = parseTiledGid(rawGid, cfg.tilesetCols)
-    if (!parsed) return null
-
-    const img = this.scene.add.image(0, 0, sheet, parsed.frame)
-    placeTiledTile(img, px, py, cfg.tileSize)
-    applyTiledTileTransform(img, parsed)
-    return img
-  }
-
-  _setTileFrame(sprite, rawGid, cfg) {
-    const parsed = parseTiledGid(rawGid, cfg.tilesetCols)
-    if (!parsed) return
-    sprite.setFrame(parsed.frame)
-    applyTiledTileTransform(sprite, parsed)
+    this.map?.destroy()
+    this.map = null
+    this.destructibleLayer = null
   }
 }

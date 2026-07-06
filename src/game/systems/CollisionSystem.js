@@ -4,14 +4,15 @@ import {
   DIR_LEFT,
   DIR_RIGHT,
   DIR_NONE,
-  TILE_WALL,
-  TILE_DESTRUCTIBLE,
 } from '../../config/constants.js'
+import { GridQuery } from '../GridQuery.js'
+import { syncTileFromPosition } from '../entityTiles.js'
 
 export class CollisionSystem {
   update(world, dt) {
     const grid = world.grid
     const tileSize = world.tileSize
+    const query = GridQuery.for(world)
     const entities = [world.player, ...world.enemies]
 
     for (const entity of entities) {
@@ -50,22 +51,22 @@ export class CollisionSystem {
       const movingH = vec.x !== 0
 
       const cornerA = movingH
-        ? this.blockedTile(world, grid, vec.x > 0 ? right : left, top, entity)
-        : this.blockedTile(world, grid, left, vec.y > 0 ? bottom : top, entity)
+        ? query.blocksMovement(vec.x > 0 ? right : left, top, entity)
+        : query.blocksMovement(left, vec.y > 0 ? bottom : top, entity)
 
       const cornerB = movingH
-        ? this.blockedTile(world, grid, vec.x > 0 ? right : left, bottom, entity)
-        : this.blockedTile(world, grid, right, vec.y > 0 ? bottom : top, entity)
+        ? query.blocksMovement(vec.x > 0 ? right : left, bottom, entity)
+        : query.blocksMovement(right, vec.y > 0 ? bottom : top, entity)
 
       const collision = cornerA || cornerB
 
       const aheadA = movingH
-        ? this.blockedTile(world, grid, vec.x > 0 ? right + 1 : left - 1, top, entity)
-        : this.blockedTile(world, grid, left, vec.y > 0 ? bottom + 1 : top - 1, entity)
+        ? query.blocksMovement(vec.x > 0 ? right + 1 : left - 1, top, entity)
+        : query.blocksMovement(left, vec.y > 0 ? bottom + 1 : top - 1, entity)
 
       const aheadB = movingH
-        ? this.blockedTile(world, grid, vec.x > 0 ? right + 1 : left - 1, bottom, entity)
-        : this.blockedTile(world, grid, right, vec.y > 0 ? bottom + 1 : top - 1, entity)
+        ? query.blocksMovement(vec.x > 0 ? right + 1 : left - 1, bottom, entity)
+        : query.blocksMovement(right, vec.y > 0 ? bottom + 1 : top - 1, entity)
 
       const possibleCollision = !collision && ((!aheadA && aheadB) || (aheadA && !aheadB))
 
@@ -82,8 +83,7 @@ export class CollisionSystem {
         entity.posY = newY
       }
 
-      entity.tileX = Math.floor((entity.posX + entity.size / 2) / tileSize)
-      entity.tileY = Math.floor((entity.posY + entity.size / 2) / tileSize)
+      syncTileFromPosition(entity, tileSize)
     }
   }
 
@@ -100,26 +100,5 @@ export class CollisionSystem {
       default:
         return { x: 0, y: 0 }
     }
-  }
-
-  solid(grid, x, y) {
-    const tile = grid.get(x, y)
-    return tile === TILE_WALL || tile === TILE_DESTRUCTIBLE
-  }
-
-  blockedTile(world, grid, x, y, entity) {
-    if (this.solid(grid, x, y)) return true
-    if (this.bombSolid(world, x, y, entity)) return true
-    return false
-  }
-
-  bombSolid(world, x, y, entity) {
-    for (const bomb of world.bombs) {
-      if (bomb.tileX === x && bomb.tileY === y) {
-        if (bomb.passThrough && bomb.owner === entity) return false
-        return true
-      }
-    }
-    return false
   }
 }

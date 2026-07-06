@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { registerAnimations } from '../AnimationRegistry.js'
+import { registerTilemaps } from '../level/registerTilemaps.js'
 import { LEVELS } from '../../config/levels.js'
 
 export class PreloadScene extends Phaser.Scene {
@@ -42,6 +43,7 @@ export class PreloadScene extends Phaser.Scene {
 
   create() {
     registerAnimations(this.anims)
+    registerTilemaps(this.cache)
     this.scene.start('Splash')
   }
 }

@@ -4,13 +4,13 @@ import { Enemy } from './entities/Enemy.js'
 import { Player } from './entities/Player.js'
 import { Portal } from './entities/Portal.js'
 import {
-  ENEMY_SIZE,
   PLAYER_SIZE,
   PLAYER_SPEED,
   DIR_DOWN,
   LEVEL_TIMER,
 } from '../config/constants.js'
 import { ENEMY_TYPES } from '../config/enemyTypes.js'
+import { positionFromTile } from './entityTiles.js'
 
 export class World {
   constructor(tileSize) {
@@ -64,11 +64,12 @@ export class World {
     }
 
     const spawn = this.playerSpawn
+    const playerPos = positionFromTile(spawn.x, spawn.y, this.tileSize, PLAYER_SIZE)
     this.player = new Player(
-      spawn.x * this.tileSize + (this.tileSize - PLAYER_SIZE) / 2,
-      spawn.y * this.tileSize + (this.tileSize - PLAYER_SIZE) / 2,
-      spawn.x,
-      spawn.y,
+      playerPos.posX,
+      playerPos.posY,
+      playerPos.tileX,
+      playerPos.tileY,
       PLAYER_SPEED,
       PLAYER_SIZE,
       DIR_DOWN,
@@ -78,14 +79,9 @@ export class World {
       const config = ENEMY_TYPES[enemySpawn.kind]
       if (!config) continue
 
+      const enemyPos = positionFromTile(enemySpawn.x, enemySpawn.y, this.tileSize, config.size)
       this.enemies.push(
-        new Enemy(
-          enemySpawn.x * this.tileSize + (this.tileSize - ENEMY_SIZE) / 2,
-          enemySpawn.y * this.tileSize + (this.tileSize - ENEMY_SIZE) / 2,
-          enemySpawn.x,
-          enemySpawn.y,
-          config,
-        ),
+        new Enemy(enemyPos.posX, enemyPos.posY, enemyPos.tileX, enemyPos.tileY, config),
       )
     }
 

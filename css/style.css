@@ -19,7 +19,6 @@ body {
 }
 
 #game-container canvas {
-    position: fixed;
     display: block;
     image-rendering: pixelated;
     image-rendering: crisp-edges;

@@ -1,23 +1,23 @@
 import { INTERNAL_WIDTH, INTERNAL_HEIGHT } from '../config/constants.js'
 
+/** Escala entera vía Phaser Scale (sin CSS manual en el canvas). */
 export function setupIntegerScale(game) {
+  let lastZoom = 0
+
   const apply = () => {
-    const scale = Math.max(
+    const zoom = Math.max(
       1,
       Math.floor(Math.min(window.innerWidth / INTERNAL_WIDTH, window.innerHeight / INTERNAL_HEIGHT)),
     )
-
-    const displayW = INTERNAL_WIDTH * scale
-    const displayH = INTERNAL_HEIGHT * scale
-    const canvas = game.canvas
-
-    canvas.style.width = `${displayW}px`
-    canvas.style.height = `${displayH}px`
-    canvas.style.left = `${Math.floor((window.innerWidth - displayW) / 2)}px`
-    canvas.style.top = `${Math.floor((window.innerHeight - displayH) / 2)}px`
+    // setZoom dispara RESIZE; no reentrar si el zoom no cambió.
+    if (zoom === lastZoom) return
+    lastZoom = zoom
+    game.scale.setZoom(zoom)
   }
 
   apply()
   window.addEventListener('resize', apply)
-  game.events.once('destroy', () => window.removeEventListener('resize', apply))
+  game.events.once('destroy', () => {
+    window.removeEventListener('resize', apply)
+  })
 }
