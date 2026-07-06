@@ -1,0 +1,80 @@
+{
+    "activeFile": "assets/tilemaps/level1.tmj",
+    "expandedProjectPaths": [
+        "assets",
+        ".",
+        "js",
+        "assets/tilemaps"
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "TileMap.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 8
+        },
+        "assets/tilemaps/level1.tmj": {
+            "scale": 2.305147058823529,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 134.04784688995218,
+                "y": 104.3317384370016
+            }
+        },
+        "assets/tilemaps/level1.tsj": {
+            "scaleInDock": 1.5,
+            "scaleInEditor": 1
+        },
+        "assets/tilemaps/level2.tmj": {
+            "expandedObjectLayers": [
+                7
+            ],
+            "scale": 2.305147058823529,
+            "selectedLayer": 7,
+            "viewCenter": {
+                "x": 135.7830940988836,
+                "y": 104.3317384370016
+            }
+        },
+        "assets/tilemaps/level2.tsj": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "src/levels/level1.tmj": {
+            "scale": 2.15,
+            "selectedLayer": 5,
+            "viewCenter": {
+                "x": 146.97674418604652,
+                "y": 108.13953488372093
+            }
+        }
+    },
+    "frame.defaultDuration": 200,
+    "last.imagePath": "/home/vethariel",
+    "map.height": 13,
+    "map.lastUsedFormat": "json",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "map.width": 17,
+    "openFiles": [
+        "assets/tilemaps/level1.tmj",
+        "assets/tilemaps/level1.tsj",
+        "assets/tilemaps/level2.tsj",
+        "assets/tilemaps/level2.tmj"
+    ],
+    "project": "tileMap.tiled-project",
+    "recentFiles": [
+        "assets/tilemaps/level2.tmj",
+        "assets/tilemaps/level2.tsj",
+        "assets/tilemaps/level1.tsj",
+        "assets/tilemaps/level1.tmj",
+        "src/levels/level1.tmj",
+        "TileMap.tsx"
+    ],
+    "tileset.lastUsedFormat": "json",
+    "tileset.margin": 1,
+    "tileset.spacing": 1,
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    }
+}
