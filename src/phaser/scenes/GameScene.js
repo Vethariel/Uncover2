@@ -31,7 +31,9 @@ export class GameScene extends Phaser.Scene {
 
     if (this.showIntroOnStart) {
       this.audio.playOverlayMusic('levelStart', false)
-      this._openOverlay('levelIntro', 3.7)
+      this.events.once(Phaser.Scenes.Events.UPDATE, () => {
+        this._openOverlay('levelIntro', 3.7)
+      })
     }
   }
 
@@ -101,11 +103,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   _openOverlay(type, duration = 0) {
-    if (this.scene.isActive('GameOverlay')) return
+    if (this.scene.isActive('GameOverlay')) {
+      this.scene.stop('GameOverlay')
+    }
 
     this.scene.launch('GameOverlay', { type, duration })
-    this.scene.pause()
+    this._pauseForOverlay()
     this.inputAdapter.flush()
+  }
+
+  _pauseForOverlay() {
+    if (!this.scene.isActive('Game') || this.scene.isPaused('Game')) return
+    this.scene.pause('Game')
   }
 
   _startLevel() {

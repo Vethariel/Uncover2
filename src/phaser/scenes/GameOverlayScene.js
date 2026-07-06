@@ -92,26 +92,33 @@ export class GameOverlayScene extends Phaser.Scene {
   }
 
   _close(result) {
-    const game = this.scene.get('Game')
+    const gameScene = this.scene.get('Game')
     this.audio.stopOverlay()
-
     this.scene.stop('GameOverlay')
 
     if (result === 'quit') {
-      game._cleanupLevel()
-      game.scene.start('Menu')
+      gameScene._cleanupLevel()
+      this.scene.start('Menu')
       return
     }
 
-    if (game.scene.isPaused()) {
-      game.scene.resume()
-    }
-
     if (result === 'resume') {
+      this._resumeGame()
       this.audio.resumeMusic()
       return
     }
 
-    game.onOverlayFinished(result)
+    gameScene.onOverlayFinished(result)
+
+    // victory/timeUp encadenan otro overlay → Game sigue pausado.
+    if (result === 'levelIntro') {
+      this._resumeGame()
+    }
+  }
+
+  _resumeGame() {
+    if (this.scene.isPaused('Game')) {
+      this.scene.resume('Game')
+    }
   }
 }
