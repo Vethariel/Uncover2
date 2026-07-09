@@ -206,7 +206,7 @@ npm run test:watch
 
 ### Principio
 
-Los tests documentan las reglas del diseño tile-based. Si fallan tras un cambio, o el código rompió una regla o el diseño cambió a propósito (actualizar test + `DESIGN.md`).
+Los tests documentan las reglas del diseño tile-based. Si fallan tras un cambio, o el código rompió una regla o el diseño cambió a propósito (actualizar test + `docs/DESIGN.md`).
 
 Casos cubiertos:
 

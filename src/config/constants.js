@@ -7,7 +7,7 @@ export const INTERNAL_WIDTH = TILE_SIZE * TILES_X
 export const INTERNAL_HEIGHT = TILE_SIZE * TILES_Y + HUD_HEIGHT
 export const GAME_OFFSET_Y = HUD_HEIGHT
 
-// ── Modelo de espacio (ver DESIGN.md) ─────────────────────────────────────
+// ── Modelo de espacio (ver docs/DESIGN.md) ────────────────────────────────
 // TILE_SIZE: rejilla lógica del juego (16×16).
 // PLAYER_SIZE / ENEMY_SIZE: hitbox de movimiento y contacto (12×12 dentro del tile).
 // Sprites: 32×32 en render — solo presentación, no definen reglas de gameplay.
