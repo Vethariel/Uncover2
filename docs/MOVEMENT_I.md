@@ -7,13 +7,14 @@
 | Sección | Contenido |
 | ------- | --------- |
 | [Función narrativa](#función-narrativa) | Propósito de Las Minas |
-| [Estructura del movimiento](#estructura-del-movimiento) | Niveles, ejes, parametrización |
-| [Estructura de niveles](#estructura-de-niveles) | Niveles 1–7 |
-| [El Primer Excavador](#el-primer-excavador) | Guardián y elección del Primer Eje |
-| [Fabricación](#fabricación-en-las-minas) | Sistema de mejoras en el Mov. I |
+| [Estructura del movimiento](#estructura-del-movimiento) | Niveles, ejes, taller |
+| [Curriculum de niveles](#curriculum-de-niveles) | Mecánicas por nivel (1–7) |
+| [Herramientas del viajero](#herramientas-del-viajero) | Bombas mágicas vs pico |
+| [El Taller](#el-taller) | Hub post-nivel, NPCs |
+| [El Primer Excavador](#el-primer-excavador) | Umbral, fallos, portales |
 | [Música](#música-del-movimiento-i) | Dirección sonora |
 | [Dirección visual](#dirección-visual) | Bioma y paleta |
-| [Cierre del movimiento](#cierre-del-movimiento) | Transición al Mov. II |
+| [Cierre del movimiento](#cierre-del-movimiento) | Estado de los portales |
 | [Relación con el resto del viaje](#relación-con-el-resto-del-viaje) | Lectura retrospectiva |
 
 ---
@@ -35,6 +36,8 @@ El jugador debe sentir:
 - descubrimiento;
 - posibilidad.
 
+Al final del movimiento debe sentirse: **un Bomberman en minas** — fantasía minera activa, no un tutorial abstracto ni un spoiler de las rutas doctrinales.
+
 ## Propósito del movimiento
 
 El Movimiento I tiene cuatro objetivos:
@@ -44,11 +47,11 @@ El Movimiento I tiene cuatro objetivos:
 El jugador aprende:
 
 - movimiento;
-- bombas;
-- recursos;
+- bombas *(magia del viajero)*;
+- pico y minerales;
 - criaturas;
-- fabricación;
-- exploración.
+- fabricación en el **Taller**;
+- exploración y puzzles básicos.
 
 La mecánica debe sentirse integrada al universo.
 
@@ -58,7 +61,7 @@ El protagonista no entiende completamente dónde está.
 
 Pero tampoco se comporta como alguien perdido.
 
-Es un explorador.
+Es un explorador que **acaba de recibir permiso** para adentrarse en la mina.
 
 La llegada al mundo nuevo no es una tragedia.
 
@@ -66,14 +69,15 @@ Es una llamada a la aventura.
 
 ### 3. Presentar la cultura del reino
 
-Sin explicar su historia.
+Sin explicar su historia profunda ni las doctrinas.
 
 El jugador debe observar:
 
 - arquitectura enana;
 - herramientas antiguas;
 - restos de minería;
-- señales de una civilización activa.
+- señales de una civilización activa;
+- el **Taller** como lugar social.
 
 La pregunta no es:
 
@@ -102,81 +106,84 @@ La segunda lectura aparece después.
 | Aspecto | Detalle |
 | ------- | ------- |
 | **Territorio** | Las Minas Fundacionales |
-| **Niveles** | 7 (introducción 1–6; Guardián en 7) |
-| **Parametrización** | **Universal** — todos los jugadores viven el mismo recorrido |
-| **Primer Eje** | Se elige al **final** del Nivel 7 (tres portales) |
-| **Segundo Eje** | No aplica aún |
-| **Siguiente destino** | El Reino (Mov. II) según doctrina elegida |
+| **Niveles** | 7 (1–6 recorrido; 7 umbral) |
+| **Entre niveles** | Acceso al **Taller** *(desde el N2 en adelante)* |
+| **Parametrización** | **Universal** — mismo recorrido para todos |
+| **Primer Eje** | Tres portales **presentes** al cierre; **aún no activos** *(elección pendiente de uso)* |
+| **Segundo Eje** | No aplica |
+| **Siguiente destino** | El Reino (Mov. II) cuando los portales entren en uso |
 
 ---
 
-El Movimiento I tiene **7 niveles**.
+## Curriculum de niveles
 
-Los primeros seis son introducción.
+| Nivel | Nombre | Mecánica que introduce | Sensación |
+| ----- | ------ | ---------------------- | --------- |
+| 1 | La Entrada | Movimiento + bombas mágicas para atravesar | Permiso; primera aventura |
+| 2 | Las Herramientas | Pico + minerales *(tensión: bomba destroza valor)* | Mina que se modifica |
+| 3 | La Profundidad | Golems descompuestos | La mina está habitada |
+| 4 | Los Habitantes | Luz parcial + espíritus + golems | La montaña no está vacía |
+| 5 | La Recolección | Puzzle básico (activar bloques) + enemigos | Recursos con inteligencia |
+| 6 | La Cámara Antigua | Todos los elementos + puzzle-lore del Excavador | Preámbulo del umbral |
+| 7 | El Primer Excavador | Carrera de recursos / pasadizos / trampas | Umbral; reconocimiento |
 
-El séptimo presenta al Primer Guardián.
-
-| Nivel | Nombre | Función |
-| ----- | ------ | ------- |
-| 1 | La Entrada | Movimiento, espacio, peligro |
-| 2 | Las Herramientas | Bombas, materiales, modificación |
-| 3 | La Profundidad | Escala, civilización antigua |
-| 4 | Los Habitantes | Criaturas y espíritus |
-| 5 | La Recolección | Recursos y fabricación |
-| 6 | La Cámara Antigua | Primera anomalía |
-| 7 | El Primer Excavador | Primer Guardián + elección del Primer Eje |
+Tras **fallar** el Nivel 7: el jugador **repite el Nivel 6** y vuelve a intentar el umbral. Ver [Fallo y reintento](#fallo-y-reintento).
 
 ---
 
 ### Nivel 1 — La Entrada
 
-**Tema:** Llegar.
+**Tema:** El permiso de explorar.
 
-El protagonista despierta o entra en la zona minera.
+El protagonista recién cuenta con autorización para adentrarse en la mina.
 
-No se explica completamente cómo llegó.
+No se explica del todo cómo llegó al reino.
 
-La prioridad es establecer:
+**Mecánica principal:**
 
 - movimiento;
-- espacio;
-- peligro.
+- **bombas mágicas** — generar bombas “de la nada”, como en Bomberman, justificado en el tono fantástico del viajero;
+- atravesar el nivel con explosiones.
 
-**Elementos:**
+**Aún no:**
 
-- paredes simples;
-- primeros recursos;
-- criaturas menores.
+- pico;
+- minerales con valor de fabricación;
+- enemigos agresivos;
+- Taller *(o solo presentación visual sin craft)*.
+
+**Sensación:** empezar una aventura.
 
 ---
 
 ### Nivel 2 — Las Herramientas
 
-**Tema:** Adaptarse.
+**Tema:** Adaptarse — y elegir cómo abrir camino.
 
-El jugador descubre que la mina no solo se recorre.
+Aparecen el **pico** y los **minerales**.
 
-Se modifica.
+| Herramienta | Ritmo | Efecto sobre minerales |
+| ----------- | ----- | ---------------------- |
+| **Bomba** | Rápida; cubre más terreno | Puede **destruir** minerales valiosos al abrir |
+| **Pico** | Demorado al inicio | Extrae sin (o con mínimo) desperdicio |
 
-Aparecen:
+El jugador descubre que la mina no solo se recorre: se **trabaja**.
 
-- explosiones;
-- materiales;
-- recursos.
+**Tras completar este nivel** (y cada uno siguiente): acceso al **Taller**.
+
+La primera visita al Taller **explica brevemente** fabricar con lo recolectado.
 
 ---
 
 ### Nivel 3 — La Profundidad
 
-**Tema:** El mundo es más grande de lo esperado.
+**Tema:** La mina es más grande — y no está sola.
 
-La mina deja de parecer una simple cueva.
+Aparecen **golems descompuestos** — enemigos básicos.
 
-Aparecen:
+Siguen visibles señales de civilización (túneles hechos por otros, arquitectura).
 
-- estructuras antiguas;
-- caminos creados por otros;
-- señales de civilización.
+El Taller sigue disponible entre niveles.
 
 ---
 
@@ -184,67 +191,148 @@ Aparecen:
 
 **Tema:** La montaña no está vacía.
 
-Aparecen criaturas y espíritus.
+- La **luz no cubre** todo el nivel *(visibilidad por tile / zonas en sombra)*.
+- Aparecen **espíritus** junto a los golems.
 
-Importante:
-
-No son enemigos malvados.
+No son “malvados” por defecto.
 
 Son habitantes con comportamientos propios.
 
-El jugador aprende:
-
 > No todo lo que intenta detenerte te odia.
+
+Sin spoiler de doctrinas: luz y espíritus se leen como clima de la mina, no como Eco/Llama.
 
 ---
 
 ### Nivel 5 — La Recolección
 
-**Tema:** La relación con los recursos.
+**Tema:** Recursos con inteligencia.
 
-Se introduce la idea de fabricación.
+Se introduce un **puzzle básico**: activar bloques / mecanismos.
 
-El jugador empieza a comprender:
+Convive con enemigos ya conocidos.
 
-> Los recursos no son solamente puntos. Son posibilidades.
+El Taller sigue siendo donde se convierte mineral en mejoras.
 
 ---
 
 ### Nivel 6 — La Cámara Antigua
 
-**Tema:** Primera anomalía.
+**Tema:** Preámbulo del Primer Excavador.
 
-Algo no encaja.
+Nivel que combina **todos** los elementos enseñados:
 
-Ejemplos:
+- bombas;
+- pico / minerales;
+- golems;
+- luz parcial;
+- espíritus;
+- puzzle.
 
-- una construcción demasiado avanzada;
-- una inscripción incomprensible;
-- una criatura que parece reconocerlo.
+El puzzle y el entorno **cuentan**, sin discurso doctrinal, sobre el **Primer Excavador** como figura laboral de la montaña — quién fue, qué dejó, qué protege.
 
-No se explica.
+No se explican Piedra / Eco / Llama.
 
-Solo se muestra.
+Si el jugador **falla el Nivel 7**, regresa aquí. El reintento refuerza la lectura del preámbulo.
 
 ---
 
 ### Nivel 7 — El Primer Excavador
 
-**Tema:** El primer encuentro con un guardián.
+**Tema:** Umbral — carrera de comprensión, no solo daño.
 
-No es un jefe porque odie al jugador.
+Encuentro con el **Primer Excavador**.
 
-Es un umbral.
+#### Forma del encuentro
 
-Representa:
+- **Carrera de recursos:** encontrar pasadizos, recolectar, gestionar bombas vs pico.
+- Versión **avanzada** de golems descompuestos.
+- **Trampas.**
+- Termina cuando se acaba el **tiempo**; hay **recuento**.
+- Gana quien termine con **más recursos** según las reglas del encuentro *(definidas en [`DESIGN.md`](./DESIGN.md))*.
 
-> ¿Tienes derecho a continuar?
+El Excavador **comenta durante** el encuentro y **al final**.
 
-Tras superarlo, el Primer Excavador **no muere**.
+#### Tras superarlo
 
-Reconoce que el jugador puede continuar y abre **tres portales** — uno por cada doctrina: La Piedra, El Eco y La Llama.
+1. Recuento.
+2. El Excavador **reconoce** al viajero — **no muere**.
+3. Habla a nivel **general** sobre la aventura que viene *(sin spoilers de doctrinas ni ejes)*.
+4. Pasa a habitar el **Taller** como NPC de lore / consejo.
+5. Quedan visibles los **tres portales** (Piedra / Eco / Llama) — **presentes pero aún no en uso**.
 
-Aquí se decide el **Primer Eje**. La elección es **irreversible** y determina cómo se manifestará El Reino en el Movimiento II. Ver [Doctrinas del reino](./NARRATIVE.md#doctrinas-del-reino).
+#### Fallo y reintento
+
+Si el viajero **no supera** el umbral:
+
+1. No avanza.
+2. Debe **repetir el Nivel 6**.
+3. Luego puede volver a intentar el Nivel 7.
+
+Las mejoras fabricadas en el Taller **no se borran** por el fallo.
+
+El mensaje implícito: aún no leíste del todo el preámbulo / aún no trabajaste la mina como exige el umbral.
+
+---
+
+## Herramientas del viajero
+
+### Bombas mágicas
+
+Igual que en Bomberman: el viajero puede **generar bombas** sin un inventario material de “pólvora del suelo”.
+
+Justificación fantasía: capacidad del forastero / magia práctica del permiso de exploración — no se teoriza en pantalla.
+
+Siguen aplicando límites de diseño ya existentes cuando existan (`maxBombs`, alcance, etc.): “de la nada” no significa “sin reglas”, significa **origen mágico**, no crafting de cada bomba.
+
+### Pico
+
+Herramienta lenta al inicio.
+
+Favorece conservar minerales.
+
+Mejorable en el Taller *(velocidad, temple / filo — detalle en [`CRAFTING.md`](./CRAFTING.md))*.
+
+### Tensión central del Mov. I
+
+> ¿Abro camino rápido (bomba) o trabajo la veta (pico)?
+
+Esa pregunta sostiene los niveles 2–7 **sin** necesidad de doctrinas.
+
+---
+
+## El Taller
+
+Espacio **entre niveles** (desde el N2).
+
+No se llama “La Forja”: ese nombre queda reservado al Movimiento V. Ver [Distinción de La Forja](./NARRATIVE.md#distinción-de-la-forja).
+
+| Aspecto | Detalle |
+| ------- | ------- |
+| **Función** | Fabricar mejoras con minerales recolectados |
+| **Tono** | Cómodo, social, minero — no ritual final |
+| **Primera visita** | Explicación breve de fabricación |
+| **NPCs** | Enanos del taller; más adelante, guardianes reconocidos |
+
+### Habitantes del Taller (Mov. I)
+
+| Quién | Cuándo |
+| ----- | ------ |
+| Enanos del taller | Desde la primera visita |
+| **Primer Excavador** | Tras superar el Nivel 7 |
+
+En movimientos posteriores, otros guardianes pueden pasar a habitar el Taller con lore propio. En el Mov. I solo aplica el Excavador.
+
+### Fabricación
+
+| Aspecto | Detalle |
+| ------- | ------- |
+| **Materiales** | Minerales y recursos de los niveles |
+| **Mejoras** | Bombas (máx/alcance), pico, velocidad, vida — ver [`CRAFTING.md`](./CRAFTING.md) |
+| **Regla canónica** | Los niveles no sueltan mejoras directas; se fabrican aquí |
+| **Futuro (Mov. V)** | La Última Forja reutilizará la lógica de identidad mecánica en sentido inverso |
+
+Cada mejora fabricada es una decisión que pesará al final del viaje.
 
 ---
 
@@ -252,7 +340,7 @@ Aquí se decide el **Primer Eje**. La elección es **irreversible** y determina 
 
 ### Identidad
 
-El Primer Excavador fue uno de los primeros habitantes en abrir caminos dentro de la montaña.
+Uno de los primeros en abrir caminos dentro de la montaña.
 
 No protege un tesoro.
 
@@ -260,39 +348,23 @@ Protege un límite.
 
 ### Filosofía
 
-Su pregunta:
-
 > ¿Vienes a tomar de la montaña o a conocerla?
 
-### Combate
+La carrera de recursos y la tensión bomba/pico **son** esa pregunta jugable.
 
-Debe enseñar una idea:
+### Comentarios
 
-> La fuerza sin comprensión no funciona.
+- **Durante** el encuentro: observaciones sobre cómo trabaja el viajero.
+- **Al final:** reconocimiento + visión **general** de lo que viene en la aventura.
+- **En el Taller:** lore y consejo sin revelar Piedra / Eco / Llama como sistemas.
 
-Ejemplo:
+### Portales
 
-- cambia el terreno;
-- utiliza la mina contra el jugador;
-- obliga a leer patrones.
+Tras el reconocimiento, los **tres portales** están en el escenario.
 
-Al superarlo, reconoce al jugador — no desaparece por completo.
+**Aún no están en uso:** el jugador no elige doctrina en esta fase de diseño / implementación.
 
----
-
-## Fabricación en Las Minas
-
-El Movimiento I introduce el sistema de **fabricación** como parte del mundo, no como menú abstracto.
-
-| Aspecto | Detalle |
-| ------- | ------- |
-| **Introducción** | Nivel 2 (herramientas) y Nivel 5 (recolección) |
-| **Recursos** | Materiales de la mina integrados al bioma |
-| **Mejoras** | Bombas, alcance, velocidad, vida — según [`DESIGN.md`](./DESIGN.md) |
-| **Función narrativa** | Cada mejora es una **decisión** que pesará en La Forja (Mov. V) |
-| **Tono** | Pragmático — el viajero aprende a sobrevivir y progresar |
-
-Las mejoras fabricadas aquí son las primeras capas de identidad mecánica del viajero.
+Cuando entren en uso, la elección del Primer Eje será irreversible y parametrizará el Movimiento II. Ver [Doctrinas del reino](./NARRATIVE.md#doctrinas-del-reino).
 
 ---
 
@@ -345,31 +417,36 @@ La rareza debe venir de pequeños detalles:
 
 Bioma canónico: **Las Minas Fundacionales** — ciudad minera activa; estabilidad, trabajo y prosperidad.
 
+Dirección de arte (gradientes PC, top-down, nórdico): [`VISUAL_STYLE.md`](./VISUAL_STYLE.md).
+
+El **Taller** visualmente es fragua / banco de trabajo comunal — familiar, no cósmico.
+
 ---
 
 ## Cierre del movimiento
 
 Tras superar al Primer Excavador:
 
-1. El guardián **no muere** — reconoce al viajero.
-2. Se abren **tres portales** (La Piedra, El Eco, La Llama).
-3. El jugador elige **irreversiblemente** el **Primer Eje**.
-4. La elección determina cómo se manifestará **El Reino** en el Movimiento II.
+1. Recuento del encuentro.
+2. El guardián **no muere** — reconoce al viajero.
+3. Comentario general sobre la aventura que viene.
+4. El Excavador pasa al **Taller**.
+5. Los **tres portales** quedan **presentes pero inactivos** hasta que el diseño active la elección del Primer Eje.
 
-No hay segunda oportunidad ni vuelta atrás.
-
-Ver [Doctrinas del reino](./NARRATIVE.md#doctrinas-del-reino).
+No hay spoiler de rutas doctrinales en el Mov. I.
 
 ---
 
-El Movimiento I es importante porque debe poder jugarse sin conocer nada de la narrativa profunda.
+## Relación con el resto del viaje
 
-Después, cuando el jugador llegue al Corazón o a la Forja, podrá mirar atrás y pensar:
+El Movimiento I debe poder jugarse sin conocer la narrativa profunda.
 
-> La montaña ya estaba hablando desde el inicio.
+Después, en el Corazón o La Forja, el jugador podrá mirar atrás y pensar:
+
+> La montaña ya estaba hablando desde el inicio — el pico, el mineral, el taller.
 
 Pero durante la primera partida solo debe sentir:
 
-> Estoy explorando una mina misteriosa.
+> Estoy explorando una mina misteriosa con permiso de trabajarla.
 
 Todos los jugadores viven exactamente el mismo recorrido en este movimiento.

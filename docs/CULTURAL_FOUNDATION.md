@@ -56,24 +56,24 @@ Llega a descubrir sus reglas.
 
 ---
 
-## La forja
+## La forja y el taller
 
 La forja representa transformación.
 
 En la tradición fantástica europea, la forja es el lugar donde la materia cambia de forma.
 
-En Uncover esta idea evoluciona:
+En Uncover esta idea tiene **dos escalas**:
 
-| Momento | Significado |
-| ------- | ----------- |
-| **Durante el juego** | La forja transforma materiales |
-| **Al final** | La forja transforma decisiones |
+| Momento | Nombre en juego | Significado |
+| ------- | --------------- | ----------- |
+| **Durante el viaje** | **El Taller** | Transforma materiales en herramientas; lugar social (enanos, luego guardianes) |
+| **Al final** | **La Forja** | Transforma decisiones; ritual de renuncia |
 
 La última creación no es un objeto.
 
 Es una nueva relación entre el viajero y aquello que vivió.
 
-Ver también [Distinción de La Forja](./NARRATIVE.md#distinción-de-la-forja) en el documento narrativo.
+Ver también [Distinción de La Forja](./NARRATIVE.md#distinción-de-la-forja) y [`MOVEMENT_I.md` — El Taller](./MOVEMENT_I.md#el-taller).
 
 ---
 

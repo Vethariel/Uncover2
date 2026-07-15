@@ -1,6 +1,6 @@
 # Uncover — Narrative Design v1.6
 
-> Contrato narrativo del juego. Fundamentos culturales en [`CULTURAL_FOUNDATION.md`](./CULTURAL_FOUNDATION.md). Especificaciones por movimiento: [`MOVEMENT_I.md`](./MOVEMENT_I.md) · [`MOVEMENT_II.md`](./MOVEMENT_II.md) · [`MOVEMENT_III.md`](./MOVEMENT_III.md) · [`MOVEMENT_IV.md`](./MOVEMENT_IV.md) · [`MOVEMENT_V.md`](./MOVEMENT_V.md). Las reglas de gameplay y la matriz tile-based viven en [`DESIGN.md`](./DESIGN.md).
+> Contrato narrativo del juego. Fundamentos culturales en [`CULTURAL_FOUNDATION.md`](./CULTURAL_FOUNDATION.md). Dirección visual en [`VISUAL_STYLE.md`](./VISUAL_STYLE.md). Especificaciones por movimiento: [`MOVEMENT_I.md`](./MOVEMENT_I.md) · [`MOVEMENT_II.md`](./MOVEMENT_II.md) · [`MOVEMENT_III.md`](./MOVEMENT_III.md) · [`MOVEMENT_IV.md`](./MOVEMENT_IV.md) · [`MOVEMENT_V.md`](./MOVEMENT_V.md). Las reglas de gameplay y la matriz tile-based viven en [`DESIGN.md`](./DESIGN.md).
 
 ## Filosofía
 
@@ -78,6 +78,7 @@ El Tercer Eje **no se elige directamente**: surge como consecuencia de la Últim
 
 | Término | Qué es |
 | ------- | ------ |
+| **El Taller** | Hub de fabricación **entre niveles** (desde Mov. I); NPCs, craft cotidiano — **no** es el final |
 | **La Forja** | Espacio del Movimiento V; lugar donde culmina el viaje |
 | **La Última Forja** | Evento central en el Nivel 5: ritual donde el jugador desmonta mejoras y define qué conserva |
 | **Camino de la Forja** | Desenlace posible: renuncia incompleta, transformación aún abierta — **epílogo jugable** |
@@ -100,7 +101,7 @@ El **Camino de la Forja** queda fuera de esos doce: es un **epílogo jugable**, 
 
 | Eje | Cuándo | Cómo |
 | --- | ------ | ---- |
-| **Primer Eje** | Al finalizar el Movimiento I | El jugador elige una interpretación del mundo. **Irreversible.** Parametriza el Movimiento II y el resto del viaje. |
+| **Primer Eje** | Al finalizar el Movimiento I *(tras el umbral)* | Tres portales presentes; la elección se activa cuando entren **en uso**. **Irreversible.** Parametriza el Movimiento II y el resto del viaje. |
 | **Segundo Eje** | Al finalizar el Movimiento II | El jugador elige Buscar o Crear. **Irreversible.** Parametriza Las Ruinas (Mov. III) y el resto del viaje. |
 | **Tercer Eje** | Tras la Última Forja (Mov. V, Nivel 5) | No se elige directamente; emerge del sacrificio. Pregunta: *¿Qué estás dispuesto a dejar atrás para continuar?* |
 
@@ -148,15 +149,15 @@ Todo transmite estabilidad, trabajo y prosperidad.
 
 **El Primer Excavador.**
 
-Su función es comprobar que el jugador comprende las mecánicas básicas.
+Su función es comprobar que el jugador comprende las mecánicas básicas *(carrera de recursos / trabajo de la mina)*.
 
-Al derrotarlo no muere.
+Al superarlo no muere.
 
-Reconoce que el jugador puede continuar.
+Reconoce que el jugador puede continuar; comenta el encuentro y habla en términos generales de la aventura que viene.
 
-Abre **tres portales** — uno por cada doctrina: La Piedra, El Eco y La Llama.
+Pasa a habitar el **Taller**.
 
-La elección del Primer Eje ocurre **aquí**, al finalizar el Movimiento I. Es **irreversible** y determina cómo se manifestará El Reino en el Movimiento II.
+Quedan **tres portales** — uno por cada doctrina: La Piedra, El Eco y La Llama — **presentes pero aún no en uso** hasta activar la elección del Primer Eje. Esa elección será **irreversible** y determinará cómo se manifestará El Reino en el Movimiento II.
 
 ---
 
@@ -207,7 +208,7 @@ Cada una responde a una dimensión distinta de la experiencia.
 
 **¿Cómo comprendes el mundo?**
 
-El jugador elige una de las tres grandes interpretaciones del reino **al finalizar el Movimiento I** (tras El Primer Excavador).
+El jugador elige una de las tres grandes interpretaciones del reino **tras El Primer Excavador**, cuando los tres portales entren **en uso**. Hasta entonces los portales pueden estar presentes pero inactivos.
 
 La respuesta modifica la identidad del mundo a partir del **Movimiento II**.
 
@@ -1699,9 +1700,11 @@ Simplemente reconocen que el jugador puede continuar descendiendo.
 
 Los niveles no contienen mejoras directas.
 
-Durante la exploración se obtienen materiales.
+Durante la exploración se obtienen materiales *(en Las Minas: minerales; tensión bomba vs pico)*.
 
-Al finalizar cada nivel el jugador accede a una estación de fabricación.
+Al finalizar cada nivel el jugador accede al **Taller** — estación de fabricación entre niveles.
+
+El Taller **no** es La Forja (Movimiento V). Es el lugar cotidiano donde la materia se convierte en herramienta. Ver [`MOVEMENT_I.md` — El Taller](./MOVEMENT_I.md#el-taller).
 
 Las mejoras se construyen utilizando recursos limitados.
 
@@ -1709,7 +1712,7 @@ Fabricar repetidamente una misma mejora produce rendimientos decrecientes.
 
 Esto incentiva la especialización sin imponer una única estrategia óptima.
 
-Cada mejora fabricada — bombas, alcance, velocidad, vida — forma parte de la identidad mecánica del jugador y adquiere significado narrativo en La Forja (Movimiento V).
+Cada mejora fabricada — bombas, alcance, velocidad, vida, pico — forma parte de la identidad mecánica del jugador y adquiere significado narrativo en La Forja (Movimiento V). Detalle de materiales y recetas (Mov. I): [`CRAFTING.md`](./CRAFTING.md).
 
 En la **Última Forja**, la misma interfaz permite **desmontar** mejoras de forma irreversible. Ver [El sacrificio](#el-sacrificio).
 

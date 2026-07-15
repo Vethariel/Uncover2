@@ -4,21 +4,25 @@
 
 Uncover es un juego de **rejilla (tile-based)**, no de física pixel a pixel.
 
+**Tamaño de tile canónico: 32×32 px.**  
+(16×16 quedó descartado: no sostiene la riqueza visual definida en [`VISUAL_STYLE.md`](./VISUAL_STYLE.md).)
+
 Hay dos capas de precisión, a propósito:
 
 | Capa | Datos | Uso |
 |------|-------|-----|
-| **Continua** | `posX`, `posY`, `size` (12×12) | Movimiento fluido, corner assist, contacto jugador–enemigo |
+| **Continua** | `posX`, `posY`, `size` (hitbox interior al tile) | Movimiento fluido, corner assist, contacto jugador–enemigo |
 | **Discreta** | `tileX`, `tileY` | Bombas, explosiones, power-ups, portal, IA, trampas futuras |
 
 La posición continua existe para que caminar se sienta bien. Las reglas de juego preguntan: **¿en qué casilla estás?**
 
 ## Hitbox vs sprite
 
-- **Hitbox lógica:** 12×12 px (`PLAYER_SIZE`, `ENEMY_SIZE`) dentro de un tile de 16×16.
-- **Sprite visual:** 32×32 px — solo presentación, desacoplado de las reglas.
+- **Tile:** 32×32 px.
+- **Hitbox lógica (target):** ~24×24 px dentro del tile (mismo margen relativo que el prototipo 12/16) — ajustar en `PLAYER_SIZE` / `ENEMY_SIZE` al migrar runtime.
+- **Sprite visual:** puede superar la altura del tile (p. ej. ~32×40–48); solo presentación, desacoplado de las reglas.
 
-El margen de 2 px por lado hace que el contacto con enemigos sea justo: el arte parece más grande, pero el juego solo cuenta el núcleo central.
+El margen interior hace que el contacto con enemigos sea justo: el arte parece más grande, pero el juego solo cuenta el núcleo central.
 
 `tileX` / `tileY` se derivan del centro de la hitbox:
 
@@ -27,6 +31,7 @@ tileX = floor((posX + size / 2) / TILE_SIZE)
 tileY = floor((posY + size / 2) / TILE_SIZE)
 ```
 
+> **Nota de migración:** el código actual puede seguir en `TILE_SIZE = 16` hasta actualizar mapas Tiled, assets y constantes. El **contrato de diseño** ya es 32×32.
 ## Qué es tile-based
 
 Estos sistemas usan **tile**, no overlap AABB fino:
@@ -40,7 +45,7 @@ Estos sistemas usan **tile**, no overlap AABB fino:
 ## Qué usa posición continua
 
 - `CollisionSystem` — movimiento vs paredes y bombas
-- `LifeSystem.overlaps()` — contacto jugador–enemigo (AABB 12×12)
+- `LifeSystem.overlaps()` — contacto jugador–enemigo (AABB de hitbox; target ~24×24 tras migrar a tile 32)
 
 ## Extensiones previstas (Uncover)
 
@@ -52,6 +57,28 @@ Nuevas mecánicas deben preferir **tile** salvo que necesiten lo contrario:
 | Trampas (gas, suelo inestable) | Activación y daño por tile |
 | Fragmentos de memoria | Coleccionable por tile |
 | Derrumbe | Tiles que pasan a sólido |
+| Minerales / pico | Extracción y destrucción por tile |
+| Bloques de puzzle (activar) | Estado por tile |
+
+## Curriculum técnico — Movimiento I
+
+Contrato jugable detallado en [`MOVEMENT_I.md`](./MOVEMENT_I.md). Resumen de sistemas:
+
+| Concepto | Regla |
+|----------|-------|
+| **Bombas** | Magia del viajero (origen “de la nada”, como Bomberman); siguen `maxBombs` / alcance |
+| **Pico** | Herramienta lenta al inicio; extrae minerales sin el destrozimiento amplio de la bomba |
+| **Minerales** | En tiles; la bomba puede abrir camino **y** destruir valor; el pico prioriza conservación |
+| **Taller** | Hub post-nivel (desde N2); fabricación con materiales — **no** se llama La Forja |
+| **Luz** | Visibilidad por tile (N4+) |
+| **Golems / espíritus** | Perfiles de amenaza; no doctrinales |
+| **Puzzle** | Activar bloques por tile (N5–N6) |
+| **Umbral (N7)** | Carrera de recursos a tiempo + recuento; fallo → repetir N6; mejoras del Taller se conservan |
+| **Portales del Primer Eje** | Presentes tras el umbral; **aún no activos** |
+
+El Mov. I debe sentirse *Bomberman en minas*, no un menú de power-ups clásico.
+
+**Economía de minerales / Taller / mejoras:** [`CRAFTING.md`](./CRAFTING.md).
 
 ## Principio rector
 
