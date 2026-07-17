@@ -160,8 +160,9 @@ Estas reglas **rompen** el “todo por tile” de forma intencional:
 1. **Bomba sobre destructible:** el centro de la explosión no aplica lógica de destructible al tile de la bomba; hay que alcanzarlo con un rayo adyacente.
 2. **`TILE_PASS`:** transitable y transparente a visión (`lineOfSight`, `IsPlayerInLine`), pero **opaco** al blast — útil para puentes y ventilación en Uncover.
 3. **`passThrough`:** el dueño ignora su bomba en movimiento (`bombBlocksEntity`), pero el tile sigue siendo `!isWalkable` para la IA.
-4. **Daño y vidas:** un golpe no letal resta una vida, conserva la posición y concede 2 s de invulnerabilidad. Con una sola vida restante, el golpe produce `playerDeath`; tras 2 s comienza `gameOver`. No hay respawn.
-5. **Nuevas mecánicas** (luz, gas, trampas): añadir columna a estas tablas y un test en `tests/interactions/coherence.test.js` antes de implementar en producción.
+4. **Daño y vidas (jugador):** un golpe no letal resta una vida, conserva la posición y concede 2 s de invulnerabilidad. Con una sola vida restante, el golpe produce `playerDeath`; tras 2 s comienza `gameOver`. No hay respawn del jugador.
+5. **Daño y vidas (enemigos):** mismo patrón de HP + 2 s de invulnerabilidad. Al morir: cadáver 1 s y respawn a los 20 s en el spawn original si el tile está libre. Contacto: `golem_basic` solo en agresivo; `spirit` y `golem_advanced` siempre.
+6. **Nuevas mecánicas** (luz, gas, trampas): añadir columna a estas tablas y un test en `tests/interactions/coherence.test.js` antes de implementar en producción.
 
 ## API de grid (`GridQuery`)
 
@@ -245,12 +246,14 @@ Casos cubiertos:
 - `activeBombs--` al detonar
 
 **Vida y victoria**
-- Daño por tile; contacto AABB (jugador, `golem_advanced` 28×28)
-- Daño no letal con invulnerabilidad sin reposición, muerte en la última vida y timeout exclusivo de N7
+- Daño por tile; contacto AABB (jugador; `golem_basic` solo agresivo; `spirit`/`golem_advanced` siempre; hitbox avanzada 28×28)
+- Jugador: daño no letal + invulnerabilidad 2 s; muerte en la última vida; timeout exclusivo de N7
+- Enemigos: HP por tipo + invulnerabilidad 2 s; respawn 20 s en spawn original
 - Puerta: victoria al pisar el trigger central, incluso con enemigos vivos
 
 **IA**
-- BFS hacia objetivo, huida a tile seguro, hojas de patrulla
+- Estados pasivo/agresivo por especie; alerta de golems básicos; furia de espíritus por explosión cercana
+- BFS hacia objetivo (espíritu atraviesa destructibles), huida a tile seguro, hojas de patrulla
 - `IsPlayerInLine`, `IsPlayerNear`, `IsInDanger`
 
 **Progresión**

@@ -8,14 +8,18 @@ import { createTestWorld } from '../helpers/worldFactory.js'
 describe('GridQuery', () => {
   const map = ['#####', '#...#', '#.#.#', '#...#', '#####']
 
-  it('isSolidTile detecta pared y destructible', () => {
-    const world = createTestWorld(map)
+  it('isSolidTile detecta pared y destructible, salvo para espíritus', () => {
+    const world = createTestWorld(map, {
+      playerSpawn: { x: 1, y: 1 },
+      enemies: [{ x: 1, y: 1, kind: 'spirit' }],
+    })
     const q = GridQuery.for(world)
 
     expect(q.isSolidTile(0, 0)).toBe(true)
     expect(q.isSolidTile(1, 1)).toBe(false)
     world.grid.set(2, 2, 2) // TILE_DESTRUCTIBLE
     expect(q.isSolidTile(2, 2)).toBe(true)
+    expect(q.isSolidTile(2, 2, world.enemies[0])).toBe(false)
   })
 
   it('hasBomb y bombBlocksEntity respetan passThrough del dueño', () => {

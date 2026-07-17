@@ -1,33 +1,64 @@
-import { createBasicEnemyTree } from '../game/ai/trees/basicEnemy.js'
-import { createPatrolEnemyTree } from '../game/ai/trees/patrolEnemy.js'
+import { createPatrolFleeTree } from '../game/ai/trees/patrolEnemy.js'
+import { createChaseFleeTree } from '../game/ai/trees/basicEnemy.js'
 
-// Roster Mov. I — comportamientos objetivo en docs/PROCEDURAL_LEVELS.md.
-// Trees actuales son placeholders hasta implementar huida / furia / chase dedicados.
+export const ENEMY_INVULNERABLE_DURATION = 2
+export const ENEMY_RESPAWN_DELAY = 20
+export const ENEMY_CORPSE_DURATION = 1
+
+export const GOLEM_BASIC_ALERT_RADIUS = 5
+export const GOLEM_BASIC_CHASE_TIMEOUT = 8
+export const GOLEM_BASIC_CHASE_MAX_DISTANCE = 10
+
+export const SPIRIT_RAGE_RADIUS = 6
+export const SPIRIT_CHASE_TIMEOUT = 8
+
+// Roster Mov. I — ver docs/PROCEDURAL_LEVELS.md.
 export const ENEMY_TYPES = {
-  // Patrulla; debe huir de bombas (AI pendiente).
+  // Más rápido que el jugador; patrulla pasiva; daña solo si está agresivo.
   golem_basic: {
-    speed: 50,
+    speed: 110,
     size: 24,
     thinkInterval: 0.2,
     colorRole: 'golem_basic',
-    tree: () => createPatrolEnemyTree(2, 0.1, 0.2),
+    maxHp: 2,
+    alwaysAggressive: false,
+    contactWhenAggressiveOnly: true,
+    canPassDestructibles: false,
+    alertRadius: GOLEM_BASIC_ALERT_RADIUS,
+    chaseTimeout: GOLEM_BASIC_CHASE_TIMEOUT,
+    chaseMaxDistance: GOLEM_BASIC_CHASE_MAX_DISTANCE,
+    tree: () => createPatrolFleeTree(4, 1.5, 3),
+    aggressiveTree: () => createChaseFleeTree(),
   },
 
-  // Se enfurece con explosiones cercanas; atraviesa destructibles (AI/collision pendientes).
+  // Más lento en pasivo; se enfurece con explosiones cercanas; atraviesa destructibles.
   spirit: {
-    speed: 70,
+    speed: 75,
+    aggressiveSpeed: 110,
     size: 24,
     thinkInterval: 0.2,
     colorRole: 'spirit',
-    tree: () => createPatrolEnemyTree(2, 0.05, 0.3),
+    maxHp: 1,
+    alwaysAggressive: false,
+    contactWhenAggressiveOnly: false,
+    canPassDestructibles: true,
+    rageRadius: SPIRIT_RAGE_RADIUS,
+    chaseTimeout: SPIRIT_CHASE_TIMEOUT,
+    tree: () => createPatrolFleeTree(4, 1.5, 3),
+    aggressiveTree: () => createChaseFleeTree(),
   },
 
-  // Persigue al jugador (basicEnemy ≈ chase placeholder).
+  // Más lento que el jugador; siempre agresivo; 4 vidas.
   golem_advanced: {
-    speed: 90,
+    speed: 80,
     size: 28,
     thinkInterval: 0.25,
     colorRole: 'golem_advanced',
-    tree: () => createBasicEnemyTree(),
+    maxHp: 4,
+    alwaysAggressive: true,
+    contactWhenAggressiveOnly: false,
+    canPassDestructibles: false,
+    tree: () => createChaseFleeTree(),
+    aggressiveTree: () => createChaseFleeTree(),
   },
 }

@@ -15,11 +15,13 @@ export class GridQuery {
     return this.grid.inBounds(x, y)
   }
 
-  /** Terreno que bloquea movimiento (pared, destructible). */
-  isSolidTile(x, y) {
+  /** Terreno que bloquea movimiento (pared; destructible salvo espíritus). */
+  isSolidTile(x, y, entity = null) {
     if (!this.inBounds(x, y)) return true
     const tile = this.grid.get(x, y)
-    return tile === TILE_WALL || tile === TILE_DESTRUCTIBLE
+    if (tile === TILE_WALL) return true
+    if (tile === TILE_DESTRUCTIBLE) return !entity?.canPassDestructibles
+    return false
   }
 
   /** Bomba ocupando este tile. */
@@ -39,16 +41,16 @@ export class GridQuery {
 
   /** Bloqueo total para movimiento continuo (terreno + bomba). */
   blocksMovement(x, y, entity = null) {
-    if (this.isSolidTile(x, y)) return true
+    if (this.isSolidTile(x, y, entity)) return true
     if (entity && this.bombBlocksEntity(x, y, entity)) return true
     if (!entity && this.hasBomb(x, y)) return true
     return false
   }
 
   /** IA: tile transitable (sin bomba). TILE_PASS y TILE_EMPTY son válidos. */
-  isWalkable(x, y) {
+  isWalkable(x, y, entity = null) {
     if (!this.inBounds(x, y)) return false
-    if (this.isSolidTile(x, y)) return false
+    if (this.isSolidTile(x, y, entity)) return false
     if (this.hasBomb(x, y)) return false
     return true
   }
@@ -79,8 +81,8 @@ export class GridQuery {
   }
 
   /** IA: caminable y sin peligro inmediato. */
-  isSafe(x, y) {
-    if (!this.isWalkable(x, y)) return false
+  isSafe(x, y, entity = null) {
+    if (!this.isWalkable(x, y, entity)) return false
     return !this.isDangerous(x, y)
   }
 

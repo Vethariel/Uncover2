@@ -70,7 +70,18 @@ export class EntityView {
   }
 
   _drawEnemy(enemy) {
-    const color = enemy.alive ? (COLORS.enemy[enemy.kind] ?? COLORS.enemy.golem_basic) : 0x5d3f43
+    if (enemy.visible === false) return
+    if (
+      enemy.alive
+      && enemy.invulnerableTimer > 0
+      && Math.floor(enemy.invulnerableTimer * 20) % 2 !== 0
+    ) return
+
+    let color = COLORS.enemy[enemy.kind] ?? COLORS.enemy.golem_basic
+    if (!enemy.alive) color = 0x5d3f43
+    else if (enemy.aggressive && enemy.kind === 'golem_basic') color = 0xb08d57
+    else if (enemy.aggressive && enemy.kind === 'spirit') color = 0xa8e6ff
+
     this.graphics.fillStyle(color).fillRect(enemy.posX, enemy.posY, enemy.size, enemy.size)
     this.graphics.lineStyle(1, 0xffffff, 0.65)
     this.graphics.strokeRect(enemy.posX + 0.5, enemy.posY + 0.5, enemy.size - 1, enemy.size - 1)

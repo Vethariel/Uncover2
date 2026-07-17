@@ -152,11 +152,17 @@ Contrato económico global (techos de craft, smelting, recetas): [`CRAFTING.md`]
 
 ### Roster Mov. I (solo tres tipos)
 
-| ID | Nombre | Comportamiento |
-|----|--------|----------------|
-| `golem_basic` | Golem básico (descompuesto) | Patrulla. **Huye** de bombas / blast inminente. |
-| `spirit` | Espíritu | Pacífico hasta que una bomba **explota cerca**; entonces se enfurece. **Atraviesa destructibles** (no muros fijos). |
-| `golem_advanced` | Golem avanzado | **Persigue** al jugador. Amenaza activa. |
+| ID | Nombre | Velocidad | HP | Comportamiento |
+|----|--------|-----------|----|----------------|
+| `golem_basic` | Golem básico | `110` (> jugador) | 2 | Patrulla pasiva; **no daña** por contacto. **Huye** de bombas. Si recibe daño se vuelve agresivo, persigue y alerta a otros básicos a ≤5 tiles. Vuelve a pasivo tras 8 s o a >10 tiles del jugador. En agresivo sí daña por contacto. |
+| `spirit` | Espíritu | `75` pasivo / `110` agresivo | 1 | Patrulla pasiva. Si una explosión ocurre a ≤6 tiles se enfurece 8 s, acelera y persigue. **Atraviesa destructibles** (no muros ni bombas). Daña por contacto siempre. |
+| `golem_advanced` | Golem avanzado | `80` (< jugador) | 4 | **Siempre agresivo**; persigue al jugador; daña por contacto. |
+
+Compartido por todos:
+
+- Un golpe resta 1 HP y concede **2 s** de invulnerabilidad (mismo modelo que el jugador).
+- Al llegar a 0 HP: cadáver visible 1 s, luego oculto; **reaparece a los 20 s** en su spawn original cuando el tile esté libre (sin jugador, enemigo vivo, bomba, explosión ni bloqueo).
+- Matar enemigos **no otorga puntuación**.
 
 ### Introducción por nivel
 

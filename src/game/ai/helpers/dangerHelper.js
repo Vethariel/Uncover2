@@ -5,10 +5,10 @@ export function isDangerous(world, tileX, tileY) {
   return GridQuery.for(world).isDangerous(tileX, tileY)
 }
 
-export function isSafe(world, tileX, tileY) {
-  return GridQuery.for(world).isSafe(tileX, tileY)
+export function isSafe(world, tileX, tileY, entity = null) {
+  return GridQuery.for(world).isSafe(tileX, tileY, entity)
 }
 
-export function isWalkable(world, tileX, tileY) {
-  return GridQuery.for(world).isWalkable(tileX, tileY)
+export function isWalkable(world, tileX, tileY, entity = null) {
+  return GridQuery.for(world).isWalkable(tileX, tileY, entity)
 }

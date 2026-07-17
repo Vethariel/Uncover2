@@ -31,22 +31,61 @@ describe('daño por explosión (tile-based)', () => {
     expect(world.player.alive).toBe(true)
   })
 
-  it('mata enemigo en tile de explosión', () => {
+  it('daña gradualmente al golem básico y mata al espíritu de un golpe', () => {
     const world = createTestWorld(
       ['#####', '#...#', '#####'],
       {
         playerSpawn: { x: 1, y: 1 },
-        enemies: [{ x: 3, y: 1 }],
+        enemies: [
+          { x: 2, y: 1, kind: 'golem_basic' },
+          { x: 3, y: 1, kind: 'spirit' },
+        ],
       },
     )
 
+    const golem = world.enemies[0]
+    const spirit = world.enemies[1]
+    expect(golem.hp).toBe(2)
+    expect(spirit.hp).toBe(1)
+
+    world.explosions.push(new Explosion(2, 1, TILE_SIZE))
     world.explosions.push(new Explosion(3, 1, TILE_SIZE))
     stepLife(world, 0.016)
 
-    expect(world.enemies[0].alive).toBe(false)
+    expect(golem.alive).toBe(true)
+    expect(golem.hp).toBe(1)
+    expect(golem.invulnerableTimer).toBeGreaterThan(0)
+    expect(golem.aggressive).toBe(true)
+    expect(world.events).toContain('enemyDamaged')
+
+    expect(spirit.alive).toBe(false)
     expect(world.events).toContain('enemyDeath')
-    expect(world.player).not.toHaveProperty('score')
-    expect(world.enemies[0]).not.toHaveProperty('score')
+  })
+
+  it('la invulnerabilidad evita un segundo golpe de la misma ráfaga', () => {
+    const world = createTestWorld(
+      ['#####', '#...#', '#####'],
+      {
+        playerSpawn: { x: 1, y: 1 },
+        enemies: [{ x: 2, y: 1, kind: 'golem_basic' }],
+      },
+    )
+
+    const golem = world.enemies[0]
+    world.explosions.push(new Explosion(2, 1, TILE_SIZE))
+    stepLife(world, 0.016)
+    expect(golem.hp).toBe(1)
+
+    world.explosions.push(new Explosion(2, 1, TILE_SIZE))
+    stepLife(world, 0.016)
+    expect(golem.hp).toBe(1)
+    expect(golem.alive).toBe(true)
+
+    golem.invulnerableTimer = 0
+    world.explosions.push(new Explosion(2, 1, TILE_SIZE))
+    stepLife(world, 0.016)
+    expect(golem.alive).toBe(false)
+    expect(golem.respawnTimer).toBe(20)
   })
 
   it('explosión de bomba alcanza tiles en cruz según rango', () => {
