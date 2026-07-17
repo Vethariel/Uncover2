@@ -19,7 +19,7 @@ La posición continua existe para que caminar se sienta bien. Las reglas de jueg
 ## Hitbox vs sprite
 
 - **Tile:** 32×32 px (`TILE_SIZE`).
-- **Hitbox lógica:** 24×24 px dentro del tile (`PLAYER_SIZE` / `ENEMY_SIZE`; `brute` 28).
+- **Hitbox lógica:** 24×24 px dentro del tile (`PLAYER_SIZE` / `ENEMY_SIZE`; `golem_advanced` 28).
 - **Sprite visual:** puede superar la altura del tile (p. ej. ~32×40–48); solo presentación, desacoplado de las reglas.
 
 El margen interior hace que el contacto con enemigos sea justo: el arte parece más grande, pero el juego solo cuenta el núcleo central.
@@ -136,7 +136,7 @@ No hay una sola función “¿qué es este tile?”. Cada sistema hace una pregu
 | `InputSystem` | ¿Puedo plantar bomba en mi tile? | Tile ≠ `TILE_PASS`, sin bomba duplicada, `activeBombs < maxBombs` |
 | `BombSystem` | ¿Hacia dónde llega el blast? | Rayos en cruz; para en `WALL`, `TILE_PASS`, `TILE_EXPLOSION`; rompe `DESTRUCTIBLE` |
 | `LifeSystem` (explosión) | ¿Mismo tile entidad–explosión? | `tileX` / `tileY` iguales |
-| `LifeSystem` (enemigo) | ¿Solapan las hitboxes? | AABB 12×12 (`brute`: 14×14) — **no** solo tile |
+| `LifeSystem` (enemigo) | ¿Solapan las hitboxes? | AABB 24×24 (`golem_advanced`: 28×28) — **no** solo tile |
 | `LifeSystem` (portal) | ¿Gano / activo portal? | Activación: tile vacío + sin enemigos. Victoria: `portal.visible` + AABB estrictamente dentro |
 | `GridQuery.isWalkable` | ¿Puede pisar la IA? | En bounds, no sólido, sin bomba |
 | `GridQuery.isDangerous` | ¿Hay daño inminente? | Explosión en tile o zona de bomba a punto de detonar |
@@ -151,9 +151,9 @@ Estas reglas **rompen** el “todo por tile” de forma intencional:
 
 | Caso | Criterio | Por qué |
 |------|----------|---------|
-| Contacto jugador–enemigo | AABB (`LifeSystem.overlaps`) | Margen justo: figura visual independiente, hitbox 12×12 |
+| Contacto jugador–enemigo | AABB (`LifeSystem.overlaps`) | Margen justo: figura visual independiente, hitbox 24×24 |
 | Victoria en portal | AABB estricto (`LifeSystem.inside`) | El jugador debe “entrar” al portal, no rozarlo |
-| Enemigo `brute` | Hitbox 14×14 | Contacto más amplio que `scout` / `hunter` |
+| Enemigo `golem_advanced` | Hitbox 28×28 | Contacto más amplio que golem básico / espíritu |
 
 ### Notas de diseño (descubiertas en tests)
 
@@ -198,7 +198,7 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 
 | Responsabilidad | Implementación |
 |-----------------|----------------|
-| Generación de nivel | `LevelGenerator` (procedural, seed) → `Grid` + spawns |
+| Generación de nivel | `LevelGenerator` (procedural, seed) → `Grid` + spawns; diseño objetivo en [`PROCEDURAL_LEVELS.md`](./PROCEDURAL_LEVELS.md) |
 | Mapa visible (provisional) | `TilemapView` dibuja el `Grid` con rectángulos y colores |
 | Destructibles rotos | `TilemapView` redibuja al detectar un cambio del `Grid` |
 | Entidades (provisional) | `EntityView` dibuja círculos, rectángulos y líneas |
@@ -208,7 +208,7 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 | Escalado | buffer interno 640×360, `Scale.FIT` (llena la ventana, 16:9) + nearest + `roundPixels` — sin restricción de zoom entero |
 | Input | `InputAdapter` sobre `keyboard` de Phaser |
 
-Niveles procedurales: `src/config/levels.js` define tamaño, densidad de destructibles y enemigos por nivel; `LevelGenerator` arma borde de muro + lattice de pilares + destructibles, y coloca jugador, portal y enemigos garantizando arranque y lejanía. El runtime no carga PNG, spritesheets ni animaciones mientras se prioriza gameplay.
+El generador actual es una primera implementación rectangular. El objetivo aprobado es un grafo de cámaras orgánicas y túneles de banda 3/5, conservando siempre el lattice de indestructibles y usando puertas de mina de 3 tiles para entrada/salida; ver [`PROCEDURAL_LEVELS.md`](./PROCEDURAL_LEVELS.md). El runtime no carga PNG, spritesheets ni animaciones mientras se prioriza gameplay.
 
 ## Pruebas de interacción
 
@@ -245,7 +245,7 @@ Casos cubiertos:
 - `activeBombs--` al detonar
 
 **Vida y victoria**
-- Daño por tile; contacto AABB (jugador, `brute` 14×14)
+- Daño por tile; contacto AABB (jugador, `golem_advanced` 28×28)
 - Invulnerabilidad, respawn y `gameOver` solo por pérdida de vidas
 - Portal: activación, victoria solo si `visible` + AABB estricto
 

@@ -79,12 +79,12 @@ describe('contacto continuo (excepciones documentadas)', () => {
     expect(world.player.alive).toBe(true)
   })
 
-  it('brute (28×28) contacta antes que el overlap tile-only sugeriría', () => {
+  it('golem_advanced (28×28) contacta antes que el overlap tile-only sugeriría', () => {
     const world = createTestWorld(
       ['#####', '#...#', '#####'],
       {
         playerSpawn: { x: 2, y: 1 },
-        enemies: [{ x: 3, y: 1, kind: 'brute' }],
+        enemies: [{ x: 3, y: 1, kind: 'golem_advanced' }],
       },
     )
 
@@ -103,7 +103,7 @@ describe('contacto continuo (excepciones documentadas)', () => {
     life.update(world, 0.016, { addScore: () => {} })
     expect(player.alive).toBe(true)
 
-    // Acercar hasta overlap por hitbox grande del brute
+    // Acercar hasta overlap por hitbox grande del golem avanzado
     player.posX = e.posX - player.size + 1
     player.posY = e.posY + 1
     life.update(world, 0.016, { addScore: () => {} })

@@ -14,7 +14,7 @@ describe('LevelGenerator', () => {
     rows: 33,
     destructibleChance: 0.5,
     enemies: 5,
-    enemyKinds: ['scout', 'hunter'],
+    enemyKinds: ['golem_basic', 'spirit'],
     seed: 12345,
   }
 

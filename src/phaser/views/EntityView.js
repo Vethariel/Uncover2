@@ -4,9 +4,9 @@ const COLORS = {
   player: 0x4ea5ff,
   playerDirection: 0xd9efff,
   enemy: {
-    scout: 0xef5350,
-    hunter: 0xab47bc,
-    brute: 0xff7043,
+    golem_basic: 0x8d8a84,
+    spirit: 0x7ec8ff,
+    golem_advanced: 0xc45c26,
   },
   bomb: 0x20242b,
   fuse: 0xffc857,
@@ -75,7 +75,7 @@ export class EntityView {
   }
 
   _drawEnemy(enemy) {
-    const color = enemy.alive ? (COLORS.enemy[enemy.kind] ?? COLORS.enemy.scout) : 0x5d3f43
+    const color = enemy.alive ? (COLORS.enemy[enemy.kind] ?? COLORS.enemy.golem_basic) : 0x5d3f43
     this.graphics.fillStyle(color).fillRect(enemy.posX, enemy.posY, enemy.size, enemy.size)
     this.graphics.lineStyle(1, 0xffffff, 0.65)
     this.graphics.strokeRect(enemy.posX + 0.5, enemy.posY + 0.5, enemy.size - 1, enemy.size - 1)

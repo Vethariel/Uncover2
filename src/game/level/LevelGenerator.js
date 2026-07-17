@@ -29,8 +29,8 @@ export class LevelGenerator {
     const cols = spec.cols ?? 45
     const rows = spec.rows ?? 33
     const destructibleChance = spec.destructibleChance ?? 0.45
-    const enemyCount = spec.enemies ?? 3
-    const enemyKinds = spec.enemyKinds ?? ['scout']
+    const enemyCount = (spec.enemyKinds?.length ? (spec.enemies ?? 0) : 0)
+    const enemyKinds = spec.enemyKinds?.length ? spec.enemyKinds : ['golem_basic']
     const seed = spec.seed ?? (Math.random() * 0xffffffff) >>> 0
     const rand = mulberry32(seed)
 

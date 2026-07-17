@@ -113,6 +113,8 @@ La segunda lectura aparece después.
 | **Segundo Eje** | No aplica |
 | **Siguiente destino** | El Reino (Mov. II) cuando los portales entren en uso |
 
+La progresión espacial procedural por nivel (cantidad y tamaño de cámaras, materiales, túneles y puertas de mina) está definida en [`PROCEDURAL_LEVELS.md`](./PROCEDURAL_LEVELS.md#progresión-espacial--movimiento-i).
+
 ---
 
 ## Curriculum de niveles
@@ -124,7 +126,7 @@ La segunda lectura aparece después.
 | 3 | La Profundidad | Golems descompuestos | La mina está habitada |
 | 4 | Los Habitantes | Luz parcial + espíritus + golems | La montaña no está vacía |
 | 5 | La Recolección | Puzzle básico (activar bloques) + enemigos | Recursos con inteligencia |
-| 6 | La Cámara Antigua | Todos los elementos + puzzle-lore del Excavador | Preámbulo del umbral |
+| 6 | La Cámara Antigua | Golem avanzado + puzzle-lore del Excavador | Preámbulo del umbral |
 | 7 | El Primer Excavador | Carrera de recursos / pasadizos / trampas | Umbral; reconocimiento |
 
 Tras **fallar** el Nivel 7: el jugador **repite el Nivel 6** y vuelve a intentar el umbral. Ver [Fallo y reintento](#fallo-y-reintento).
@@ -220,11 +222,12 @@ El Taller sigue siendo donde se convierte mineral en mejoras.
 
 **Tema:** Preámbulo del Primer Excavador.
 
-Nivel que combina **todos** los elementos enseñados:
+Nivel que combina elementos enseñados y **introduce el golem avanzado**:
 
 - bombas;
 - pico / minerales;
-- golems;
+- golems básicos;
+- golems avanzados (persiguen);
 - luz parcial;
 - espíritus;
 - puzzle.

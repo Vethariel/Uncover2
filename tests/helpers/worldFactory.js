@@ -57,7 +57,7 @@ export function createTestWorld(rows, options = {}) {
 
   if (options.enemies) {
     for (const e of options.enemies) {
-      world.enemies.push(spawnEnemy(e.x, e.y, e.kind ?? 'scout'))
+      world.enemies.push(spawnEnemy(e.x, e.y, e.kind ?? 'golem_basic'))
     }
   }
 
@@ -106,7 +106,7 @@ export function spawnPlayer(tile) {
   )
 }
 
-export function spawnEnemy(tileX, tileY, kind = 'scout') {
+export function spawnEnemy(tileX, tileY, kind = 'golem_basic') {
   const config = ENEMY_TYPES[kind]
   const pos = positionFromTile(tileX, tileY, TILE_SIZE, config.size)
   return new Enemy(pos.posX, pos.posY, pos.tileX, pos.tileY, config)
