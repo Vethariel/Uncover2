@@ -55,6 +55,8 @@ function hasLineOfSight(grid, startX, startY, targetX, targetY) {
 
   while (x !== targetX || y !== targetY) {
     const doubledError = error * 2
+    const previousX = x
+    const previousY = y
     if (doubledError > -dy) {
       error -= dy
       x += stepX
@@ -62,6 +64,16 @@ function hasLineOfSight(grid, startX, startY, targetX, targetY) {
     if (doubledError < dx) {
       error += dx
       y += stepY
+    }
+
+    // Un paso diagonal no puede colarse entre dos esquinas opacas.
+    if (
+      x !== previousX
+      && y !== previousY
+      && isOpaque(grid.get(x, previousY))
+      && isOpaque(grid.get(previousX, y))
+    ) {
+      return false
     }
 
     if (x === targetX && y === targetY) return true

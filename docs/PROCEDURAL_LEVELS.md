@@ -134,6 +134,7 @@ Reglas:
 - la iluminación se propaga radialmente y pierde intensidad según distancia euclidiana;
 - cada tile requiere línea de visión directa desde su fuente;
 - el jugador también necesita línea de visión directa al tile: una luz no revela zonas separadas por obstáculos;
+- dos bloques opacos en esquina sellan la diagonal entre ambos: ni la luz ni la visión pueden colarse por ese hueco;
 - la suma por tile se limita a `10`;
 - la visibilidad efectiva nunca supera radio euclidiano `7` respecto al jugador;
 - solo se procesan luces que intersectan el viewport del jugador;

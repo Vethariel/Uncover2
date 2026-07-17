@@ -148,6 +148,28 @@ describe('VisionSystem', () => {
     expect(world.visibleTiles.has('16,12')).toBe(false)
   })
 
+  it('dos bloques en esquina no dejan ver la diagonal, aunque esté iluminada', () => {
+    const world = createTestWorld(openMap(25), { playerSpawn: { x: 12, y: 12 } })
+    // Bloques al norte y al oeste del jugador: la diagonal NW queda sellada.
+    world.grid.set(12, 11, TILE_WALL)
+    world.grid.set(11, 12, TILE_WALL)
+    // Fuente potente junto a la diagonal para intentar iluminarla.
+    world.wallLightSpawns = [{
+      x: 10,
+      y: 10,
+      wallX: 10,
+      wallY: 9,
+      orientation: 'north',
+      intensity: 10,
+    }]
+
+    vision.update(world)
+
+    expect(world.visibleTiles.has('12,11')).toBe(true)
+    expect(world.visibleTiles.has('11,12')).toBe(true)
+    expect(world.visibleTiles.has('11,11')).toBe(false)
+  })
+
   it('un obstáculo diagonal proyecta sombra radial', () => {
     const world = createTestWorld(openMap(25), { playerSpawn: { x: 12, y: 12 } })
     world.wallLightSpawns = [{
