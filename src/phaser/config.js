@@ -19,7 +19,8 @@ export const gameConfig = {
   antialias: false,
   roundPixels: true,
   scale: {
-    mode: Phaser.Scale.NONE,
+    // FIT: llena la ventana manteniendo 16:9; nearest conserva el pixel art nítido.
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   render: {

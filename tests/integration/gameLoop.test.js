@@ -14,7 +14,6 @@ describe('GameLoop — humo end-to-end', () => {
     expect(result).toMatchObject({
       gameOver: false,
       gameWon: false,
-      timeUp: false,
     })
     expect(Array.isArray(result.events)).toBe(true)
   })

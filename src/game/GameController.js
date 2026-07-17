@@ -5,10 +5,10 @@ export class GameController {
     this.loop = new GameLoop()
   }
 
-  createWorld(tileSize, levelIndex, assets) {
+  createWorld(tileSize, levelIndex) {
     const world = this.loop.createWorld(tileSize)
     world.currentLevelIndex = levelIndex
-    world.reset(assets)
+    world.reset()
     return world
   }
 

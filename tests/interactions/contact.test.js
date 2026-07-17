@@ -52,7 +52,7 @@ describe('contacto continuo (excepciones documentadas)', () => {
     )
 
     const portal = world.portal
-    // AABB del jugador (12×12) estrictamente dentro del portal (16×16)
+    // AABB del jugador (24×24) estrictamente dentro del portal (32×32)
     world.player.posX = portal.posX + 2
     world.player.posY = portal.posY + 2
 
@@ -79,7 +79,7 @@ describe('contacto continuo (excepciones documentadas)', () => {
     expect(world.player.alive).toBe(true)
   })
 
-  it('brute (14×14) contacta antes que el overlap tile-only sugeriría', () => {
+  it('brute (28×28) contacta antes que el overlap tile-only sugeriría', () => {
     const world = createTestWorld(
       ['#####', '#...#', '#####'],
       {
@@ -90,7 +90,7 @@ describe('contacto continuo (excepciones documentadas)', () => {
 
     const player = world.player
     const enemy = world.enemies[0]
-    expect(enemy.size).toBe(14)
+    expect(enemy.size).toBe(28)
 
     const e = positionFromTile(3, 1, TILE_SIZE, enemy.size)
     enemy.posX = e.posX

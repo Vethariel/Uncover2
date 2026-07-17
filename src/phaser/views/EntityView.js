@@ -1,4 +1,4 @@
-import { DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT, HUD_HEIGHT } from '../../config/constants.js'
+import { DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT } from '../../config/constants.js'
 
 const COLORS = {
   player: 0x4ea5ff,
@@ -12,19 +12,13 @@ const COLORS = {
   fuse: 0xffc857,
   explosion: 0xff9f1c,
   portal: 0x35d0ba,
-  powerUp: {
-    life: 0x66df7d,
-    bomb: 0x4f5968,
-    range: 0xffb52e,
-    speed: 0x61d4ff,
-  },
 }
 
 export class EntityView {
   constructor(scene, world) {
     this.scene = scene
     this.world = world
-    this.graphics = scene.add.graphics({ x: 0, y: HUD_HEIGHT })
+    this.graphics = scene.add.graphics({ x: 0, y: 0 })
   }
 
   update() {
@@ -32,9 +26,6 @@ export class EntityView {
 
     const drawables = [
       ...this.world.explosions.map((entity) => ({ entity, kind: 'explosion' })),
-      ...Object.values(this.world.powerUps ?? {})
-        .filter((entity) => entity.alive)
-        .map((entity) => ({ entity, kind: 'powerUp' })),
       ...(this.world.portal?.visible ? [{ entity: this.world.portal, kind: 'portal' }] : []),
       ...this.world.bombs.map((entity) => ({ entity, kind: 'bomb' })),
       ...this.world.enemies.map((entity) => ({ entity, kind: 'enemy' })),
@@ -63,9 +54,6 @@ export class EntityView {
         break
       case 'explosion':
         this._drawExplosion(entity)
-        break
-      case 'powerUp':
-        this._drawPowerUp(entity)
         break
       case 'portal':
         this._drawPortal(entity)
@@ -110,15 +98,6 @@ export class EntityView {
       explosion.size - inset * 2,
       explosion.size - inset * 2,
     )
-  }
-
-  _drawPowerUp(powerUp) {
-    const cx = powerUp.posX + powerUp.size / 2
-    const cy = powerUp.posY + powerUp.size / 2
-    const radius = powerUp.size * 0.3
-    this.graphics.fillStyle(COLORS.powerUp[powerUp.kind] ?? 0xffffff)
-    this.graphics.fillTriangle(cx, cy - radius, cx + radius, cy, cx, cy + radius)
-    this.graphics.fillTriangle(cx, cy - radius, cx - radius, cy, cx, cy + radius)
   }
 
   _drawPortal(portal) {

@@ -120,34 +120,4 @@ describe('LifeSystem — ciclo de vida', () => {
     expect(world.gameWon).toBe(false)
   })
 
-  it('timeUp resta una vida y marca timeUp', () => {
-    const world = createTestWorld(
-      ['#####', '#...#', '#####'],
-      {
-        playerSpawn: { x: 2, y: 1 },
-        player: { lives: 3 },
-        levelTimer: 0.5,
-      },
-    )
-
-    stepLife(world, 0.6)
-
-    expect(world.timeUp).toBe(true)
-    expect(world.player.lives).toBe(2)
-    expect(world.levelTimer).toBe(0)
-  })
-
-  it('timeUp con última vida provoca gameOver', () => {
-    const world = createTestWorld(
-      ['#####', '#...#', '#####'],
-      {
-        playerSpawn: { x: 2, y: 1 },
-        player: { lives: 0 },
-        levelTimer: 0.1,
-      },
-    )
-
-    stepLife(world, 0.2)
-    expect(world.gameOver).toBe(true)
-  })
 })

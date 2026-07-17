@@ -23,7 +23,7 @@ export class GameOverlayScene extends Phaser.Scene {
 
     if (this.overlayType === 'pause') {
       this.audio.pauseMusic()
-    } else if (['victory', 'timeUp', 'levelIntro'].includes(this.overlayType)) {
+    } else if (['victory', 'levelIntro'].includes(this.overlayType)) {
       this.audio.pauseMusic()
     }
 
@@ -56,12 +56,6 @@ export class GameOverlayScene extends Phaser.Scene {
             fontSize: '20px',
             color: '#ffdc00',
           })
-          .setOrigin(0.5)
-        break
-      case 'timeUp':
-        this.add.text(cx, cy - 20, 'TIME OUT!', { fontSize: '20px', color: '#dc3c3c' }).setOrigin(0.5)
-        this.add
-          .text(cx, cy + 15, 'HURRY UP NEXT TIME...', { fontSize: '8px', color: '#c8c8c8' })
           .setOrigin(0.5)
         break
     }
@@ -110,7 +104,7 @@ export class GameOverlayScene extends Phaser.Scene {
 
     gameScene.onOverlayFinished(result)
 
-    // victory/timeUp encadenan otro overlay → Game sigue pausado.
+    // victory encadena otro overlay → Game sigue pausado.
     if (result === 'levelIntro') {
       this._resumeGame()
     }

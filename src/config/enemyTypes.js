@@ -3,8 +3,8 @@ import { createPatrolEnemyTree } from '../game/ai/trees/patrolEnemy.js'
 
 export const ENEMY_TYPES = {
   scout: {
-    speed: 25,
-    size: 12,
+    speed: 50,
+    size: 24,
     thinkInterval: 0.2,
     colorRole: 'scout',
     score: 100,
@@ -12,8 +12,8 @@ export const ENEMY_TYPES = {
   },
 
   hunter: {
-    speed: 50,
-    size: 12,
+    speed: 100,
+    size: 24,
     thinkInterval: 0.2,
     colorRole: 'hunter',
     score: 100,
@@ -21,8 +21,8 @@ export const ENEMY_TYPES = {
   },
 
   brute: {
-    speed: 50,
-    size: 14,
+    speed: 100,
+    size: 28,
     thinkInterval: 0.5,
     colorRole: 'brute',
     score: 100,

@@ -37,7 +37,6 @@ export class BombSystem {
 
         if (grid.get(tileX, tileY) === TILE_EXPLOSION) {
           grid.set(tileX, tileY, TILE_EMPTY)
-          this.revealPowerUp(world, tileX, tileY)
         }
       }
     }
@@ -69,12 +68,10 @@ export class BombSystem {
         if (tile === TILE_WALL || tile === TILE_EXPLOSION || tile === TILE_PASS) break
 
         const isLast = i === range
-        const isPowerUp = world.powerUps?.[`${tx},${ty}`]?.alive
         const isDestructible = tile === TILE_DESTRUCTIBLE
         const kind = this.explosionKind(
           dir,
           isLast,
-          isPowerUp,
           isDestructible,
           world.currentLevelIndex + 1,
         )
@@ -99,8 +96,7 @@ export class BombSystem {
     world.bombs = world.bombs.filter((b) => b !== bomb)
   }
 
-  explosionKind(dir, isLast, isPowerUp, isDestructible, level) {
-    if (isPowerUp) return 'powerUp'
+  explosionKind(dir, isLast, isDestructible, level) {
     if (isDestructible) return `tilelevel${level}`
     if (dir.x !== 0) return isLast ? (dir.x > 0 ? 'tipRight' : 'tipLeft') : 'horizontal'
     if (dir.y !== 0) return isLast ? (dir.y > 0 ? 'tipDown' : 'tipUp') : 'vertical'
@@ -108,7 +104,6 @@ export class BombSystem {
   }
 
   mergeKind(existing, incoming) {
-    if (existing === 'powerUp' || incoming === 'powerUp') return 'powerUp'
     if (existing === 'center' || incoming === 'center') return 'center'
 
     const segments = ['horizontal', 'vertical', 'center']
@@ -123,11 +118,6 @@ export class BombSystem {
   }
 
   spawnExplosion(world, tx, ty, kind = 'center') {
-    const key = `${tx},${ty}`
-    if (world.powerUps?.[key]?.alive) {
-      delete world.powerUps[key]
-    }
-
     world.explosions.push(new Explosion(tx, ty, world.tileSize, kind))
   }
 
@@ -137,10 +127,5 @@ export class BombSystem {
         bomb.timer = 0
       }
     }
-  }
-
-  revealPowerUp(world, tx, ty) {
-    const powerUp = world.powerUps?.[`${tx},${ty}`]
-    if (powerUp) powerUp.alive = true
   }
 }

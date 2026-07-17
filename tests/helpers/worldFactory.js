@@ -7,14 +7,12 @@ import {
   PLAYER_SIZE,
   PLAYER_SPEED,
   DIR_DOWN,
-  LEVEL_TIMER,
 } from '../../src/config/constants.js'
 import { Grid } from '../../src/game/Grid.js'
 import { World } from '../../src/game/World.js'
 import { Player } from '../../src/game/entities/Player.js'
 import { Enemy } from '../../src/game/entities/Enemy.js'
 import { Portal } from '../../src/game/entities/Portal.js'
-import { PowerUp } from '../../src/game/entities/PowerUp.js'
 import { Explosion } from '../../src/game/entities/Explosion.js'
 import { Bomb } from '../../src/game/entities/Bomb.js'
 import { positionFromTile } from '../../src/game/entityTiles.js'
@@ -43,16 +41,11 @@ export function createTestWorld(rows, options = {}) {
   world.bombs = []
   world.explosions = []
   world.enemies = []
-  world.powerUps = {}
   world.events = []
   world.currentLevelIndex = 0
-  world.levelTimer = LEVEL_TIMER
   world.gameOver = false
   world.gameWon = false
-  world.timeUp = false
   world.respawnTimer = 0
-
-  if (options.levelTimer !== undefined) world.levelTimer = options.levelTimer
 
   const spawn = options.playerSpawn ?? findFirstTile(world, TILE_EMPTY) ?? { x: 1, y: 1 }
   world.playerSpawn = spawn
@@ -71,14 +64,6 @@ export function createTestWorld(rows, options = {}) {
   if (options.portal) {
     world.portal = new Portal(options.portal.x, options.portal.y, TILE_SIZE)
     world.portal.visible = options.portal.visible ?? false
-  }
-
-  if (options.powerUps) {
-    for (const p of options.powerUps) {
-      const key = `${p.x},${p.y}`
-      world.powerUps[key] = new PowerUp(p.x, p.y, TILE_SIZE, p.kind ?? 'bomb')
-      world.powerUps[key].alive = p.alive ?? true
-    }
   }
 
   if (options.bombs) {

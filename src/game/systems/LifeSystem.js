@@ -52,17 +52,6 @@ export class LifeSystem {
         world.gameWon = true
       }
     }
-
-    if (!world.gameOver && !world.gameWon) {
-      world.levelTimer -= dt
-
-      if (world.levelTimer <= 0) {
-        world.levelTimer = 0
-        world.timeUp = true
-        player.lives--
-        if (player.lives < 0) world.gameOver = true
-      }
-    }
   }
 
   killPlayer(world) {

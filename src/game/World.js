@@ -1,5 +1,5 @@
 import { LEVELS } from '../config/levels.js'
-import { LevelLoader } from './level/LevelLoader.js'
+import { LevelGenerator } from './level/LevelGenerator.js'
 import { Enemy } from './entities/Enemy.js'
 import { Player } from './entities/Player.js'
 import { Portal } from './entities/Portal.js'
@@ -7,7 +7,6 @@ import {
   PLAYER_SIZE,
   PLAYER_SPEED,
   DIR_DOWN,
-  LEVEL_TIMER,
 } from '../config/constants.js'
 import { ENEMY_TYPES } from '../config/enemyTypes.js'
 import { positionFromTile } from './entityTiles.js'
@@ -23,13 +22,10 @@ export class World {
     this.playerSpawn = null
     this.portalSpawn = null
     this.enemySpawns = []
-    this.powerUps = {}
     this.portal = null
     this.scorePopups = []
     this.levelVisualConfig = null
     this.currentLevelIndex = 0
-    this.levelTimer = LEVEL_TIMER
-    this.timeUp = false
     this.gameOver = false
     this.gameWon = false
     this.respawnTimer = 0
@@ -37,7 +33,7 @@ export class World {
     this.events = []
   }
 
-  reset(assets) {
+  reset() {
     this.grid = null
     this.player = null
     this.enemies = []
@@ -45,23 +41,16 @@ export class World {
     this.playerSpawn = null
     this.portalSpawn = null
     this.bombs = []
-    this.levelTimer = LEVEL_TIMER
-    this.timeUp = false
     this.scorePopups = []
     this.gameOver = false
     this.gameWon = false
     this.portal = null
     this.enemySpawns = []
-    this.powerUps = {}
     this.tileAnimTimer = 0
     this.events = []
 
-    const level = LEVELS[this.currentLevelIndex]
-    if (level.type === 'tmj') {
-      const tmj = assets.getTMJ(level.data)
-      const tsj = assets.getTSJ(level.data)
-      LevelLoader.loadTMJ(this, tmj, tsj, level.data)
-    }
+    const level = LEVELS[this.currentLevelIndex] ?? LEVELS[0]
+    LevelGenerator.generate(this, level)
 
     const spawn = this.playerSpawn
     const playerPos = positionFromTile(spawn.x, spawn.y, this.tileSize, PLAYER_SIZE)

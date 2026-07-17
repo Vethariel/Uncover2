@@ -1,12 +1,11 @@
 import Phaser from 'phaser'
 import { session } from '../../core/session.js'
 import { LEVELS } from '../../config/levels.js'
-import { TILE_SIZE } from '../../config/constants.js'
+import { TILE_SIZE, INTERNAL_WIDTH, INTERNAL_HEIGHT } from '../../config/constants.js'
 import { GameController } from '../../game/GameController.js'
 import { InputAdapter } from '../input/InputAdapter.js'
 import { getAudio } from '../audio/AudioService.js'
 import { SoundBridge } from '../audio/SoundBridge.js'
-import { createLevelAssets } from '../level/LevelAssets.js'
 import { TilemapView } from '../views/TilemapView.js'
 import { EntityView } from '../views/EntityView.js'
 import { HudView } from '../views/HudView.js'
@@ -51,6 +50,7 @@ export class GameScene extends Phaser.Scene {
     this.tilemapView.update()
     this.entityView.update()
     this.hudView.update()
+    this._syncCamera()
 
     if (result.gameOver) {
       this.gameState.syncFromPlayer(this.world.player)
@@ -66,13 +66,6 @@ export class GameScene extends Phaser.Scene {
       this.audio.playOverlayMusic('victory', false)
       this._openOverlay('victory', 4)
       return
-    }
-
-    if (result.timeUp) {
-      this.gameState.syncFromPlayer(this.world.player)
-      this.world.timeUp = false
-      this.audio.playOverlayMusic('timeUp', false)
-      this._openOverlay('timeUp', 2)
     }
 
     this.inputAdapter.flush()
@@ -93,11 +86,6 @@ export class GameScene extends Phaser.Scene {
         break
       case 'levelIntro':
         this.audio.resumeMusic()
-        break
-      case 'timeUp':
-        this._startLevel()
-        this.audio.playOverlayMusic('levelStart', false)
-        this._openOverlay('levelIntro', 3.7)
         break
     }
   }
@@ -120,8 +108,7 @@ export class GameScene extends Phaser.Scene {
   _startLevel() {
     this._cleanupLevel()
 
-    const assets = createLevelAssets(this)
-    this.world = this.controller.createWorld(TILE_SIZE, this.gameState.currentLevelIndex, assets)
+    this.world = this.controller.createWorld(TILE_SIZE, this.gameState.currentLevelIndex)
     this.gameState.applyToPlayer(this.world.player)
     this.gameState.save()
 
@@ -129,9 +116,34 @@ export class GameScene extends Phaser.Scene {
     this.entityView = new EntityView(this, this.world)
     this.hudView = new HudView(this, this.world, this.gameState)
     this._syncViews()
+    this._setupCamera()
 
     const musicKey = this.world.levelVisualConfig?.bgMusic ?? 'world1'
     this.audio.playMusic(musicKey)
+  }
+
+  _setupCamera() {
+    const { grid, player } = this.world
+    const cam = this.cameras.main
+
+    // Objetivo invisible que sigue al jugador (los sprites reales viven en un Graphics único).
+    this.cameraTarget = this.add.rectangle(
+      player.posX + player.size / 2,
+      player.posY + player.size / 2,
+      1,
+      1,
+    ).setVisible(false)
+
+    cam.setBounds(0, 0, grid.cols * TILE_SIZE, grid.rows * TILE_SIZE)
+    cam.setDeadzone(INTERNAL_WIDTH * 0.35, INTERNAL_HEIGHT * 0.35)
+    cam.startFollow(this.cameraTarget, true, 0.15, 0.15)
+    cam.roundPixels = true
+  }
+
+  _syncCamera() {
+    const player = this.world?.player
+    if (!player || !this.cameraTarget) return
+    this.cameraTarget.setPosition(player.posX + player.size / 2, player.posY + player.size / 2)
   }
 
   _syncViews() {
@@ -141,6 +153,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   _cleanupLevel() {
+    this.cameras.main.stopFollow()
+    this.cameraTarget?.destroy()
+    this.cameraTarget = null
     this.tilemapView?.destroy()
     this.entityView?.destroy()
     this.hudView?.destroy()

@@ -1,17 +1,17 @@
-export const TILE_SIZE = 16
-export const TILES_X = 17
-export const TILES_Y = 13
-export const HUD_HEIGHT = 24
-export const LEVEL_TIMER = 180
-export const INTERNAL_WIDTH = TILE_SIZE * TILES_X
-export const INTERNAL_HEIGHT = TILE_SIZE * TILES_Y + HUD_HEIGHT
-export const GAME_OFFSET_Y = HUD_HEIGHT
+export const TILE_SIZE = 32
+export const VIEW_TILES_X = 20
+export const VIEW_TILES_Y = 11
+export const HUD_HEIGHT = 28
+// Buffer interno 16:9 (640×360): se escala con Scale.FIT a cualquier ventana.
+export const INTERNAL_WIDTH = 640
+export const INTERNAL_HEIGHT = 360
 
 // ── Modelo de espacio (ver docs/DESIGN.md) ────────────────────────────────
-// TILE_SIZE: rejilla lógica del juego (16×16).
-// PLAYER_SIZE / ENEMY_SIZE: hitbox de movimiento y contacto (12×12 dentro del tile).
+// TILE_SIZE: rejilla lógica del juego (32×32).
+// PLAYER_SIZE / ENEMY_SIZE: hitbox de movimiento y contacto (24×24 dentro del tile).
+// Cámara: sigue al jugador con deadzone; mapas procedurales mayores al viewport.
 // Render provisional: figuras primitivas independientes de las hitboxes.
-// Reglas de juego (bombas, explosiones, power-ups, trampas, IA): por tile (tileX, tileY).
+// Reglas de juego (bombas, explosiones, trampas, IA): por tile (tileX, tileY).
 
 export const TILE_EMPTY = 0
 export const TILE_WALL = 1
@@ -26,8 +26,8 @@ export const TMJ_PASS = 3
 
 export const BG_LAYER_NAMES = ['Background', 'Background2', 'Ground', 'Obstacles', 'Bridge']
 
-export const PLAYER_SPEED = 50
-export const PLAYER_SIZE = 12
+export const PLAYER_SPEED = 100
+export const PLAYER_SIZE = 24
 export const PLAYER_LIVES = 3
 export const PLAYER_BOMB_RANGE = 1
 export const PLAYER_MAX_BOMBS = 1
@@ -38,18 +38,5 @@ export const DIR_DOWN = 2
 export const DIR_LEFT = 3
 export const DIR_RIGHT = 4
 
-export const ENEMY_SIZE = 12
-export const ENEMY_SPEED = 30
-
-export const POWERUP_POOL_RATIO = 0.3
-export const POWERUP_LIFE_CHANCE = 0.05
-
-export const POWERUP_WEIGHTS = {
-  bomb: 3,
-  range: 3,
-  speed: 2,
-}
-
-export const POWERUP_BOMB_AMOUNT = 1
-export const POWERUP_RANGE_AMOUNT = 1
-export const POWERUP_SPEED_AMOUNT = 20
+export const ENEMY_SIZE = 24
+export const ENEMY_SPEED = 60

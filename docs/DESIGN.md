@@ -12,14 +12,14 @@ Hay dos capas de precisión, a propósito:
 | Capa | Datos | Uso |
 |------|-------|-----|
 | **Continua** | `posX`, `posY`, `size` (hitbox interior al tile) | Movimiento fluido, corner assist, contacto jugador–enemigo |
-| **Discreta** | `tileX`, `tileY` | Bombas, explosiones, power-ups, portal, IA, trampas futuras |
+| **Discreta** | `tileX`, `tileY` | Bombas, explosiones, portal, IA, trampas futuras |
 
 La posición continua existe para que caminar se sienta bien. Las reglas de juego preguntan: **¿en qué casilla estás?**
 
 ## Hitbox vs sprite
 
-- **Tile:** 32×32 px.
-- **Hitbox lógica (target):** ~24×24 px dentro del tile (mismo margen relativo que el prototipo 12/16) — ajustar en `PLAYER_SIZE` / `ENEMY_SIZE` al migrar runtime.
+- **Tile:** 32×32 px (`TILE_SIZE`).
+- **Hitbox lógica:** 24×24 px dentro del tile (`PLAYER_SIZE` / `ENEMY_SIZE`; `brute` 28).
 - **Sprite visual:** puede superar la altura del tile (p. ej. ~32×40–48); solo presentación, desacoplado de las reglas.
 
 El margen interior hace que el contacto con enemigos sea justo: el arte parece más grande, pero el juego solo cuenta el núcleo central.
@@ -31,14 +31,13 @@ tileX = floor((posX + size / 2) / TILE_SIZE)
 tileY = floor((posY + size / 2) / TILE_SIZE)
 ```
 
-> **Nota de migración:** el código actual puede seguir en `TILE_SIZE = 16` hasta actualizar mapas Tiled, assets y constantes. El **contrato de diseño** ya es 32×32.
+> Runtime ya en `TILE_SIZE = 32`. Velocidades y tamaños escalados ×2 respecto al prototipo 16; el feel es proporcional.
 ## Qué es tile-based
 
 Estos sistemas usan **tile**, no overlap AABB fino:
 
 - Colocación y explosión de bombas
 - Daño por explosión
-- Pickup de power-ups
 - Activación del portal (lógica de tile; victoria usa AABB más estricto)
 - IA (`isWalkable`, `isDangerous`, BFS)
 
@@ -119,16 +118,13 @@ No hay una sola función “¿qué es este tile?”. Cada sistema hace una pregu
 
 ### Por estado superpuesto (mismo tile)
 
-| Pregunta | Bomba (`hasBomb`) | Bomba + `passThrough` dueño | Explosión activa | Power-up oculto | Power-up visible |
-|----------|-------------------|-----------------------------|------------------|-----------------|------------------|
-| `isWalkable` | ✗ | ✗ | ✓†† | — | — |
-| `blocksMovement(player dueño)` | ✓ | ✗ | ◐ | — | — |
-| `blocksMovement(otro / sin entidad)` | ✓ | ✓ | ◐ | — | — |
-| `isDangerous` | ◐ timer ≤ 1.5s | ◐ | ✓ en ese tile | ✗ | ✗ |
-| Daño a entidad (mismo tile) | ✗ | ✗ | ✓ | ✗ | ✗ |
-| Pickup (`PowerUpSystem`) | — | — | — | ✗ | ✓ |
-| Blast destruye power-up | — | — | ✓ si `alive` | ✗ conserva | ✓ elimina |
-| Tras limpiar explosión en destructible | — | — | — | ✓ `revealPowerUp` | — |
+| Pregunta | Bomba (`hasBomb`) | Bomba + `passThrough` dueño | Explosión activa |
+|----------|-------------------|-----------------------------|------------------|
+| `isWalkable` | ✗ | ✗ | ✓†† |
+| `blocksMovement(player dueño)` | ✓ | ✗ | ◐ |
+| `blocksMovement(otro / sin entidad)` | ✓ | ✓ | ◐ |
+| `isDangerous` | ◐ timer ≤ 1.5s | ◐ | ✓ en ese tile |
+| Daño a entidad (mismo tile) | ✗ | ✗ | ✓ |
 
 †† La explosión no cambia `isWalkable`; el daño es por coincidencia de tile, no por bloquear paso.
 
@@ -142,7 +138,6 @@ No hay una sola función “¿qué es este tile?”. Cada sistema hace una pregu
 | `LifeSystem` (explosión) | ¿Mismo tile entidad–explosión? | `tileX` / `tileY` iguales |
 | `LifeSystem` (enemigo) | ¿Solapan las hitboxes? | AABB 12×12 (`brute`: 14×14) — **no** solo tile |
 | `LifeSystem` (portal) | ¿Gano / activo portal? | Activación: tile vacío + sin enemigos. Victoria: `portal.visible` + AABB estrictamente dentro |
-| `PowerUpSystem` | ¿Pickup? | Mismo tile jugador–power-up y `alive === true` |
 | `GridQuery.isWalkable` | ¿Puede pisar la IA? | En bounds, no sólido, sin bomba |
 | `GridQuery.isDangerous` | ¿Hay daño inminente? | Explosión en tile o zona de bomba a punto de detonar |
 | `GridQuery.lineOfSight` | ¿Hay sólido entre A y B? | Solo `isSolidTile` en el camino |
@@ -203,15 +198,17 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 
 | Responsabilidad | Implementación |
 |-----------------|----------------|
+| Generación de nivel | `LevelGenerator` (procedural, seed) → `Grid` + spawns |
 | Mapa visible (provisional) | `TilemapView` dibuja el `Grid` con rectángulos y colores |
-| Lógica del grid | `LevelLoader` → `Grid` (solo capa `GridMap`) |
 | Destructibles rotos | `TilemapView` redibuja al detectar un cambio del `Grid` |
-| Entidades (provisional) | `EntityView` dibuja círculos, rectángulos, líneas y rombos |
+| Entidades (provisional) | `EntityView` dibuja círculos, rectángulos y líneas |
+| Cámara | `GameScene` sigue al jugador (deadzone + `setBounds`); mapas mayores al viewport hacen scroll |
+| HUD | `HudView` fijo (`scrollFactor 0`); popups de score en espacio de mundo |
 | Overlays (pausa, victoria…) | `GameOverlayScene` + `scene.pause('Game')` |
-| Escala pixel-perfect | `Phaser.Scale` con `setZoom` entero |
+| Escalado | buffer interno 640×360, `Scale.FIT` (llena la ventana, 16:9) + nearest + `roundPixels` — sin restricción de zoom entero |
 | Input | `InputAdapter` sobre `keyboard` de Phaser |
 
-Los TMJ/TSJ se conservan únicamente como datos lógicos de niveles. El runtime no carga PNG, spritesheets ni animaciones mientras se prioriza gameplay.
+Niveles procedurales: `src/config/levels.js` define tamaño, densidad de destructibles y enemigos por nivel; `LevelGenerator` arma borde de muro + lattice de pilares + destructibles, y coloca jugador, portal y enemigos garantizando arranque y lejanía. El runtime no carga PNG, spritesheets ni animaciones mientras se prioriza gameplay.
 
 ## Pruebas de interacción
 
@@ -226,8 +223,8 @@ npm run test:watch
 
 | Carpeta | Qué protege |
 |---------|-------------|
-| `tests/unit/` | `Grid`, `entityTiles`, `GridQuery`, `bfsHelper`, `aiConditions`, `powerUpPool` |
-| `tests/interactions/` | Movimiento, corner assist, bombas, explosiones avanzadas, vida, input, score, power-ups, contacto AABB, coherencia |
+| `tests/unit/` | `Grid`, `entityTiles`, `GridQuery`, `bfsHelper`, `aiConditions` |
+| `tests/interactions/` | Movimiento, corner assist, bombas, explosiones avanzadas, vida, input, score, contacto AABB, coherencia |
 | `tests/integration/` | `GameLoop` end-to-end |
 | `tests/helpers/` | `createTestWorld()` — mapas ASCII sin assets Tiled |
 
@@ -245,11 +242,11 @@ Casos cubiertos:
 **Bombas y explosiones**
 - Colocación, `TILE_PASS`, `passThrough`, `maxBombs`
 - Cadena de bombas, destructibles, `TILE_PASS` detiene blast
-- `activeBombs--`, power-up oculto/visible bajo explosión
+- `activeBombs--` al detonar
 
 **Vida y victoria**
 - Daño por tile; contacto AABB (jugador, `brute` 14×14)
-- Invulnerabilidad, respawn, `gameOver`, `timeUp`
+- Invulnerabilidad, respawn y `gameOver` solo por pérdida de vidas
 - Portal: activación, victoria solo si `visible` + AABB estricto
 
 **IA**
@@ -257,7 +254,7 @@ Casos cubiertos:
 - `IsPlayerInLine`, `IsPlayerNear`, `IsInDanger`
 
 **Progresión**
-- Score y combo; efectos de cada power-up; `PowerUpPool`
+- Score y combo
 
 **Integración**
 - `GameLoop`: input → movimiento → bomba → explosión en varios frames

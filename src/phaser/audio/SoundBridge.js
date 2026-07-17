@@ -24,9 +24,6 @@ export class SoundBridge {
         case 'explosion':
           this.audio.playSFX('explosion')
           break
-        case 'powerUpPickup':
-          this.audio.playSFX('powerUp')
-          break
         case 'playerDeath':
           this.audio.playSFX('playerDeath')
           break

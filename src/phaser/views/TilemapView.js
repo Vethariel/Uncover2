@@ -1,5 +1,4 @@
 import {
-  HUD_HEIGHT,
   TILE_EMPTY,
   TILE_WALL,
   TILE_DESTRUCTIBLE,
@@ -17,7 +16,7 @@ export class TilemapView {
   constructor(scene, world) {
     this.scene = scene
     this.world = world
-    this.graphics = scene.add.graphics({ x: 0, y: HUD_HEIGHT })
+    this.graphics = scene.add.graphics({ x: 0, y: 0 })
     this.lastGridState = ''
     this.build()
   }
