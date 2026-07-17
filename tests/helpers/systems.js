@@ -8,7 +8,6 @@ import { CollisionSystem } from '../../src/game/systems/CollisionSystem.js'
 import { BombSystem } from '../../src/game/systems/BombSystem.js'
 import { LifeSystem } from '../../src/game/systems/LifeSystem.js'
 import { InputSystem } from '../../src/game/systems/InputSystem.js'
-import { ScoreSystem } from '../../src/game/systems/ScoreSystem.js'
 import { GameLoop } from '../../src/game/GameLoop.js'
 import { mockInput } from './worldFactory.js'
 
@@ -16,7 +15,6 @@ const collision = new CollisionSystem()
 const bomb = new BombSystem()
 const life = new LifeSystem()
 const input = new InputSystem()
-const score = new ScoreSystem()
 const gameLoop = new GameLoop()
 
 export function stepCollision(world, dt, direction) {
@@ -31,16 +29,8 @@ export function stepBomb(world, dt) {
   bomb.update(world, dt)
 }
 
-export function stepLife(world, dt, scoreSystem = score) {
-  life.update(world, dt, scoreSystem)
-}
-
-export function stepScore(world, dt, scoreSystem = score) {
-  scoreSystem.update(world, dt)
-}
-
-export function createScoreSystem() {
-  return new ScoreSystem()
+export function stepLife(world, dt) {
+  life.update(world, dt)
 }
 
 export function stepGameLoop(world, dt, keys = {}) {

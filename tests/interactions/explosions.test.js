@@ -45,6 +45,8 @@ describe('daño por explosión (tile-based)', () => {
 
     expect(world.enemies[0].alive).toBe(false)
     expect(world.events).toContain('enemyDeath')
+    expect(world.player).not.toHaveProperty('score')
+    expect(world.enemies[0]).not.toHaveProperty('score')
   })
 
   it('explosión de bomba alcanza tiles en cruz según rango', () => {

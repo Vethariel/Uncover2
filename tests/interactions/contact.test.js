@@ -32,13 +32,13 @@ describe('contacto continuo (excepciones documentadas)', () => {
     enemy.tileX = 3
     enemy.tileY = 1
 
-    life.update(world, 0.016, { addScore: () => {} })
+    life.update(world, 0.016)
     expect(player.alive).toBe(true)
 
     // Overlap parcial entre tiles adyacentes
     player.posX = e.posX - player.size + 2
     player.posY = e.posY
-    life.update(world, 0.016, { addScore: () => {} })
+    life.update(world, 0.016)
     expect(player.alive).toBe(true)
     expect(player.lives).toBe(2)
     expect(player.invulnerableTimer).toBeGreaterThan(0)
@@ -56,7 +56,7 @@ describe('contacto continuo (excepciones documentadas)', () => {
     world.player.tileX = 3
     world.player.tileY = 1
 
-    life.update(world, 0.016, { addScore: () => {} })
+    life.update(world, 0.016)
     expect(world.gameWon).toBe(true)
   })
 
@@ -81,13 +81,13 @@ describe('contacto continuo (excepciones documentadas)', () => {
     player.posX = p.posX
     player.posY = p.posY
 
-    life.update(world, 0.016, { addScore: () => {} })
+    life.update(world, 0.016)
     expect(player.alive).toBe(true)
 
     // Acercar hasta overlap por hitbox grande del golem avanzado
     player.posX = e.posX - player.size + 1
     player.posY = e.posY + 1
-    life.update(world, 0.016, { addScore: () => {} })
+    life.update(world, 0.016)
     expect(player.alive).toBe(true)
     expect(player.lives).toBe(2)
   })

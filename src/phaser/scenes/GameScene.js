@@ -114,7 +114,7 @@ export class GameScene extends Phaser.Scene {
 
     this.tilemapView = new TilemapView(this, this.world)
     this.entityView = new EntityView(this, this.world)
-    this.hudView = new HudView(this, this.world, this.gameState)
+    this.hudView = new HudView(this, this.world)
     this._syncViews()
     this._setupCamera()
 

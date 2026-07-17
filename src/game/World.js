@@ -27,7 +27,6 @@ export class World {
     this.recipeFragmentSpawns = []
     this.levelGraph = null
     this.levelTimer = null
-    this.scorePopups = []
     this.levelVisualConfig = null
     this.currentLevelIndex = 0
     this.gameOver = false
@@ -47,7 +46,6 @@ export class World {
     this.entryDoor = null
     this.exitDoor = null
     this.bombs = []
-    this.scorePopups = []
     this.gameOver = false
     this.gameWon = false
     this.enemySpawns = []

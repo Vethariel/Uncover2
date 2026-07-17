@@ -16,7 +16,6 @@ export class GameState {
 
   reset() {
     this.currentLevelIndex = 0
-    this.score = 0
     this.lives = PLAYER_LIVES
     this.speed = PLAYER_SPEED
     this.bombRange = PLAYER_BOMB_RANGE
@@ -28,7 +27,6 @@ export class GameState {
     player.bombRange = this.bombRange
     player.maxBombs = this.maxBombs
     player.lives = this.lives
-    player.score = this.score
   }
 
   syncFromPlayer(player) {
@@ -36,7 +34,6 @@ export class GameState {
     this.bombRange = player.bombRange
     this.maxBombs = player.maxBombs
     this.lives = player.lives
-    this.score = player.score
   }
 
   nextLevel() {
@@ -54,7 +51,6 @@ export class GameState {
   save() {
     const data = {
       currentLevelIndex: this.currentLevelIndex,
-      score: this.score,
       lives: this.lives,
       speed: this.speed,
       bombRange: this.bombRange,
@@ -71,7 +67,6 @@ export class GameState {
     try {
       const data = JSON.parse(raw)
       this.currentLevelIndex = data.currentLevelIndex ?? 0
-      this.score = data.score ?? 0
       this.lives = data.lives ?? PLAYER_LIVES
       this.speed = data.speed ?? PLAYER_SPEED
       this.bombRange = data.bombRange ?? PLAYER_BOMB_RANGE

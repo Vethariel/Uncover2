@@ -10,7 +10,6 @@ export const ENEMY_TYPES = {
     size: 24,
     thinkInterval: 0.2,
     colorRole: 'golem_basic',
-    score: 100,
     tree: () => createPatrolEnemyTree(2, 0.1, 0.2),
   },
 
@@ -20,7 +19,6 @@ export const ENEMY_TYPES = {
     size: 24,
     thinkInterval: 0.2,
     colorRole: 'spirit',
-    score: 120,
     tree: () => createPatrolEnemyTree(2, 0.05, 0.3),
   },
 
@@ -30,7 +28,6 @@ export const ENEMY_TYPES = {
     size: 28,
     thinkInterval: 0.25,
     colorRole: 'golem_advanced',
-    score: 150,
     tree: () => createBasicEnemyTree(),
   },
 }

@@ -3,7 +3,6 @@ import { InputSystem } from './systems/InputSystem.js'
 import { CollisionSystem } from './systems/CollisionSystem.js'
 import { BombSystem } from './systems/BombSystem.js'
 import { LifeSystem } from './systems/LifeSystem.js'
-import { ScoreSystem } from './systems/ScoreSystem.js'
 import { World } from './World.js'
 
 export class GameLoop {
@@ -13,7 +12,6 @@ export class GameLoop {
     this.collision = new CollisionSystem()
     this.bomb = new BombSystem()
     this.life = new LifeSystem()
-    this.score = new ScoreSystem()
   }
 
   createWorld(tileSize) {
@@ -25,8 +23,7 @@ export class GameLoop {
     this.enemyAI.update(world, dt)
     this.collision.update(world, dt)
     this.bomb.update(world, dt)
-    this.life.update(world, dt, this.score)
-    this.score.update(world, dt)
+    this.life.update(world, dt)
 
     return {
       events: world.events.splice(0),

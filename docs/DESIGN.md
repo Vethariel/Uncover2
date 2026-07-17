@@ -203,7 +203,7 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 | Destructibles rotos | `TilemapView` redibuja al detectar un cambio del `Grid` |
 | Entidades (provisional) | `EntityView` dibuja círculos, rectángulos y líneas |
 | Cámara | `GameScene` sigue al jugador (deadzone + `setBounds`); mapas mayores al viewport hacen scroll |
-| HUD | `HudView` fijo (`scrollFactor 0`); popups de score en espacio de mundo |
+| HUD | `HudView` fijo (`scrollFactor 0`); muestra vidas y temporizador cuando aplica |
 | Overlays (pausa, victoria…) | `GameOverlayScene` + `scene.pause('Game')` |
 | Escalado | buffer interno 640×360, `Scale.FIT` (llena la ventana, 16:9) + nearest + `roundPixels` — sin restricción de zoom entero |
 | Input | `InputAdapter` sobre `keyboard` de Phaser |
@@ -224,7 +224,7 @@ npm run test:watch
 | Carpeta | Qué protege |
 |---------|-------------|
 | `tests/unit/` | `Grid`, `entityTiles`, `GridQuery`, `bfsHelper`, `aiConditions` |
-| `tests/interactions/` | Movimiento, corner assist, bombas, explosiones avanzadas, vida, input, score, contacto AABB, coherencia |
+| `tests/interactions/` | Movimiento, corner assist, bombas, explosiones avanzadas, vida, input, contacto AABB, coherencia |
 | `tests/integration/` | `GameLoop` end-to-end |
 | `tests/helpers/` | `createTestWorld()` — mapas ASCII sin assets Tiled |
 
@@ -254,7 +254,6 @@ Casos cubiertos:
 - `IsPlayerInLine`, `IsPlayerNear`, `IsInDanger`
 
 **Progresión**
-- Score y combo
 
 **Integración**
 - `GameLoop`: input → movimiento → bomba → explosión en varios frames

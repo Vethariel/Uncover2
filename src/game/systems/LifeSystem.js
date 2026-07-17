@@ -1,5 +1,5 @@
 export class LifeSystem {
-  update(world, dt, scoreSystem) {
+  update(world, dt) {
     const player = world.player
 
     if (world.levelTimer !== null && !world.gameWon && !world.gameOver) {
@@ -27,7 +27,7 @@ export class LifeSystem {
       for (const explosion of world.explosions) {
         if (explosion.tileX === entity.tileX && explosion.tileY === entity.tileY) {
           if (entity.type === 'player') this.damagePlayer(world)
-          else this.killEnemy(world, entity, scoreSystem)
+          else this.killEnemy(world, entity)
         }
       }
     }
@@ -67,10 +67,9 @@ export class LifeSystem {
     world.events.push('playerDeath')
   }
 
-  killEnemy(world, enemy, scoreSystem) {
+  killEnemy(world, enemy) {
     enemy.alive = false
     enemy.deathTimer = 1
-    scoreSystem.addScore(world, enemy)
     world.events.push('enemyDeath')
   }
 
