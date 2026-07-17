@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest'
-import { TILE_DESTRUCTIBLE } from '../../src/config/constants.js'
 import { Explosion } from '../../src/game/entities/Explosion.js'
 import { TILE_SIZE } from '../../src/config/constants.js'
 import { createTestWorld } from '../helpers/worldFactory.js'
@@ -56,68 +55,64 @@ describe('LifeSystem — ciclo de vida', () => {
     expect(world.gameOver).toBe(true)
   })
 
-  it('activa portal cuando no hay enemigos y el tile está vacío', () => {
+  it('completa el nivel al pisar cualquiera de los tiles de la puerta', () => {
     const world = createTestWorld(
       ['#####', '#...#', '#####'],
       {
         playerSpawn: { x: 1, y: 1 },
-        portal: { x: 3, y: 1, visible: false },
+        exitDoor: { tiles: [{ x: 3, y: 1 }] },
         enemies: [{ x: 2, y: 1 }],
       },
     )
 
-    world.enemies[0].alive = false
+    world.player.tileX = 3
+    world.player.tileY = 1
     stepLife(world, 0.016)
 
-    expect(world.portal.visible).toBe(true)
-    expect(world.events).toContain('portalActive')
+    expect(world.gameWon).toBe(true)
+    expect(world.events).toContain('levelExit')
   })
 
-  it('no activa portal si hay enemigo vivo', () => {
+  it('la puerta permanece abierta aunque haya enemigos vivos', () => {
     const world = createTestWorld(
       ['#####', '#...#', '#####'],
       {
         playerSpawn: { x: 1, y: 1 },
-        portal: { x: 3, y: 1, visible: false },
+        exitDoor: { tiles: [{ x: 3, y: 1 }] },
         enemies: [{ x: 2, y: 1 }],
       },
     )
 
+    world.player.tileX = 3
+    world.player.tileY = 1
     stepLife(world, 0.016)
-    expect(world.portal.visible).toBe(false)
+    expect(world.gameWon).toBe(true)
   })
 
-  it('no activa portal si el tile no está vacío', () => {
-    const world = createTestWorld(
-      ['#####', '#..D#', '#####'],
-      {
-        playerSpawn: { x: 1, y: 1 },
-        portal: { x: 3, y: 1, visible: false },
-      },
-    )
-
-    world.grid.set(3, 1, TILE_DESTRUCTIBLE)
-    stepLife(world, 0.016)
-    expect(world.portal.visible).toBe(false)
-  })
-
-  it('no gana si el portal no está visible', () => {
+  it('no gana mientras no pisa la puerta', () => {
     const world = createTestWorld(
       ['#####', '#...#', '#####'],
       {
         playerSpawn: { x: 1, y: 1 },
-        portal: { x: 3, y: 1, visible: false },
-        enemies: [{ x: 2, y: 1 }],
+        exitDoor: { tiles: [{ x: 3, y: 1 }] },
       },
     )
 
-    const portal = world.portal
-    world.player.posX = portal.posX + 2
-    world.player.posY = portal.posY + 2
-
     stepLife(world, 0.016)
-    expect(world.portal.visible).toBe(false)
     expect(world.gameWon).toBe(false)
+  })
+
+  it('el temporizador opcional termina el intento', () => {
+    const world = createTestWorld(
+      ['#####', '#...#', '#####'],
+      { playerSpawn: { x: 1, y: 1 } },
+    )
+
+    world.levelTimer = 0.1
+    stepLife(world, 0.2)
+    expect(world.levelTimer).toBe(0)
+    expect(world.gameOver).toBe(true)
+    expect(world.events).toContain('levelTimeExpired')
   })
 
 })

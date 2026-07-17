@@ -65,6 +65,8 @@ Un pasillo es una **banda excavada de 3 o 5 tiles de ancho**, pero no una avenid
 - El grid de indestructibles continúa dentro del túnel.
 - Las columnas del lattice producen el ritmo visual y estructural del pasillo.
 - Los túneles conectan nodos mediante tramos ortogonales sobre el grid.
+- La separación libre `d_ij` depende del nodo más grande conectado: pequeño `10±5`, mediano `15±5`, grande `25±5`.
+- Toda la banda puede contener destructibles, recursos escasos y enemigos; los rompibles pueden bloquear el avance.
 
 Esquema conceptual de una banda con columnas:
 
@@ -125,6 +127,8 @@ La entrada existe en todos los niveles como una zona pequeña y legible. La tabl
 | **6** | 7 | 3 peq + 3 med + 1 grande | Soft-cap 14 |
 | **7** | 8 | 3 peq + 3 med + 2 grandes | Soft-cap 10 (carrera) |
 
+En N3 y N4 el conteo de nodos de recorrido (4 o 5) se decide con probabilidad **50/50** a partir de la semilla del nivel.
+
 Los tamaños se expresarán mediante un radio de nodo. Como referencia inicial para el optimizador:
 
 | Tamaño | Radio |
@@ -165,13 +169,15 @@ Contrato económico global (techos de craft, smelting, recetas): [`CRAFTING.md`]
 
 Cada nodo de recorrido recibe un **rol** primario. Un nivel no debe sentirse uniforme: unos nodos dan mena, otros dan pelea, otros mezclan.
 
-| Rol | Enfoque | Contenido típico |
-|-----|---------|------------------|
-| **Veta** | Recursos | Menas del material asignado; 0–1 golem básico (desde N3) |
-| **Guarida** | Enemigos | Poca o ninguna mena; varios golems / espíritus |
-| **Mixta** | Ambos | Menas + 1–2 enemigos; tensión pico vs pelea |
-| **Reliquia** | Receta / lore | Fragmento de receta; guardián opcional (espíritu o golem) |
-| **Ágora** | Tránsito | Casi vacío; cruza pasillos; sin enemigos o 1 golem básico |
+| Rol | Enfoque | Contenido típico | Densidad destructibles |
+|-----|---------|------------------|------------------------|
+| **Veta** | Recursos | Menas del material asignado; 0–1 golem básico (desde N3) | **alta ≈ 0.45** |
+| **Guarida** | Enemigos | Poca o ninguna mena; varios golems / espíritus | **baja ≈ 0.20** |
+| **Mixta** | Ambos | Menas + 1–2 enemigos; tensión pico vs pelea | **media ≈ 0.35** |
+| **Reliquia** | Receta / lore | Fragmento de receta; guardián opcional (espíritu o golem) | **media-baja ≈ 0.25** |
+| **Ágora** | Tránsito | Casi vacío; cruza pasillos; sin enemigos o 1 golem básico | **muy baja ≈ 0.10** |
+
+La densidad se aplica sobre las casillas caminables del nodo que no son pilar fijo ni `EXTRA_WALL`. Solo se excluyen el spawn y los tiles de las puertas. Guaridas abiertas favorecen el combate; vetas densas dan qué picar.
 
 Regla: en un nivel con ≥3 nodos de recorrido, **no repetir el mismo rol** en más de la mitad de los nodos.
 
@@ -232,9 +238,10 @@ No spawnear fragmentos en N1–N2.
 
 ### Pasillos
 
-- Sin menas (salvo rareza narrativa).
-- Sin enemigos en pasillos cortos; en pasillos largos (≥12 tiles de canal), como máximo **1 `golem_basic`** (N3+) a mitad de camino.
-- Espíritus y golems avanzados viven en **nodos**, no en túneles.
+- Destructibles con densidad baja objetivo de **≈8%** sobre tiles elegibles del pasillo. Pueden cortar temporalmente el paso y obligar a usar bombas.
+- Desde N3, aproximadamente **10% del soft-cap** de recursos puede aparecer en pasillos (mínimo 1 si hay slots), principalmente bronce o hierro. Sigue contando dentro del presupuesto total; no es recurso adicional.
+- Desde N3, aproximadamente **15% del presupuesto enemigo** puede aparecer en pasillos, como máximo uno por conexión.
+- Los enemigos de pasillo son `golem_basic`; espíritus y golems avanzados permanecen en nodos.
 - Preferencia: pelea y loot concentrados en **nodos**.
 
 ---
@@ -269,14 +276,24 @@ Para cada par de nodos diferentes:
 
 Esta restricción evita que las cámaras se solapen y reserva separación para los túneles.
 
-Valores iniciales de `d_ij` (separación libre entre bordes):
+`d_ij` para **pares conectados** define la **longitud objetivo del pasillo** según el nodo más grande de la conexión. La variación se sortea uniformemente por arista desde la semilla:
+
+| Nodo más grande conectado | Base | Variación | Rango de `d_ij` |
+|----------------------------|-----:|----------:|-----------------:|
+| Pequeño | `10` | `±5` | `5–15` |
+| Mediano | `15` | `±5` | `10–20` |
+| Grande | `25` | `±5` | `20–30` |
+
+La conexión pequeño–mediano usa la regla de mediano; mediano–grande usa la de grande. Como la restricción de no-solape usa `(r_i+r_j+d_{ij})^2` como cota inferior, esa cota ya expresa la longitud objetivo: minimizar `β·D_{ij}^2` asienta los pares cerca de ella, mientras `α` compacta el contenedor global.
+
+Para **pares no conectados** `d_ij` solo garantiza anti-solape:
 
 | Par | `d_ij` |
 |-----|--------|
-| Ambos pequeños | `3` |
-| Involucra mediano (sin grande) | `4` |
-| Involucra grande | `5` |
-| Par no conectado | `1` (solo anti-solape con margen mínimo) |
+| Par no conectado, ambos pequeños | `3` |
+| Par no conectado, involucra mediano (sin grande) | `4` |
+| Par no conectado, involucra grande | `5` |
+| Mínimo absoluto anti-solape | `1` |
 
 ### Función objetivo
 
@@ -367,6 +384,18 @@ Para evitar el coste de construir y podar un grafo completo, la implementación 
 
 La segunda forma es preferible computacionalmente. Ambas deben producir un grafo conectado con grado objetivo entre 1 y 3.
 
+### Ciclos (aristas extra sobre el árbol)
+
+Un **ciclo** es una arista añadida sobre el árbol de expansión: crea una **ruta alterna** entre nodos ya conectados. Sin ciclos, el grafo es un árbol puro y siempre se vuelve por el mismo pasillo (backtracking); con 1–2 ciclos aparecen rutas alternas y cruces de pasillos, que dan sensación de mina real. Cantidad de aristas extra por nivel:
+
+| Nivel | Ciclos (aristas extra) |
+|------:|------------------------|
+| 1–2 | 0 (árbol puro) |
+| 3–4 | 0–1 |
+| 5–7 | 1–2 |
+
+Cada ciclo debe respetar el grado máximo `3` y no forzar cruces imposibles para el optimizador.
+
 Las fuerzas `c_ij` solo existen para las aristas finales. Después de decidir el grafo, el optimizador coloca sus nodos.
 
 ---
@@ -443,7 +472,12 @@ exitDoor = {
 }
 ```
 
-Atravesar la puerta de salida completa el recorrido. No reutiliza la semántica visual ni la condición de activación del portal anterior.
+### Condición de finalización
+
+- **N1–N6:** pisar la puerta de salida completa el nivel. No hace falta matar enemigos ni recolectar un mínimo; el reto es **explorar y encontrarla**.
+- **N7:** es una **carrera contra el tiempo**. Sigue existiendo la puerta de salida (pisarla gana), pero un temporizador acota el intento; agotarlo cuenta como fallo del recorrido.
+
+Atravesar la puerta de salida completa el recorrido (salvo el matiz de tiempo en N7). No reutiliza la semántica visual ni la condición de activación del portal anterior.
 
 ---
 
@@ -466,30 +500,31 @@ Atravesar la puerta de salida completa el recorrido. No reutiliza la semántica 
 
 ### Orden importante
 
-La conectividad se valida **antes** de poblar el nivel. Los destructibles y recursos no pueden invalidar:
+La conectividad se valida **antes** de poblar el nivel y solo impone una garantía: los muros indestructibles no pueden impedir llegar desde la entrada hasta la salida.
 
-- La salida del nodo de entrada.
-- La llegada a cada puerta.
-- Las conexiones del grafo.
-- Una ruta válida entre entrada y salida.
+Después de esa validación se colocan destructibles y menas. Estos **sí pueden bloquear temporalmente** pasillos, conexiones y la ruta hacia la puerta; abrirse camino con bombas forma parte del núcleo Bomberman. Solo quedan excluidos el spawn y los tres tiles de cada puerta.
+
+### Semilla
+
+Se genera una **semilla nueva en cada entrada al nivel** (no se guarda ni se reutiliza entre intentos): reintentar un nivel produce un mapa distinto. El pipeline sigue siendo determinista respecto a esa semilla —el mismo `seed` reconstruye grafo, grid y contenido idénticos—, lo que permite depurar y reproducir un layout puntual pasando la semilla a mano.
 
 ---
 
 ## Invariantes que debe probar el generador
 
-1. Todos los nodos del grafo son alcanzables desde la entrada.
-2. Existe al menos una ruta entre entrada y salida.
+1. Todos los nodos del grafo son alcanzables desde la entrada al considerar rompibles como excavables.
+2. Existe al menos una ruta entre entrada y salida que no exige retirar indestructibles.
 3. Las puertas ocupan exactamente 3 tiles y están adyacentes a un muro.
 4. El nodo de entrada permite movimiento inicial.
 5. Ningún enemigo aparece sobre una puerta, un muro o el jugador.
 6. Ningún recurso obligatorio queda en una región inaccesible.
 7. Los pasillos mantienen bandas de 3 o 5 tiles y canales caminables de 1 tile entre columnas.
-8. Los muros adicionales de los nodos no cortan todas las rutas internas.
+8. Los muros indestructibles adicionales no cortan todas las rutas internas.
 9. Un mismo `seed` produce el mismo grafo, grid y contenido.
 10. La distancia entre nodos respeta sus radios y la longitud mínima del pasillo.
 11. Todo nodo grande se conecta mediante al menos un túnel de banda 5.
-12. La puerta de salida está abierta y puede atravesarse desde el inicio si el jugador la encuentra.
-13. Todos los tiles caminables conservados pertenecen al componente alcanzable desde la entrada.
+12. La puerta de salida está abierta; llegar a ella puede exigir destruir obstáculos.
+13. Antes de poblar con rompibles, todos los tiles caminables conservados pertenecen al componente alcanzable desde la entrada.
 14. Ningún proceso de corrección elimina un `FIXED_WALL` del lattice.
 15. El grafo final permanece conectado y cada nodo tiene entre 1 y 3 aristas.
 
@@ -527,12 +562,12 @@ El AABB ya no es fijo. Orden de magnitud con packing ortogonal compacto (mediana
 
 | Nivel | AABB aproximado (tiles) |
 |------:|-------------------------|
-| 1 | ~35×18 |
-| 2 | ~70×20 |
-| 3–4 | ~110×35 |
-| 5 | ~160×35 |
-| 6 | ~215×50 |
-| 7 | ~255×50 |
+| 1 | ~40×21 |
+| 2 | ~49×49 |
+| 3–4 | ~86×86 |
+| 5 | ~93×95 |
+| 6 | ~110×130 |
+| 7 | ~138×150 |
 
 Usarlos solo como expectativa de cámara/scroll, no como constantes hardcodeadas.
 

@@ -2,7 +2,6 @@ import { LEVELS } from '../config/levels.js'
 import { LevelGenerator } from './level/LevelGenerator.js'
 import { Enemy } from './entities/Enemy.js'
 import { Player } from './entities/Player.js'
-import { Portal } from './entities/Portal.js'
 import {
   PLAYER_SIZE,
   PLAYER_SPEED,
@@ -20,9 +19,13 @@ export class World {
     this.bombs = []
     this.explosions = []
     this.playerSpawn = null
-    this.portalSpawn = null
+    this.entryDoor = null
+    this.exitDoor = null
     this.enemySpawns = []
-    this.portal = null
+    this.resourceSpawns = []
+    this.recipeFragmentSpawns = []
+    this.levelGraph = null
+    this.levelTimer = null
     this.scorePopups = []
     this.levelVisualConfig = null
     this.currentLevelIndex = 0
@@ -39,13 +42,17 @@ export class World {
     this.enemies = []
     this.explosions = []
     this.playerSpawn = null
-    this.portalSpawn = null
+    this.entryDoor = null
+    this.exitDoor = null
     this.bombs = []
     this.scorePopups = []
     this.gameOver = false
     this.gameWon = false
-    this.portal = null
     this.enemySpawns = []
+    this.resourceSpawns = []
+    this.recipeFragmentSpawns = []
+    this.levelGraph = null
+    this.levelTimer = null
     this.tileAnimTimer = 0
     this.events = []
 
@@ -74,13 +81,6 @@ export class World {
       )
     }
 
-    this.spawnPortal()
-  }
-
-  spawnPortal() {
-    if (!this.portalSpawn) return
-
-    this.portal = new Portal(this.portalSpawn.x, this.portalSpawn.y, this.tileSize)
   }
 
   isLastLevel() {

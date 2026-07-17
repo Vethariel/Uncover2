@@ -11,7 +11,6 @@ const COLORS = {
   bomb: 0x20242b,
   fuse: 0xffc857,
   explosion: 0xff9f1c,
-  portal: 0x35d0ba,
 }
 
 export class EntityView {
@@ -26,7 +25,6 @@ export class EntityView {
 
     const drawables = [
       ...this.world.explosions.map((entity) => ({ entity, kind: 'explosion' })),
-      ...(this.world.portal?.visible ? [{ entity: this.world.portal, kind: 'portal' }] : []),
       ...this.world.bombs.map((entity) => ({ entity, kind: 'bomb' })),
       ...this.world.enemies.map((entity) => ({ entity, kind: 'enemy' })),
       { entity: this.world.player, kind: 'player' },
@@ -54,9 +52,6 @@ export class EntityView {
         break
       case 'explosion':
         this._drawExplosion(entity)
-        break
-      case 'portal':
-        this._drawPortal(entity)
         break
     }
   }
@@ -98,16 +93,6 @@ export class EntityView {
       explosion.size - inset * 2,
       explosion.size - inset * 2,
     )
-  }
-
-  _drawPortal(portal) {
-    const cx = portal.posX + portal.size / 2
-    const cy = portal.posY + portal.size / 2
-    this.graphics.lineStyle(3, COLORS.portal, 0.9)
-    this.graphics.strokeCircle(cx, cy, portal.size * 0.38)
-    this.graphics.lineStyle(1, 0xb8fff5, 0.8)
-    this.graphics.strokeCircle(cx, cy, portal.size * 0.22)
-    if (portal.animState === 'spawn') portal.animState = 'idle'
   }
 
   _directionVector(facing) {

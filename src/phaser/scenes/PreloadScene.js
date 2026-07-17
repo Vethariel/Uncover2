@@ -11,7 +11,6 @@ export class PreloadScene extends Phaser.Scene {
     this.load.audio('explosion', 'assets/sounds/explosion.wav')
     this.load.audio('playerDeath', 'assets/sounds/player_death.wav')
     this.load.audio('enemyDeath', 'assets/sounds/enemy_death.wav')
-    this.load.audio('portalActive', 'assets/sounds/portal.wav')
     this.load.audio('menu', 'assets/sounds/music_menu.mp3')
     this.load.audio('world1', 'assets/sounds/music_world1.mp3')
     this.load.audio('victory', 'assets/sounds/music_victory.mp3')

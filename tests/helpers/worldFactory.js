@@ -12,7 +12,6 @@ import { Grid } from '../../src/game/Grid.js'
 import { World } from '../../src/game/World.js'
 import { Player } from '../../src/game/entities/Player.js'
 import { Enemy } from '../../src/game/entities/Enemy.js'
-import { Portal } from '../../src/game/entities/Portal.js'
 import { Explosion } from '../../src/game/entities/Explosion.js'
 import { Bomb } from '../../src/game/entities/Bomb.js'
 import { positionFromTile } from '../../src/game/entityTiles.js'
@@ -61,9 +60,17 @@ export function createTestWorld(rows, options = {}) {
     }
   }
 
-  if (options.portal) {
-    world.portal = new Portal(options.portal.x, options.portal.y, TILE_SIZE)
-    world.portal.visible = options.portal.visible ?? false
+  if (options.exitDoor) {
+    const tiles = options.exitDoor.tiles ?? [
+      { x: options.exitDoor.x, y: options.exitDoor.y },
+    ]
+    world.exitDoor = {
+      kind: 'exit',
+      width: tiles.length,
+      orientation: options.exitDoor.orientation ?? 'east',
+      center: tiles[Math.floor(tiles.length / 2)],
+      tiles,
+    }
   }
 
   if (options.bombs) {

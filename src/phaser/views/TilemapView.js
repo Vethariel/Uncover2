@@ -61,6 +61,52 @@ export class TilemapView {
       }
     }
 
+    this._drawGeneratedContent(graphics, tileSize)
     this.lastGridState = state
+  }
+
+  _drawGeneratedContent(graphics, tileSize) {
+    const resourceColors = {
+      bronze: 0xc77b3f,
+      iron: 0xb9c0c7,
+      crystal: 0x78d7e8,
+    }
+
+    for (const resource of this.world.resourceSpawns ?? []) {
+      if (this.world.grid.get(resource.x, resource.y) !== TILE_DESTRUCTIBLE) continue
+      const color = resourceColors[resource.material] ?? 0xffffff
+      graphics.fillStyle(color, 0.9)
+      graphics.fillCircle(
+        resource.x * tileSize + tileSize / 2,
+        resource.y * tileSize + tileSize / 2,
+        tileSize * 0.16,
+      )
+    }
+
+    for (const fragment of this.world.recipeFragmentSpawns ?? []) {
+      const px = fragment.x * tileSize
+      const py = fragment.y * tileSize
+      graphics.fillStyle(0xd28cff, 0.95)
+      graphics.fillTriangle(
+        px + tileSize / 2, py + 5,
+        px + tileSize - 5, py + tileSize - 5,
+        px + 5, py + tileSize - 5,
+      )
+    }
+
+    this._drawDoor(graphics, this.world.entryDoor, tileSize, 0x3c8991)
+    this._drawDoor(graphics, this.world.exitDoor, tileSize, 0xffc857)
+  }
+
+  _drawDoor(graphics, door, tileSize, fillColor) {
+    if (!door) return
+    for (const tile of door.tiles) {
+      const px = tile.x * tileSize
+      const py = tile.y * tileSize
+      graphics.fillStyle(fillColor, 0.35)
+      graphics.fillRect(px, py, tileSize, tileSize)
+      graphics.lineStyle(2, 0xb08d57, 0.95)
+      graphics.strokeRect(px + 1, py + 1, tileSize - 2, tileSize - 2)
+    }
   }
 }

@@ -26,7 +26,13 @@ export class HudView {
       color: '#ffffff',
     }).setOrigin(0.5)
 
-    this.container.add([this.banner, this.livesText, this.scoreText])
+    this.timerText = scene.add.text(width - 16, HUD_HEIGHT / 2, '', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#ffc857',
+    }).setOrigin(1, 0.5)
+
+    this.container.add([this.banner, this.livesText, this.scoreText, this.timerText])
 
     // Popups de puntaje: viven en el mundo (se desplazan con la cámara).
     this.popupTexts = []
@@ -37,6 +43,9 @@ export class HudView {
 
     this.livesText.setText(`x${Math.max(0, player.lives)}`)
     this.scoreText.setText(String(player.score).padStart(6, '0'))
+    this.timerText.setText(
+      this.world.levelTimer === null ? '' : `TIEMPO ${Math.ceil(this.world.levelTimer)}`,
+    )
 
     this._syncPopups()
   }

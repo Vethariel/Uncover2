@@ -12,7 +12,7 @@ Hay dos capas de precisión, a propósito:
 | Capa | Datos | Uso |
 |------|-------|-----|
 | **Continua** | `posX`, `posY`, `size` (hitbox interior al tile) | Movimiento fluido, corner assist, contacto jugador–enemigo |
-| **Discreta** | `tileX`, `tileY` | Bombas, explosiones, portal, IA, trampas futuras |
+| **Discreta** | `tileX`, `tileY` | Bombas, explosiones, puerta de salida, IA, trampas futuras |
 
 La posición continua existe para que caminar se sienta bien. Las reglas de juego preguntan: **¿en qué casilla estás?**
 
@@ -38,7 +38,7 @@ Estos sistemas usan **tile**, no overlap AABB fino:
 
 - Colocación y explosión de bombas
 - Daño por explosión
-- Activación del portal (lógica de tile; victoria usa AABB más estricto)
+- Victoria al pisar cualquiera de los tres tiles de la puerta de salida
 - IA (`isWalkable`, `isDangerous`, BFS)
 
 ## Qué usa posición continua
@@ -72,7 +72,7 @@ Contrato jugable detallado en [`MOVEMENT_I.md`](./MOVEMENT_I.md). Resumen de sis
 | **Luz** | Visibilidad por tile (N4+) |
 | **Golems / espíritus** | Perfiles de amenaza; no doctrinales |
 | **Puzzle** | Activar bloques por tile (N5–N6) |
-| **Umbral (N7)** | Carrera de recursos a tiempo + recuento; fallo → repetir N6; mejoras del Taller se conservan |
+| **Umbral (N7)** | Encontrar y pisar la salida antes de agotar el tiempo |
 | **Portales del Primer Eje** | Presentes tras el umbral; **aún no activos** |
 
 El Mov. I debe sentirse *Bomberman en minas*, no un menú de power-ups clásico.
@@ -108,7 +108,7 @@ No hay una sola función “¿qué es este tile?”. Cada sistema hace una pregu
 | `lineOfSight` (sólido intermedio) | — | ✓ bloquea | ✓ bloquea | ✗ no bloquea | ✗ |
 | Blast de explosión se propaga | ✓ | ✗ para | ◐ destruye‡ | ✗ para | ✗ para |
 | Colocar bomba (`InputSystem`) | ✓ | ✗ | ✓ | ✗ | ✗ |
-| Activar portal (tile del portal) | ✓ requerido | ✗ | ✗ | ✗ | ✗ |
+| Atravesar puerta de salida | ✓ requerido | ✗ | ✗ | ✗ | ✗ |
 
 \* `TILE_EXPLOSION` es estado **transitorio** tras romper un destructible; vuelve a `EMPTY` al limpiar la explosión.
 
@@ -137,7 +137,7 @@ No hay una sola función “¿qué es este tile?”. Cada sistema hace una pregu
 | `BombSystem` | ¿Hacia dónde llega el blast? | Rayos en cruz; para en `WALL`, `TILE_PASS`, `TILE_EXPLOSION`; rompe `DESTRUCTIBLE` |
 | `LifeSystem` (explosión) | ¿Mismo tile entidad–explosión? | `tileX` / `tileY` iguales |
 | `LifeSystem` (enemigo) | ¿Solapan las hitboxes? | AABB 24×24 (`golem_advanced`: 28×28) — **no** solo tile |
-| `LifeSystem` (portal) | ¿Gano / activo portal? | Activación: tile vacío + sin enemigos. Victoria: `portal.visible` + AABB estrictamente dentro |
+| `LifeSystem` (salida) | ¿Gano el nivel? | `player.tileX/Y` coincide con cualquiera de los 3 tiles de `exitDoor`; no exige eliminar enemigos |
 | `GridQuery.isWalkable` | ¿Puede pisar la IA? | En bounds, no sólido, sin bomba |
 | `GridQuery.isDangerous` | ¿Hay daño inminente? | Explosión en tile o zona de bomba a punto de detonar |
 | `GridQuery.lineOfSight` | ¿Hay sólido entre A y B? | Solo `isSolidTile` en el camino |
@@ -152,7 +152,7 @@ Estas reglas **rompen** el “todo por tile” de forma intencional:
 | Caso | Criterio | Por qué |
 |------|----------|---------|
 | Contacto jugador–enemigo | AABB (`LifeSystem.overlaps`) | Margen justo: figura visual independiente, hitbox 24×24 |
-| Victoria en portal | AABB estricto (`LifeSystem.inside`) | El jugador debe “entrar” al portal, no rozarlo |
+| Victoria en puerta | Coincidencia de tile (`LifeSystem.checkExitDoor`) | Pisar cualquiera de los tres tiles abiertos completa el nivel |
 | Enemigo `golem_advanced` | Hitbox 28×28 | Contacto más amplio que golem básico / espíritu |
 
 ### Notas de diseño (descubiertas en tests)
@@ -198,7 +198,7 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 
 | Responsabilidad | Implementación |
 |-----------------|----------------|
-| Generación de nivel | `LevelGenerator` (procedural, seed) → `Grid` + spawns; diseño objetivo en [`PROCEDURAL_LEVELS.md`](./PROCEDURAL_LEVELS.md) |
+| Generación de nivel | `LevelGenerator` → grafo, cámaras, pasillos, lattice, ruido, puertas y spawns deterministas por `seed` |
 | Mapa visible (provisional) | `TilemapView` dibuja el `Grid` con rectángulos y colores |
 | Destructibles rotos | `TilemapView` redibuja al detectar un cambio del `Grid` |
 | Entidades (provisional) | `EntityView` dibuja círculos, rectángulos y líneas |
@@ -208,7 +208,7 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 | Escalado | buffer interno 640×360, `Scale.FIT` (llena la ventana, 16:9) + nearest + `roundPixels` — sin restricción de zoom entero |
 | Input | `InputAdapter` sobre `keyboard` de Phaser |
 
-El generador actual es una primera implementación rectangular. El objetivo aprobado es un grafo de cámaras orgánicas y túneles de banda 3/5, conservando siempre el lattice de indestructibles y usando puertas de mina de 3 tiles para entrada/salida; ver [`PROCEDURAL_LEVELS.md`](./PROCEDURAL_LEVELS.md). El runtime no carga PNG, spritesheets ni animaciones mientras se prioriza gameplay.
+El generador implementa el grafo aprobado de cámaras orgánicas y túneles de banda 3/5. Deriva el AABB del layout, conserva el lattice de indestructibles, aplica ruido coherente y corrección de conectividad, distribuye contenido por rol y crea puertas de mina de 3 tiles; ver [`PROCEDURAL_LEVELS.md`](./PROCEDURAL_LEVELS.md). El runtime no carga PNG, spritesheets ni animaciones mientras se prioriza gameplay.
 
 ## Pruebas de interacción
 
@@ -246,8 +246,8 @@ Casos cubiertos:
 
 **Vida y victoria**
 - Daño por tile; contacto AABB (jugador, `golem_advanced` 28×28)
-- Invulnerabilidad, respawn y `gameOver` solo por pérdida de vidas
-- Portal: activación, victoria solo si `visible` + AABB estricto
+- Invulnerabilidad, respawn, pérdida de vidas y timeout exclusivo de N7
+- Puerta abierta: victoria al pisar cualquiera de sus tres tiles, incluso con enemigos vivos
 
 **IA**
 - BFS hacia objetivo, huida a tile seguro, hojas de patrulla

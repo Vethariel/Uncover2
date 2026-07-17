@@ -30,9 +30,6 @@ export class SoundBridge {
         case 'enemyDeath':
           this.audio.playSFX('enemyDeath')
           break
-        case 'portalActive':
-          this.audio.playSFX('portalActive')
-          break
       }
     }
   }

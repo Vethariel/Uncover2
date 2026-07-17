@@ -1,9 +1,18 @@
-import { TILE_EMPTY, DIR_NONE } from '../../config/constants.js'
+import { DIR_NONE } from '../../config/constants.js'
 import { positionFromTile } from '../entityTiles.js'
 
 export class LifeSystem {
   update(world, dt, scoreSystem) {
     const player = world.player
+
+    if (world.levelTimer !== null && !world.gameWon && !world.gameOver) {
+      world.levelTimer = Math.max(0, world.levelTimer - dt)
+      if (world.levelTimer === 0) {
+        world.gameOver = true
+        world.events.push('levelTimeExpired')
+        return
+      }
+    }
 
     if (!player.alive && !world.gameOver) {
       world.respawnTimer -= dt
@@ -45,13 +54,7 @@ export class LifeSystem {
 
     if (player.invulnerableTimer > 0) player.invulnerableTimer -= dt
 
-    this.checkPortal(world)
-
-    if (world.portal?.visible && world.player.alive) {
-      if (this.inside(world.player, world.portal)) {
-        world.gameWon = true
-      }
-    }
+    this.checkExitDoor(world)
   }
 
   killPlayer(world) {
@@ -94,27 +97,14 @@ export class LifeSystem {
     )
   }
 
-  inside(a, b) {
-    return (
-      a.posX > b.posX &&
-      a.posX + a.size < b.posX + b.size &&
-      a.posY > b.posY &&
-      a.posY + a.size < b.posY + b.size
-    )
-  }
+  checkExitDoor(world) {
+    if (!world.exitDoor || !world.player.alive || world.gameWon) return
+    const onExit = world.exitDoor.tiles.some((tile) => (
+      tile.x === world.player.tileX && tile.y === world.player.tileY
+    ))
+    if (!onExit) return
 
-  checkPortal(world) {
-    if (!world.portal) return
-    if (world.portal.visible) return
-
-    const enemiesAlive = world.enemies.some((e) => e.alive)
-    if (enemiesAlive) return
-
-    const tile = world.grid.get(world.portal.tileX, world.portal.tileY)
-    if (tile !== TILE_EMPTY) return
-
-    world.portal.visible = true
-    world.portal.animState = 'spawn'
-    world.events.push('portalActive')
+    world.gameWon = true
+    world.events.push('levelExit')
   }
 }

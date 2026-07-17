@@ -42,19 +42,17 @@ describe('contacto continuo (excepciones documentadas)', () => {
     expect(player.alive).toBe(false)
   })
 
-  it('victoria en portal requiere AABB estrictamente dentro', () => {
+  it('victoria en puerta usa el tile lógico del jugador', () => {
     const world = createTestWorld(
       ['#####', '#...#', '#####'],
       {
         playerSpawn: { x: 1, y: 1 },
-        portal: { x: 3, y: 1, visible: true },
+        exitDoor: { tiles: [{ x: 3, y: 1 }] },
       },
     )
 
-    const portal = world.portal
-    // AABB del jugador (24×24) estrictamente dentro del portal (32×32)
-    world.player.posX = portal.posX + 2
-    world.player.posY = portal.posY + 2
+    world.player.tileX = 3
+    world.player.tileY = 1
 
     life.update(world, 0.016, { addScore: () => {} })
     expect(world.gameWon).toBe(true)
