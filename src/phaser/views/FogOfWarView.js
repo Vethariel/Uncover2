@@ -1,4 +1,5 @@
-const FOG_COLOR = 0x05080b
+const UNEXPLORED_COLOR = 0x05080b
+const EXPLORED_COLOR = 0x12151a
 const MAX_LIGHT = 10
 
 function tileKey(x, y) {
@@ -16,7 +17,7 @@ export class FogOfWarView {
   update() {
     if (this.lastRevision === this.world.visionRevision) return
 
-    const { grid, tileSize, lightLevels, visionViewport } = this.world
+    const { grid, tileSize, lightLevels, discoveredTiles, visionViewport } = this.world
     this.graphics.clear()
 
     const minX = visionViewport?.minX ?? 0
@@ -26,11 +27,11 @@ export class FogOfWarView {
 
     // Fuera del viewport: negro total (culling de niebla).
     if (minY > 0) {
-      this.graphics.fillStyle(FOG_COLOR, 1)
+      this.graphics.fillStyle(UNEXPLORED_COLOR, 1)
       this.graphics.fillRect(0, 0, grid.cols * tileSize, minY * tileSize)
     }
     if (maxY < grid.rows - 1) {
-      this.graphics.fillStyle(FOG_COLOR, 1)
+      this.graphics.fillStyle(UNEXPLORED_COLOR, 1)
       this.graphics.fillRect(
         0,
         (maxY + 1) * tileSize,
@@ -39,7 +40,7 @@ export class FogOfWarView {
       )
     }
     if (minX > 0) {
-      this.graphics.fillStyle(FOG_COLOR, 1)
+      this.graphics.fillStyle(UNEXPLORED_COLOR, 1)
       this.graphics.fillRect(
         0,
         minY * tileSize,
@@ -48,7 +49,7 @@ export class FogOfWarView {
       )
     }
     if (maxX < grid.cols - 1) {
-      this.graphics.fillStyle(FOG_COLOR, 1)
+      this.graphics.fillStyle(UNEXPLORED_COLOR, 1)
       this.graphics.fillRect(
         (maxX + 1) * tileSize,
         minY * tileSize,
@@ -59,14 +60,26 @@ export class FogOfWarView {
 
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
-        const light = lightLevels.get(tileKey(x, y)) ?? 0
+        const key = tileKey(x, y)
+        const light = lightLevels.get(key) ?? 0
         if (light >= MAX_LIGHT) continue
 
-        // Fuera de visión / sin luz: oscuridad total. El descubrimiento va al minimapa.
-        const alpha = light <= 0
-          ? 1
-          : 1 - (light / MAX_LIGHT) * 0.92
-        this.graphics.fillStyle(FOG_COLOR, alpha)
+        if (light > 0) {
+          // Gradiente de luz actual: no choca con la memoria explorada.
+          const alpha = 1 - (light / MAX_LIGHT) * 0.92
+          this.graphics.fillStyle(UNEXPLORED_COLOR, alpha)
+          this.graphics.fillRect(x * tileSize, y * tileSize, tileSize, tileSize)
+          continue
+        }
+
+        if (discoveredTiles.has(key)) {
+          // Memoria explorada: tono neutro muy oscuro, sin parecer iluminación.
+          this.graphics.fillStyle(EXPLORED_COLOR, 0.94)
+          this.graphics.fillRect(x * tileSize, y * tileSize, tileSize, tileSize)
+          continue
+        }
+
+        this.graphics.fillStyle(UNEXPLORED_COLOR, 1)
         this.graphics.fillRect(x * tileSize, y * tileSize, tileSize, tileSize)
       }
     }

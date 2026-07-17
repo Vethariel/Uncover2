@@ -204,7 +204,7 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 | Destructibles rotos | `TilemapView` redibuja al detectar un cambio del `Grid` |
 | Entidades (provisional) | `EntityView` dibuja círculos, rectángulos y líneas |
 | Cámara | `GameScene` centra al jugador (`startFollow` sin deadzone + `setBounds`); mapas mayores al viewport hacen scroll |
-| Visión y niebla | `VisionSystem` acumula luz radial 0–10 solo dentro del viewport×radio 7; fuentes con `lightEmission`; `FogOfWarView` deja oscuro lo no iluminado (descubrimiento diferido al minimapa) |
+| Visión y niebla | `VisionSystem` acumula luz radial 0–10 solo dentro del viewport×radio 7; fuentes con `lightEmission`; `FogOfWarView` deja negro lo desconocido, memoria explorada en neutro muy oscuro, y oculta fuentes fuera del radio aunque su luz sí llegue |
 | HUD | `HudView` fijo (`scrollFactor 0`); muestra vidas y temporizador cuando aplica |
 | Overlays (pausa, victoria…) | `GameOverlayScene` + `scene.pause('Game')` |
 | Escalado | buffer interno 640×360, `Scale.FIT` (llena la ventana, 16:9) + nearest + `roundPixels` — sin restricción de zoom entero |
@@ -224,7 +224,7 @@ La visión ya no es una cruz rígida, sino un campo de luz tile-based:
 - la intensidad cae según la distancia radial al foco;
 - muros y destructibles reciben luz como borde, pero bloquean la propagación posterior.
 
-La visibilidad final nunca supera distancia euclidiana 7 respecto al jugador. Solo se calculan fuentes que intersectan el viewport centrado en el jugador. Cada fuente expone `lightEmission` (o `getLightEmission()`). Cada tile se valida mediante línea de visión desde la fuente: los obstáculos quedan iluminados, pero proyectan sombra. Fuera de luz el mapa queda negro; el descubrimiento persistente queda para un minimapa futuro. Las entidades dinámicas solo se muestran bajo luz actual.
+La visibilidad final nunca supera distancia euclidiana 7 respecto al jugador. Solo se calculan fuentes que intersectan el viewport centrado en el jugador. Cada fuente expone `lightEmission` (o `getLightEmission()`). Cada tile requiere línea de visión tanto desde la fuente como desde el jugador: los obstáculos quedan iluminados como borde, pero ninguna luz revela lo que queda detrás de ellos. Una fuente fuera del radio puede iluminar el interior del radio si existe línea de visión, pero su sprite/antorcha no se dibuja hasta entrar en visión. Lo desconocido es negro; lo explorado sin luz actual usa un neutro muy oscuro de memoria. Las entidades dinámicas solo se muestran bajo luz actual.
 
 ## Pruebas de interacción
 

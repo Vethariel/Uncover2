@@ -118,6 +118,11 @@ export class TilemapView {
     }
 
     for (const light of this.world.wallLightSpawns ?? []) {
+      // Solo se ve la fuente si su tile está dentro de la visión actual.
+      // Fuera del radio puede iluminar el área, pero la antorcha permanece oculta.
+      const lightKey = `${light.x},${light.y}`
+      if (!this.world.visibleTiles?.has(lightKey)) continue
+
       const px = light.x * tileSize
       const py = light.y * tileSize
       const cx = px + tileSize / 2

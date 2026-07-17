@@ -87,6 +87,12 @@ describe('LevelGenerator', () => {
     debug: true,
   }
 
+  it('configura iluminación total del suelo solo en niveles 1 y 2', () => {
+    expect(gen(LEVELS[0]).levelVisualConfig.emptyTileLight).toBe(10)
+    expect(gen(LEVELS[1]).levelVisualConfig.emptyTileLight).toBe(10)
+    expect(gen(LEVELS[2]).levelVisualConfig.emptyTileLight).toBe(0)
+  })
+
   it('rodea el nivel con muros sólidos', () => {
     const { grid } = gen(spec)
     for (let x = 0; x < grid.cols; x++) {
@@ -252,6 +258,7 @@ describe('LevelGenerator', () => {
       expect(world.grid.get(light.x, light.y)).toBe(TILE_EMPTY)
       expect(world.grid.get(light.wallX, light.wallY)).toBe(TILE_WALL)
       expect(['north', 'south', 'east', 'west']).toContain(light.orientation)
+      expect(['corridor', 'room']).toContain(light.location)
     }
 
     for (let i = 0; i < world.wallLightSpawns.length; i++) {
@@ -259,9 +266,13 @@ describe('LevelGenerator', () => {
         const a = world.wallLightSpawns[i]
         const b = world.wallLightSpawns[j]
         const distance = Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
-        expect(distance).toBeGreaterThanOrEqual(8)
+        expect(distance).toBeGreaterThanOrEqual(6)
       }
     }
+
+    expect(
+      world.wallLightSpawns.filter((light) => light.location === 'corridor').length,
+    ).toBeGreaterThan(0)
   })
 
   it('es determinista con el mismo seed', () => {

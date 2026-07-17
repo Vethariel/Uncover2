@@ -133,13 +133,15 @@ Reglas:
 
 - la iluminación se propaga radialmente y pierde intensidad según distancia euclidiana;
 - cada tile requiere línea de visión directa desde su fuente;
+- el jugador también necesita línea de visión directa al tile: una luz no revela zonas separadas por obstáculos;
 - la suma por tile se limita a `10`;
 - la visibilidad efectiva nunca supera radio euclidiano `7` respecto al jugador;
 - solo se procesan luces que intersectan el viewport del jugador;
 - indestructibles y destructibles reciben luz como borde, pero proyectan sombra y bloquean todo lo que hay detrás;
-- fuera de luz la pantalla queda negra (el discovery de niebla se diferirá a un minimapa).
+- fuera de luz la pantalla queda negra si el tile nunca se vio, o un neutro muy oscuro si ya se exploró;
+- una fuente fuera del radio de visión puede iluminar tiles dentro del radio, pero la fuente misma permanece oculta.
 
-Para soportes de luz ambientales, tras el sellado final se eligen tiles vacíos que tengan al menos un indestructible cardinal adyacente. La selección es determinista por semilla, con separación mínima de `8` tiles y objetivo aproximado de **1 soporte por cada 120 tiles excavados**. Cada soporte guarda el muro al que se adhiere y su orientación, útil para renderizar antorchas u otras fuentes.
+Para soportes de luz ambientales, tras el sellado final se eligen tiles vacíos que tengan al menos un indestructible cardinal adyacente. En Movimiento I la selección es determinista por semilla, con separación mínima de `6` tiles y objetivo general aproximado de **1 soporte por cada 80 tiles excavados**. Los pasillos reciben prioridad adicional, con un indicador de **1 soporte por cada 40 tiles de pasillo**, para mantener sus recorridos generalmente bien iluminados. Cada soporte guarda el muro al que se adhiere, su orientación y si pertenece a cámara o pasillo.
 
 ---
 

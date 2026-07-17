@@ -8,6 +8,7 @@ export const LEVELS = [
     resourceCap: 0,
     enemies: 0,
     enemyKinds: [],
+    emptyTileLight: 10,
     bgMusic: 'world1',
   },
   {
@@ -17,6 +18,7 @@ export const LEVELS = [
     resourceCap: 9,
     enemies: 0,
     enemyKinds: [],
+    emptyTileLight: 10,
     bgMusic: 'world1',
   },
   {

@@ -29,6 +29,19 @@ describe('VisionSystem', () => {
     expect(world.discoveredTiles.has('12,12')).toBe(true)
   })
 
+  it('ilumina a 10 todas las casillas vacías visibles en niveles iniciales', () => {
+    const world = createTestWorld(openMap(25), { playerSpawn: { x: 12, y: 12 } })
+    world.levelVisualConfig = { emptyTileLight: 10 }
+    world.grid.set(15, 12, TILE_DESTRUCTIBLE)
+
+    vision.update(world)
+
+    expect(world.lightLevels.get('12,12')).toBe(10)
+    expect(world.lightLevels.get('12,18')).toBe(10)
+    expect(world.lightLevels.get('12,19')).toBe(10)
+    expect(world.visibleTiles.has('16,12')).toBe(false)
+  })
+
   it('muestra el primer obstáculo pero no propaga detrás', () => {
     const world = createTestWorld(openMap(25), { playerSpawn: { x: 12, y: 12 } })
     world.grid.set(15, 12, TILE_WALL)
@@ -88,7 +101,42 @@ describe('VisionSystem', () => {
 
     expect(world.visibleTiles.has('19,12')).toBe(true)
     expect(world.lightLevels.get('19,12')).toBe(9)
+    // La fuente queda fuera del radio: ilumina, pero no es visible.
     expect(world.visibleTiles.has('20,12')).toBe(false)
+  })
+
+  it('no muestra los efectos de una luz separada por un destructible', () => {
+    const world = createTestWorld(openMap(27), { playerSpawn: { x: 12, y: 12 } })
+    world.grid.set(15, 12, TILE_DESTRUCTIBLE)
+    world.wallLightSpawns = [{
+      x: 18,
+      y: 12,
+      wallX: 19,
+      wallY: 12,
+      orientation: 'east',
+      intensity: 10,
+    }]
+
+    vision.update(world)
+
+    expect(world.visibleTiles.has('15,12')).toBe(true)
+    expect(world.visibleTiles.has('16,12')).toBe(false)
+    expect(world.visibleTiles.has('17,12')).toBe(false)
+    expect(world.visibleTiles.has('18,12')).toBe(false)
+  })
+
+  it('conserva tiles explorados sin luz actual para la memoria de niebla', () => {
+    const world = createTestWorld(openMap(25), { playerSpawn: { x: 12, y: 12 } })
+    vision.update(world)
+    expect(world.discoveredTiles.has('12,12')).toBe(true)
+
+    world.player.tileX = 20
+    world.player.tileY = 12
+    vision.update(world)
+
+    expect(world.visibleTiles.has('12,12')).toBe(false)
+    expect(world.discoveredTiles.has('12,12')).toBe(true)
+    expect(world.lightLevels.get('12,12') ?? 0).toBe(0)
   })
 
   it('los destructibles también bloquean la propagación', () => {

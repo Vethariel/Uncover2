@@ -129,6 +129,8 @@ La progresión espacial procedural por nivel (cantidad y tamaño de cámaras, ma
 | 6 | La Cámara Antigua | Golem avanzado + puzzle-lore del Excavador | Preámbulo del umbral |
 | 7 | El Primer Excavador | Carrera de recursos / pasadizos / trampas | Umbral; reconocimiento |
 
+Los niveles **1 y 2** están completamente iluminados: cada casilla vacía emite luz de intensidad `10`. Se mantienen el radio de visión y las sombras producidas por muros y destructibles. La iluminación parcial comienza en el Nivel 3 y se presenta como mecánica explícita en el Nivel 4.
+
 Tras **fallar** el Nivel 7: el jugador **repite el Nivel 6** y vuelve a intentar el umbral. Ver [Fallo y reintento](#fallo-y-reintento).
 
 ---

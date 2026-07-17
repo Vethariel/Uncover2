@@ -1,6 +1,7 @@
 import {
   PLAYER_VISION_RADIUS,
   TILE_DESTRUCTIBLE,
+  TILE_EMPTY,
   TILE_WALL,
   VIEW_TILES_X,
   VIEW_TILES_Y,
@@ -91,6 +92,7 @@ function propagateSource(world, levels, startX, startY, strength, viewport) {
 
       const playerDistance = Math.hypot(x - player.tileX, y - player.tileY)
       if (playerDistance > PLAYER_VISION_RADIUS) continue
+      if (!hasLineOfSight(grid, player.tileX, player.tileY, x, y)) continue
       if (!hasLineOfSight(grid, startX, startY, x, y)) continue
 
       addLight(levels, x, y, intensity)
@@ -106,6 +108,20 @@ function buildVisionViewport(player, grid) {
     maxX: Math.min(grid.cols - 1, player.tileX + halfW),
     minY: Math.max(0, player.tileY - halfH),
     maxY: Math.min(grid.rows - 1, player.tileY + halfH),
+  }
+}
+
+function applyEmptyTileLight(world, levels, intensity, viewport) {
+  if (intensity <= 0) return
+  const { grid, player } = world
+
+  for (let y = viewport.minY; y <= viewport.maxY; y++) {
+    for (let x = viewport.minX; x <= viewport.maxX; x++) {
+      if (grid.get(x, y) !== TILE_EMPTY) continue
+      if (Math.hypot(x - player.tileX, y - player.tileY) > PLAYER_VISION_RADIUS) continue
+      if (!hasLineOfSight(grid, player.tileX, player.tileY, x, y)) continue
+      addLight(levels, x, y, intensity)
+    }
   }
 }
 
@@ -140,8 +156,9 @@ export class VisionSystem {
     world.visionViewport = viewport
 
     const helmet = player.lightEmission ?? HELMET_LIGHT
+    const emptyTileLight = world.levelVisualConfig?.emptyTileLight ?? 0
     const sourceSignature = collectSourceSignature(world)
-    const frameSignature = `${player.tileX},${player.tileY}|${helmet}|${sourceSignature}`
+    const frameSignature = `${player.tileX},${player.tileY}|${helmet}|${emptyTileLight}|${sourceSignature}`
     if (frameSignature === world.visionSourceSignature) return
 
     const lightLevels = new Map()
@@ -189,6 +206,8 @@ export class VisionSystem {
         viewport,
       )
     }
+
+    applyEmptyTileLight(world, lightLevels, emptyTileLight, viewport)
 
     const visible = new Set()
     for (const [cellKey, level] of lightLevels) {

@@ -34,8 +34,9 @@ const CORRIDOR_BASE_LENGTH = {
 
 const CORRIDOR_DESTRUCTIBLE_DENSITY = 0.08
 const PROXIMITY_GAP = 10
-const WALL_LIGHT_SPACING = 8
-const WALL_LIGHT_TILE_BUDGET = 120
+const WALL_LIGHT_SPACING = 6
+const WALL_LIGHT_TILE_BUDGET = 80
+const CORRIDOR_LIGHT_TILE_BUDGET = 40
 
 const DIRECTIONS = [
   { x: 1, y: 0 },
@@ -82,8 +83,17 @@ function nodeTerrainRegion(node, exitNodeId) {
   return TERRAIN_REGION[node.role] ?? TERRAIN_REGION.agora
 }
 
-function chooseWallLightSpawns(grid, carvedMask, protectedCells, rand) {
+function chooseWallLightSpawns(
+  grid,
+  carvedMask,
+  corridorCells,
+  protectedCells,
+  rand,
+) {
   const reserved = new Set(protectedCells)
+  const corridorMask = new Set(
+    [...corridorCells.values()].flatMap((cells) => [...cells]),
+  )
   const candidates = []
 
   for (const cellKey of carvedMask) {
@@ -96,19 +106,31 @@ function chooseWallLightSpawns(grid, carvedMask, protectedCells, rand) {
       .filter(({ x: wx, y: wy }) => grid.get(wx, wy) === TILE_WALL)
 
     if (!adjacentWalls.length) continue
-    candidates.push({ x, y, adjacentWalls })
+    candidates.push({
+      x,
+      y,
+      adjacentWalls,
+      location: corridorMask.has(cellKey) ? 'corridor' : 'room',
+    })
   }
 
   const targetCount = Math.max(1, Math.floor(carvedMask.size / WALL_LIGHT_TILE_BUDGET))
-  shuffle(candidates, rand)
+  const corridorTarget = Math.floor(corridorMask.size / CORRIDOR_LIGHT_TILE_BUDGET)
+  const corridorCandidates = shuffle(
+    candidates.filter((candidate) => candidate.location === 'corridor'),
+    rand,
+  )
+  const remainingCandidates = shuffle(
+    candidates.filter((candidate) => candidate.location !== 'corridor'),
+    rand,
+  )
 
   const selected = []
-  for (const candidate of candidates) {
-    if (selected.length >= targetCount) break
+  function trySelect(candidate) {
     const tooClose = selected.some((light) => (
       Math.abs(light.x - candidate.x) + Math.abs(light.y - candidate.y) < WALL_LIGHT_SPACING
     ))
-    if (tooClose) continue
+    if (tooClose) return false
 
     const wall = candidate.adjacentWalls[Math.floor(rand() * candidate.adjacentWalls.length)]
     let orientation = 'east'
@@ -123,7 +145,29 @@ function chooseWallLightSpawns(grid, carvedMask, protectedCells, rand) {
       wallX: wall.x,
       wallY: wall.y,
       orientation,
+      location: candidate.location,
     })
+    return true
+  }
+
+  let selectedCorridorLights = 0
+  for (const candidate of corridorCandidates) {
+    if (selectedCorridorLights >= corridorTarget) break
+    if (trySelect(candidate)) selectedCorridorLights++
+  }
+
+  const generalCandidates = shuffle(
+    [
+      ...corridorCandidates.filter((candidate) => (
+        !selected.some((light) => light.x === candidate.x && light.y === candidate.y)
+      )),
+      ...remainingCandidates,
+    ],
+    rand,
+  )
+  for (const candidate of generalCandidates) {
+    if (selected.length >= targetCount) break
+    trySelect(candidate)
   }
 
   return selected
@@ -1391,6 +1435,7 @@ export class LevelGenerator {
     world.wallLightSpawns = chooseWallLightSpawns(
       grid,
       shiftedMask,
+      corridorCells,
       protectedCells,
       rand,
     )
@@ -1403,6 +1448,7 @@ export class LevelGenerator {
       rows,
       resourceCap: spec.resourceCap ?? 0,
       timeLimit: spec.timeLimit ?? null,
+      emptyTileLight: spec.emptyTileLight ?? 0,
     }
   }
 }
