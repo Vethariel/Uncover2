@@ -44,7 +44,7 @@ export function createTestWorld(rows, options = {}) {
   world.currentLevelIndex = 0
   world.gameOver = false
   world.gameWon = false
-  world.respawnTimer = 0
+  world.playerDeathTimer = 0
 
   const spawn = options.playerSpawn ?? findFirstTile(world, TILE_EMPTY) ?? { x: 1, y: 1 }
   world.playerSpawn = spawn
@@ -70,6 +70,9 @@ export function createTestWorld(rows, options = {}) {
       orientation: options.exitDoor.orientation ?? 'east',
       center: tiles[Math.floor(tiles.length / 2)],
       tiles,
+      triggerTiles: options.exitDoor.triggerTiles ?? [
+        tiles[Math.floor(tiles.length / 2)],
+      ],
     }
   }
 

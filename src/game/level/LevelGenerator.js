@@ -6,9 +6,9 @@ import {
 } from '../../config/constants.js'
 
 const RADII = {
-  small: 7,
-  medium: 14,
-  large: 21,
+  small: 8,
+  medium: 17,
+  large: 25,
 }
 
 const ROLE_DESTRUCTIBLE_DENSITY = {
@@ -32,6 +32,7 @@ const CORRIDOR_BASE_LENGTH = {
 }
 
 const CORRIDOR_DESTRUCTIBLE_DENSITY = 0.08
+const PROXIMITY_GAP = 10
 
 const DIRECTIONS = [
   { x: 1, y: 0 },
@@ -65,6 +66,11 @@ function shuffle(values, rand) {
 
 function key(x, y) {
   return `${x},${y}`
+}
+
+function parseKey(cellKey) {
+  const [x, y] = cellKey.split(',').map(Number)
+  return { x, y }
 }
 
 function resolveNodeSizes(spec, rand) {
@@ -108,6 +114,10 @@ function corridorLengthRange(nodeA, nodeB) {
 function randomCorridorLength(nodeA, nodeB, rand) {
   const { min, max } = corridorLengthRange(nodeA, nodeB)
   return randomInt(rand, min, max)
+}
+
+function borderGap(nodeA, nodeB) {
+  return Math.hypot(nodeA.x - nodeB.x, nodeA.y - nodeB.y) - nodeA.radius - nodeB.radius
 }
 
 function createGraph(spec, rand) {
@@ -162,7 +172,7 @@ function createGraph(spec, rand) {
 
   const [cycleMin, cycleMax] = spec.extraCycles ?? [0, 0]
   const targetCycles = randomInt(rand, cycleMin, cycleMax)
-  return { nodes, edges, cycles: 0, targetCycles }
+  return { nodes, edges, cycles: 0, targetCycles, proximityEdges: 0 }
 }
 
 function overlapsAny(graph, node, x, y, placed) {
@@ -186,8 +196,6 @@ function boundingArea(nodes) {
   const maxY = Math.max(...nodes.map((node) => node.y + node.radius))
   const width = maxX - minX + 1
   const height = maxY - minY + 1
-  // Equivale (salvo una constante) a minimizar la semidiagonal R² del AABB.
-  // A diferencia del área, evita soluciones extremadamente largas y estrechas.
   return width ** 2 + height ** 2
 }
 
@@ -203,17 +211,14 @@ function placeGraph(graph, rand) {
 
     for (const direction of directions) {
       for (const lateral of shuffle([-8, -4, 0, 4, 8], rand)) {
-        for (let extension = 0; extension <= 0; extension += 4) {
-          const distance = parent.radius + node.radius + edge.length + extension
-          const x = parent.x + direction.x * distance - direction.y * lateral
-          const y = parent.y + direction.y * distance + direction.x * lateral
-          if (overlapsAny(graph, node, x, y, placed)) continue
+        const distance = parent.radius + node.radius + edge.length
+        const x = parent.x + direction.x * distance - direction.y * lateral
+        const y = parent.y + direction.y * distance + direction.x * lateral
+        if (overlapsAny(graph, node, x, y, placed)) continue
 
-          const candidate = { x, y }
-          const area = boundingArea([...placed, { ...node, ...candidate }])
-          if (!best || area < best.area) best = { ...candidate, area }
-          break
-        }
+        const candidate = { x, y }
+        const area = boundingArea([...placed, { ...node, ...candidate }])
+        if (!best || area < best.area) best = { ...candidate, area }
       }
     }
 
@@ -230,8 +235,6 @@ function placeGraph(graph, rand) {
     }
 
     if (!best) {
-      // Búsqueda global discreta cuando una arista de ciclo restringe al nodo
-      // respecto a más de un vecino ya colocado.
       for (let radius = 40; radius <= 360 && !best; radius += 4) {
         for (let x = -radius; x <= radius; x += 4) {
           for (const y of [-radius, radius]) {
@@ -269,8 +272,7 @@ function addCycles(graph, rand) {
       if (degree[a] >= 3 || degree[b] >= 3 || hasEdge(graph.edges, a, b)) continue
       const nodeA = graph.nodes[a]
       const nodeB = graph.nodes[b]
-      const gap = Math.hypot(nodeA.x - nodeB.x, nodeA.y - nodeB.y)
-        - nodeA.radius - nodeB.radius
+      const gap = borderGap(nodeA, nodeB)
       const { min, max } = corridorLengthRange(nodeA, nodeB)
       if (gap < min || gap > max) continue
       candidates.push({ a, b, gap })
@@ -294,6 +296,29 @@ function addCycles(graph, rand) {
     degree[candidate.a]++
     degree[candidate.b]++
     graph.cycles++
+  }
+}
+
+/** Conecta todo par de nodos con separación entre bordes ≤ PROXIMITY_GAP. */
+function addProximityEdges(graph, rand) {
+  for (let a = 0; a < graph.nodes.length; a++) {
+    for (let b = a + 1; b < graph.nodes.length; b++) {
+      if (hasEdge(graph.edges, a, b)) continue
+      const nodeA = graph.nodes[a]
+      const nodeB = graph.nodes[b]
+      const gap = borderGap(nodeA, nodeB)
+      if (gap > PROXIMITY_GAP || gap < 0) continue
+      graph.edges.push({
+        a,
+        b,
+        length: Math.max(1, Math.round(gap)),
+        width: nodeA.size === 'large' || nodeB.size === 'large' ? 5 : 3,
+        horizontalFirst: rand() < 0.5,
+        tree: false,
+        proximity: true,
+      })
+      graph.proximityEdges++
+    }
   }
 }
 
@@ -370,36 +395,198 @@ function farthestNode(graph, start) {
   return farthest
 }
 
-function doorAwayFromNeighbor(node, neighbor) {
-  const dx = neighbor.x - node.x
-  const dy = neighbor.y - node.y
-  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 'west' : 'east'
-  return dy >= 0 ? 'north' : 'south'
+function collectCorridorMouths(graph, roomCells, corridorCells) {
+  const mouths = new Map(graph.nodes.map((node) => [node.id, new Set()]))
+  const roomKeys = new Map(
+    [...roomCells].map(([nodeId, cells]) => [
+      nodeId,
+      new Set(cells.map((cell) => key(cell.x, cell.y))),
+    ]),
+  )
+
+  for (const [edgeId, cells] of corridorCells) {
+    const edge = graph.edges[edgeId]
+    for (const nodeId of [edge.a, edge.b]) {
+      const inRoom = roomKeys.get(nodeId) ?? new Set()
+      for (const cellKey of cells) {
+        if (!inRoom.has(cellKey)) continue
+        const { x, y } = parseKey(cellKey)
+        // Boca = casilla de cámara que toca un tile de pasillo fuera de la cámara.
+        const exitsRoom = DIRECTIONS.some((direction) => {
+          const outside = key(x + direction.x, y + direction.y)
+          return cells.has(outside) && !inRoom.has(outside)
+        })
+        if (exitsRoom) mouths.get(nodeId).add(cellKey)
+      }
+    }
+  }
+  return mouths
 }
 
-function createDoor(node, neighbor, kind) {
-  const orientation = doorAwayFromNeighbor(node, neighbor)
-  let center = { x: node.x, y: node.y }
-  if (orientation === 'north') center.y -= node.radius
-  if (orientation === 'south') center.y += node.radius
-  if (orientation === 'west') center.x -= node.radius
-  if (orientation === 'east') center.x += node.radius
+function expandForbidden(mouths, radius = 1) {
+  const forbidden = new Set(mouths)
+  for (const cellKey of mouths) {
+    const { x, y } = parseKey(cellKey)
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        if (dx === 0 && dy === 0) continue
+        forbidden.add(key(x + dx, y + dy))
+      }
+    }
+  }
+  return forbidden
+}
 
-  const tiles = [-1, 0, 1].map((offset) => (
+function doorSpan(center, orientation) {
+  return [-1, 0, 1].map((offset) => (
     orientation === 'north' || orientation === 'south'
       ? { x: center.x + offset, y: center.y }
       : { x: center.x, y: center.y + offset }
   ))
-  return { kind, orientation, width: 3, center, tiles }
 }
 
-function inwardTile(door, amount = 2) {
-  const tile = { ...door.center }
-  if (door.orientation === 'north') tile.y += amount
-  if (door.orientation === 'south') tile.y -= amount
-  if (door.orientation === 'west') tile.x += amount
-  if (door.orientation === 'east') tile.x -= amount
-  return tile
+function inwardVector(orientation) {
+  switch (orientation) {
+    case 'north': return { x: 0, y: 1 }
+    case 'south': return { x: 0, y: -1 }
+    case 'west': return { x: 1, y: 0 }
+    case 'east': return { x: -1, y: 0 }
+    default: return { x: 0, y: 0 }
+  }
+}
+
+function offsetTiles(tiles, vector, amount) {
+  return tiles.map((tile) => ({
+    x: tile.x + vector.x * amount,
+    y: tile.y + vector.y * amount,
+  }))
+}
+
+function configureDoorGeometry(door) {
+  const tiles = doorSpan(door.center, door.orientation)
+  const inward = inwardVector(door.orientation)
+  return {
+    ...door,
+    tiles,
+    trigger: { ...door.center },
+    triggerTiles: [{ ...door.center }],
+    sideTiles: [tiles[0], tiles[2]],
+    backingTiles: offsetTiles(tiles, inward, -1),
+    frontTiles: offsetTiles(tiles, inward, 1),
+  }
+}
+
+function doorCandidates(node, mask) {
+  const candidates = []
+  const r = node.radius
+  const sides = [
+    { orientation: 'north', centers: Array.from({ length: r * 2 - 1 }, (_, i) => ({
+      x: node.x - r + 1 + i,
+      y: node.y - r,
+    })) },
+    { orientation: 'south', centers: Array.from({ length: r * 2 - 1 }, (_, i) => ({
+      x: node.x - r + 1 + i,
+      y: node.y + r,
+    })) },
+    { orientation: 'west', centers: Array.from({ length: r * 2 - 1 }, (_, i) => ({
+      x: node.x - r,
+      y: node.y - r + 1 + i,
+    })) },
+    { orientation: 'east', centers: Array.from({ length: r * 2 - 1 }, (_, i) => ({
+      x: node.x + r,
+      y: node.y - r + 1 + i,
+    })) },
+  ]
+
+  for (const side of sides) {
+    for (const center of side.centers) {
+      const tiles = doorSpan(center, side.orientation)
+      if (!tiles.every((tile) => mask.has(key(tile.x, tile.y)))) continue
+      candidates.push({
+        orientation: side.orientation,
+        center,
+        tiles,
+        width: 3,
+      })
+    }
+  }
+  return candidates
+}
+
+function scoreDoorAwayFromMouths(candidate, forbidden) {
+  if (candidate.tiles.some((tile) => forbidden.has(key(tile.x, tile.y)))) return -1
+  if (!forbidden.size) return 1000
+  let minDistance = Infinity
+  for (const tile of candidate.tiles) {
+    for (const cellKey of forbidden) {
+      const mouth = parseKey(cellKey)
+      const distance = Math.abs(tile.x - mouth.x) + Math.abs(tile.y - mouth.y)
+      if (distance < minDistance) minDistance = distance
+    }
+  }
+  return minDistance
+}
+
+function sideOfPoint(node, point) {
+  const dx = point.x - node.x
+  const dy = point.y - node.y
+  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 'east' : 'west'
+  return dy >= 0 ? 'south' : 'north'
+}
+
+function createDoorAwayFromMouths(node, mouths, kind, mask) {
+  const mouthSides = { north: 0, south: 0, east: 0, west: 0 }
+  for (const cellKey of mouths) {
+    mouthSides[sideOfPoint(node, parseKey(cellKey))]++
+  }
+
+  const sideOrder = Object.entries(mouthSides)
+    .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))
+    .map(([side]) => side)
+
+  const forbidden = expandForbidden(mouths, 1)
+  const candidates = doorCandidates(node, mask)
+    .filter((candidate) => sideOrder.includes(candidate.orientation))
+    .sort((a, b) => {
+      const sideDiff = sideOrder.indexOf(a.orientation) - sideOrder.indexOf(b.orientation)
+      if (sideDiff !== 0) return sideDiff
+      return scoreDoorAwayFromMouths(b, forbidden) - scoreDoorAwayFromMouths(a, forbidden)
+    })
+
+  for (const candidate of candidates) {
+    if (scoreDoorAwayFromMouths(candidate, forbidden) >= 2) {
+      return {
+        kind,
+        orientation: candidate.orientation,
+        width: 3,
+        center: candidate.center,
+        tiles: candidate.tiles,
+      }
+    }
+  }
+
+  // Nicho exterior: empuja la puerta fuera del círculo en el lado más libre.
+  // Si ese lado aún tiene bocas, se usa radio+2 para no quedar adyacente.
+  const orientation = sideOrder[0]
+  const outward = {
+    north: { x: 0, y: -1 },
+    south: { x: 0, y: 1 },
+    west: { x: -1, y: 0 },
+    east: { x: 1, y: 0 },
+  }[orientation]
+  const push = mouthSides[orientation] === 0 ? 1 : 2
+  const center = {
+    x: node.x + outward.x * (node.radius + push),
+    y: node.y + outward.y * (node.radius + push),
+  }
+  const tiles = doorSpan(center, orientation)
+  for (const tile of tiles) mask.add(key(tile.x, tile.y))
+  for (let depth = 1; depth <= push; depth++) {
+    for (const tile of tiles) {
+      mask.add(key(tile.x - outward.x * depth, tile.y - outward.y * depth))
+    }
+  }
+  return { kind, orientation, width: 3, center, tiles }
 }
 
 function hashNoise(x, y, seed) {
@@ -455,7 +642,7 @@ function floodReachable(grid, start) {
   return visited
 }
 
-function excavateConnection(grid, start, targets, allowed, fixedWalls, extraWalls) {
+function excavateConnection(grid, start, targets, allowed, organicWalls, immutableWalls) {
   const targetKeys = new Set(targets.map((target) => key(target.x, target.y)))
   const startKey = key(start.x, start.y)
   const visited = new Set([startKey])
@@ -468,7 +655,11 @@ function excavateConnection(grid, start, targets, allowed, fixedWalls, extraWall
     for (const direction of DIRECTIONS) {
       const next = { x: current.x + direction.x, y: current.y + direction.y }
       const nextKey = key(next.x, next.y)
-      if (visited.has(nextKey) || !allowed.has(nextKey) || fixedWalls.has(nextKey)) continue
+      if (
+        visited.has(nextKey)
+        || !allowed.has(nextKey)
+        || immutableWalls.has(nextKey)
+      ) continue
       visited.add(nextKey)
       parents.set(nextKey, key(current.x, current.y))
       if (targetKeys.has(nextKey)) {
@@ -482,15 +673,15 @@ function excavateConnection(grid, start, targets, allowed, fixedWalls, extraWall
   if (!reached) return false
   let currentKey = reached
   while (currentKey !== startKey) {
-    const [x, y] = currentKey.split(',').map(Number)
+    const { x, y } = parseKey(currentKey)
     grid.set(x, y, TILE_EMPTY)
-    extraWalls.delete(currentKey)
+    organicWalls.delete(currentKey)
     currentKey = parents.get(currentKey)
   }
   return true
 }
 
-function nearestCarvableCell(node, grid, fixedWalls) {
+function nearestCarvableCell(node, grid) {
   const candidates = [
     { x: node.x, y: node.y },
     ...DIRECTIONS.map((direction) => ({
@@ -499,8 +690,119 @@ function nearestCarvableCell(node, grid, fixedWalls) {
     })),
   ]
   return candidates.find((cell) => (
-    grid.inBounds(cell.x, cell.y) && !fixedWalls.has(key(cell.x, cell.y))
+    grid.inBounds(cell.x, cell.y) && grid.get(cell.x, cell.y) !== null
   ))
+}
+
+/** Impide toda ventana excavada 2×2 sin al menos un indestructible. */
+function enforceOrganicCoverage(
+  grid,
+  carvedMask,
+  protectedCells,
+  mandatoryOpen,
+  connectivityStart,
+  connectivityTargets,
+  seed,
+  organicWalls,
+) {
+  let changed = true
+  let iterations = 0
+  while (changed && iterations < 64) {
+    changed = false
+    iterations++
+    for (const cellKey of carvedMask) {
+      const { x, y } = parseKey(cellKey)
+      let allCarved = true
+      let hasWall = false
+      for (let oy = 0; oy < 2 && allCarved; oy++) {
+        for (let ox = 0; ox < 2; ox++) {
+          const windowKey = key(x + ox, y + oy)
+          if (!carvedMask.has(windowKey)) {
+            allCarved = false
+            break
+          }
+          if (grid.get(x + ox, y + oy) === TILE_WALL) hasWall = true
+        }
+      }
+      if (!allCarved || hasWall) continue
+
+      const candidates = []
+      for (let oy = 0; oy < 2; oy++) {
+        for (let ox = 0; ox < 2; ox++) {
+          const cx = x + ox
+          const cy = y + oy
+          const candidateKey = key(cx, cy)
+          if (protectedCells.has(candidateKey) || mandatoryOpen.has(candidateKey)) continue
+          const score = fractalNoise(cx, cy, 6, seed + 4243)
+          candidates.push({ x: cx, y: cy, score, key: candidateKey, protected: false })
+        }
+      }
+      // Si dos esqueletos se solapan, sacrifica la celda protegida menos ruidosa.
+      if (!candidates.length) {
+        for (let oy = 0; oy < 2; oy++) {
+          for (let ox = 0; ox < 2; ox++) {
+            const cx = x + ox
+            const cy = y + oy
+            const candidateKey = key(cx, cy)
+            if (mandatoryOpen.has(candidateKey)) continue
+            const score = fractalNoise(cx, cy, 6, seed + 4243)
+            candidates.push({ x: cx, y: cy, score, key: candidateKey, protected: true })
+          }
+        }
+      }
+      candidates.sort((a, b) => b.score - a.score)
+      for (const candidate of candidates) {
+        grid.set(candidate.x, candidate.y, TILE_WALL)
+        // Fuera del esqueleto, colocar muro no puede cortar sus rutas.
+        // Solo las excepciones sobre esqueletos solapados requieren flood fill.
+        let remainsConnected = true
+        if (candidate.protected) {
+          const reachable = floodReachable(grid, connectivityStart)
+          remainsConnected = connectivityTargets.every((target) => (
+            reachable.has(key(target.x, target.y))
+          ))
+        }
+        if (remainsConnected) {
+          if (candidate.protected) protectedCells.delete(candidate.key)
+          organicWalls.add(candidate.key)
+          changed = true
+          break
+        }
+        grid.set(candidate.x, candidate.y, TILE_EMPTY)
+      }
+    }
+  }
+}
+
+function hasOrganicCoverageViolation(grid, carvedMask) {
+  for (const cellKey of carvedMask) {
+    const { x, y } = parseKey(cellKey)
+    const window = [
+      { x, y },
+      { x: x + 1, y },
+      { x, y: y + 1 },
+      { x: x + 1, y: y + 1 },
+    ]
+    if (!window.every((cell) => carvedMask.has(key(cell.x, cell.y)))) continue
+    if (window.every((cell) => grid.get(cell.x, cell.y) !== TILE_WALL)) return true
+  }
+  return false
+}
+
+function applyOrganicNoise(grid, roomCells, protectedCells, seed, organicWalls) {
+  for (const [nodeId, cells] of roomCells) {
+    const scale = NOISE_SCALE[
+      [...cells].length > 600 ? 'large' : [...cells].length > 200 ? 'medium' : 'small'
+    ]
+    for (const cell of cells) {
+      const cellKey = key(cell.x, cell.y)
+      if (grid.get(cell.x, cell.y) !== TILE_EMPTY || protectedCells.has(cellKey)) continue
+      if (fractalNoise(cell.x, cell.y, scale, seed + Number(nodeId) * 7919) > 0.62) {
+        grid.set(cell.x, cell.y, TILE_WALL)
+        organicWalls.add(cellKey)
+      }
+    }
+  }
 }
 
 function shiftPoint(point, offsetX, offsetY) {
@@ -512,6 +814,11 @@ function shiftDoor(door, offsetX, offsetY) {
     ...door,
     center: shiftPoint(door.center, offsetX, offsetY),
     tiles: door.tiles.map((tile) => shiftPoint(tile, offsetX, offsetY)),
+    trigger: shiftPoint(door.trigger, offsetX, offsetY),
+    triggerTiles: door.triggerTiles.map((tile) => shiftPoint(tile, offsetX, offsetY)),
+    sideTiles: door.sideTiles.map((tile) => shiftPoint(tile, offsetX, offsetY)),
+    backingTiles: door.backingTiles.map((tile) => shiftPoint(tile, offsetX, offsetY)),
+    frontTiles: door.frontTiles.map((tile) => shiftPoint(tile, offsetX, offsetY)),
   }
 }
 
@@ -532,17 +839,17 @@ function resourceCandidateCells(grid, cells, excluded) {
 }
 
 function pointsFromKeys(keys) {
-  return [...keys].map((cellKey) => {
-    const [x, y] = cellKey.split(',').map(Number)
-    return { x, y }
-  })
+  return [...keys].map((cellKey) => parseKey(cellKey))
 }
 
 function populate(world, spec, graph, roomCells, corridorCells, rand) {
   const excluded = new Set()
   excluded.add(key(world.playerSpawn.x, world.playerSpawn.y))
-  for (const tile of world.entryDoor.tiles) excluded.add(key(tile.x, tile.y))
-  for (const tile of world.exitDoor.tiles) excluded.add(key(tile.x, tile.y))
+  for (const door of [world.entryDoor, world.exitDoor]) {
+    for (const tile of [...door.tiles, ...door.frontTiles]) {
+      excluded.add(key(tile.x, tile.y))
+    }
+  }
   const roomCellKeys = new Set(
     [...roomCells.values()].flatMap((cells) => cells.map((cell) => key(cell.x, cell.y))),
   )
@@ -553,7 +860,6 @@ function populate(world, spec, graph, roomCells, corridorCells, rand) {
     ]),
   )
 
-  // Destructibles por rol de cámara.
   for (const node of graph.nodes) {
     if (node.role === 'entry') continue
     const density = ROLE_DESTRUCTIBLE_DENSITY[node.role] ?? 0.2
@@ -564,8 +870,6 @@ function populate(world, spec, graph, roomCells, corridorCells, rand) {
     }
   }
 
-  // Todo el pasillo puede recibir obstáculos rompibles; la densidad baja evita
-  // saturarlo, pero permite que bloqueen el avance como en Bomberman.
   for (const cells of pureCorridorCells.values()) {
     for (const cell of cells) {
       if (world.grid.get(cell.x, cell.y) !== TILE_EMPTY) continue
@@ -753,6 +1057,7 @@ export class LevelGenerator {
     const graph = createGraph(spec, rand)
     placeGraph(graph, rand)
     addCycles(graph, rand)
+    addProximityEdges(graph, rand)
 
     const mask = new Set()
     const reserved = new Set()
@@ -770,26 +1075,34 @@ export class LevelGenerator {
       carveCorridor(mask, reserved, edgeCells, graph.nodes[edge.a], graph.nodes[edge.b], edge)
     }
 
+    const mouths = collectCorridorMouths(graph, roomCells, corridorCells)
     const exitNodeId = farthestNode(graph, 0)
-    const entryNeighborId = graph.edges.find((edge) => edge.a === 0 || edge.b === 0)
-    const entryNeighbor = graph.nodes[
-      entryNeighborId.a === 0 ? entryNeighborId.b : entryNeighborId.a
-    ]
-    const exitEdge = graph.edges.find((edge) => edge.a === exitNodeId || edge.b === exitNodeId)
-    const exitNeighbor = graph.nodes[
-      exitEdge.a === exitNodeId ? exitEdge.b : exitEdge.a
-    ]
-    const unshiftedEntryDoor = createDoor(graph.nodes[0], entryNeighbor, 'entry')
-    const unshiftedExitDoor = createDoor(graph.nodes[exitNodeId], exitNeighbor, 'exit')
-    for (const tile of [...unshiftedEntryDoor.tiles, ...unshiftedExitDoor.tiles]) {
-      mask.add(key(tile.x, tile.y))
-      reserved.add(key(tile.x, tile.y))
+    const unshiftedEntryDoor = configureDoorGeometry(
+      createDoorAwayFromMouths(
+        graph.nodes[0],
+        mouths.get(0) ?? new Set(),
+        'entry',
+        mask,
+      ),
+    )
+    const unshiftedExitDoor = configureDoorGeometry(
+      createDoorAwayFromMouths(
+        graph.nodes[exitNodeId],
+        mouths.get(exitNodeId) ?? new Set(),
+        'exit',
+        mask,
+      ),
+    )
+    for (const door of [unshiftedEntryDoor, unshiftedExitDoor]) {
+      for (const tile of [...door.backingTiles, ...door.tiles, ...door.frontTiles]) {
+        mask.add(key(tile.x, tile.y))
+      }
+      for (const tile of [...door.triggerTiles, ...door.frontTiles]) {
+        reserved.add(key(tile.x, tile.y))
+      }
     }
 
-    const allMaskCells = [...mask].map((cellKey) => {
-      const [x, y] = cellKey.split(',').map(Number)
-      return { x, y }
-    })
+    const allMaskCells = [...mask].map((cellKey) => parseKey(cellKey))
     const minX = Math.min(...allMaskCells.map(({ x }) => x)) - 3
     const maxX = Math.max(...allMaskCells.map(({ x }) => x)) + 3
     const minY = Math.min(...allMaskCells.map(({ y }) => y)) - 3
@@ -810,16 +1123,16 @@ export class LevelGenerator {
       grid.set(shifted.x, shifted.y, TILE_EMPTY)
     }
 
-    const shiftedReserved = new Set()
+    const protectedCells = new Set()
     for (const cellKey of reserved) {
-      const [x, y] = cellKey.split(',').map(Number)
-      shiftedReserved.add(key(x + offsetX, y + offsetY))
+      const { x, y } = parseKey(cellKey)
+      protectedCells.add(key(x + offsetX, y + offsetY))
     }
     for (const [edgeId, cells] of corridorCells) {
       corridorCells.set(
         edgeId,
         new Set([...cells].map((cellKey) => {
-          const [x, y] = cellKey.split(',').map(Number)
+          const { x, y } = parseKey(cellKey)
           return key(x + offsetX, y + offsetY)
         })),
       )
@@ -835,90 +1148,141 @@ export class LevelGenerator {
 
     const entryDoor = shiftDoor(unshiftedEntryDoor, offsetX, offsetY)
     const exitDoor = shiftDoor(unshiftedExitDoor, offsetX, offsetY)
-    const doorwayClearance = new Set()
-    for (const door of [entryDoor, exitDoor]) {
-      for (const tile of door.tiles) {
-        for (let depth = 0; depth <= 3; depth++) {
-          let x = tile.x
-          let y = tile.y
-          if (door.orientation === 'north') y += depth
-          if (door.orientation === 'south') y -= depth
-          if (door.orientation === 'west') x += depth
-          if (door.orientation === 'east') x -= depth
-          doorwayClearance.add(key(x, y))
-          shiftedReserved.add(key(x, y))
-          grid.set(x, y, TILE_EMPTY)
-        }
+    const mandatoryOpen = new Set()
+    const forcedDoorWalls = new Set()
+    const doorBindings = [
+      [entryDoor, graph.nodes[0]],
+      [exitDoor, graph.nodes[exitNodeId]],
+    ]
+    for (const [door, node] of doorBindings) {
+      for (const tile of [...door.backingTiles, ...door.sideTiles]) {
+        const tileKey = key(tile.x, tile.y)
+        forcedDoorWalls.add(tileKey)
+        grid.set(tile.x, tile.y, TILE_WALL)
+        shiftedMask.add(tileKey)
       }
-    }
-    const spawnCandidates = [2, 3, 4].map((amount) => (
-      shiftPoint(inwardTile(unshiftedEntryDoor, amount), offsetX, offsetY)
-    ))
-    for (const candidate of spawnCandidates) shiftedReserved.add(key(candidate.x, candidate.y))
-
-    // Lattice fijo: pilares globales pares dentro de toda la silueta excavada.
-    const fixedWalls = new Set()
-    for (const cellKey of shiftedMask) {
-      const [x, y] = cellKey.split(',').map(Number)
-      if (x % 2 === 0 && y % 2 === 0 && !doorwayClearance.has(cellKey)) {
-        grid.set(x, y, TILE_WALL)
-        fixedWalls.add(cellKey)
+      for (const tile of [...door.triggerTiles, ...door.frontTiles]) {
+        const tileKey = key(tile.x, tile.y)
+        protectedCells.add(tileKey)
+        mandatoryOpen.add(tileKey)
+        grid.set(tile.x, tile.y, TILE_EMPTY)
+        shiftedMask.add(tileKey)
       }
-    }
-
-    // El ruido indestructible respeta conexiones y ejes de cámara; los
-    // destructibles se distribuyen después y sí pueden bloquearlos.
-    const extraWalls = new Set()
-    for (const node of graph.nodes) {
-      const scale = NOISE_SCALE[node.size] ?? NOISE_SCALE.small
-      for (const cell of roomCells.get(node.id) ?? []) {
-        const cellKey = key(cell.x, cell.y)
-        if (grid.get(cell.x, cell.y) !== TILE_EMPTY || shiftedReserved.has(cellKey)) continue
-        if (fractalNoise(cell.x, cell.y, scale, seed + node.id * 7919) > 0.62) {
-          grid.set(cell.x, cell.y, TILE_WALL)
-          extraWalls.add(cellKey)
-        }
+      // Conecta el centro del frente con el eje protegido de la cámara.
+      const depthToCenter = Math.abs(door.center.x - node.x)
+        + Math.abs(door.center.y - node.y)
+      const inward = inwardVector(door.orientation)
+      for (let depth = 2; depth <= depthToCenter; depth++) {
+        const x = door.center.x + inward.x * depth
+        const y = door.center.y + inward.y * depth
+        protectedCells.add(key(x, y))
+        grid.set(x, y, TILE_EMPTY)
+        shiftedMask.add(key(x, y))
       }
     }
 
-    // Las puertas se abren después del lattice/ruido: sus tres tiles son transitables.
-    for (const tile of [...entryDoor.tiles, ...exitDoor.tiles]) {
-      grid.set(tile.x, tile.y, TILE_EMPTY)
-      fixedWalls.delete(key(tile.x, tile.y))
-      extraWalls.delete(key(tile.x, tile.y))
+    const playerSpawn = { ...entryDoor.trigger }
+    protectedCells.add(key(playerSpawn.x, playerSpawn.y))
+    mandatoryOpen.add(key(playerSpawn.x, playerSpawn.y))
+
+    const organicWalls = new Set()
+    applyOrganicNoise(grid, roomCells, protectedCells, seed, organicWalls)
+
+    for (const tile of mandatoryOpen) {
+      const { x, y } = parseKey(tile)
+      grid.set(x, y, TILE_EMPTY)
+      organicWalls.delete(tile)
     }
-    const playerSpawn = spawnCandidates.find(({ x, y }) => grid.get(x, y) === TILE_EMPTY)
-      ?? spawnCandidates[0]
+    for (const tile of forcedDoorWalls) {
+      const { x, y } = parseKey(tile)
+      grid.set(x, y, TILE_WALL)
+      organicWalls.add(tile)
+    }
     grid.set(playerSpawn.x, playerSpawn.y, TILE_EMPTY)
+    organicWalls.delete(key(playerSpawn.x, playerSpawn.y))
 
-    // Excavación correctiva: conecta cada cámara y la salida sin retirar pilares.
-    // Después se llenan los bolsillos restantes.
     const connectivityTargets = [
       ...graph.nodes
-        .map((node) => nearestCarvableCell(node, grid, fixedWalls))
+        .map((node) => nearestCarvableCell(node, grid))
         .filter(Boolean),
-      ...exitDoor.tiles,
+      ...exitDoor.triggerTiles,
     ]
-    for (const target of connectivityTargets) {
-      const reachable = floodReachable(grid, playerSpawn)
-      if (!reachable.has(key(target.x, target.y))) {
+    for (let pass = 0; pass < 64; pass++) {
+      for (const target of connectivityTargets) {
+        const reachable = floodReachable(grid, playerSpawn)
+        if (reachable.has(key(target.x, target.y))) continue
         excavateConnection(
           grid,
           playerSpawn,
           [target],
           shiftedMask,
-          fixedWalls,
-          extraWalls,
+          organicWalls,
+          forcedDoorWalls,
         )
+      }
+
+      const reachable = floodReachable(grid, playerSpawn)
+      for (const cellKey of shiftedMask) {
+        if (reachable.has(cellKey)) continue
+        const { x, y } = parseKey(cellKey)
+        if (grid.get(x, y) === TILE_EMPTY) {
+          grid.set(x, y, TILE_WALL)
+          organicWalls.add(cellKey)
+        }
+      }
+
+      enforceOrganicCoverage(
+        grid,
+        shiftedMask,
+        protectedCells,
+        mandatoryOpen,
+        playerSpawn,
+        connectivityTargets,
+        seed + pass,
+        organicWalls,
+      )
+      for (const tileKey of mandatoryOpen) {
+        const { x, y } = parseKey(tileKey)
+        grid.set(x, y, TILE_EMPTY)
+        organicWalls.delete(tileKey)
+      }
+      for (const tileKey of forcedDoorWalls) {
+        const { x, y } = parseKey(tileKey)
+        grid.set(x, y, TILE_WALL)
+        organicWalls.add(tileKey)
+      }
+
+      const finalReachable = floodReachable(grid, playerSpawn)
+      const allTargetsReachable = connectivityTargets.every((target) => (
+        finalReachable.has(key(target.x, target.y))
+      ))
+      const noIsolatedEmpties = [...shiftedMask].every((cellKey) => {
+        if (finalReachable.has(cellKey)) return true
+        const { x, y } = parseKey(cellKey)
+        return grid.get(x, y) !== TILE_EMPTY
+      })
+      if (
+        allTargetsReachable
+        && noIsolatedEmpties
+        && !hasOrganicCoverageViolation(grid, shiftedMask)
+      ) break
+    }
+
+    // Sellado final: la última pasada de cobertura pudo aislar celdas vacías.
+    // Convertirlas en muro evita colocar recursos o enemigos inalcanzables.
+    {
+      const reachable = floodReachable(grid, playerSpawn)
+      for (const cellKey of shiftedMask) {
+        if (reachable.has(cellKey)) continue
+        const { x, y } = parseKey(cellKey)
+        if (grid.get(x, y) === TILE_EMPTY) {
+          grid.set(x, y, TILE_WALL)
+          organicWalls.add(cellKey)
+        }
       }
     }
 
-    const reachable = floodReachable(grid, playerSpawn)
-    for (const cellKey of shiftedMask) {
-      if (reachable.has(cellKey)) continue
-      const [x, y] = cellKey.split(',').map(Number)
-      if (grid.get(x, y) === TILE_EMPTY) grid.set(x, y, TILE_WALL)
-    }
+    const shiftedMouths = collectCorridorMouths(graph, roomCells, corridorCells)
 
     world.grid = grid
     world.playerSpawn = playerSpawn
@@ -928,11 +1292,20 @@ export class LevelGenerator {
       nodes: graph.nodes.map((node) => ({ ...node })),
       edges: graph.edges.map((edge) => ({ ...edge })),
       cycles: graph.cycles,
+      proximityEdges: graph.proximityEdges,
       exitNodeId,
+      corridorMouths: Object.fromEntries(
+        [...shiftedMouths].map(([nodeId, cells]) => [nodeId, [...cells]]),
+      ),
     }
     world.generationDebug = spec.debug
-      ? { fixedWalls, extraWalls, carvedMask: shiftedMask, corridorCells }
-      : { fixedWallCount: fixedWalls.size, extraWallCount: extraWalls.size }
+      ? {
+        organicWalls,
+        carvedMask: shiftedMask,
+        corridorCells,
+        protectedCells,
+      }
+      : { organicWallCount: organicWalls.size }
     populate(world, spec, graph, roomCells, corridorCells, rand)
     world.levelTimer = spec.timeLimit ?? null
     world.levelVisualConfig = {

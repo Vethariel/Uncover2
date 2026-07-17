@@ -103,10 +103,16 @@ export class TilemapView {
     for (const tile of door.tiles) {
       const px = tile.x * tileSize
       const py = tile.y * tileSize
-      graphics.fillStyle(fillColor, 0.35)
-      graphics.fillRect(px, py, tileSize, tileSize)
       graphics.lineStyle(2, 0xb08d57, 0.95)
       graphics.strokeRect(px + 1, py + 1, tileSize - 2, tileSize - 2)
     }
+    const trigger = door.trigger ?? door.center
+    graphics.fillStyle(fillColor, 0.45)
+    graphics.fillRect(
+      trigger.x * tileSize,
+      trigger.y * tileSize,
+      tileSize,
+      tileSize,
+    )
   }
 }

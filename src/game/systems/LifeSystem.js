@@ -1,6 +1,3 @@
-import { DIR_NONE } from '../../config/constants.js'
-import { positionFromTile } from '../entityTiles.js'
-
 export class LifeSystem {
   update(world, dt, scoreSystem) {
     const player = world.player
@@ -15,12 +12,9 @@ export class LifeSystem {
     }
 
     if (!player.alive && !world.gameOver) {
-      world.respawnTimer -= dt
+      world.playerDeathTimer -= dt
 
-      if (world.respawnTimer <= 0) {
-        if (player.lives >= 0) this.respawn(world)
-        else world.gameOver = true
-      }
+      if (world.playerDeathTimer <= 0) world.gameOver = true
       return
     }
 
@@ -32,7 +26,7 @@ export class LifeSystem {
 
       for (const explosion of world.explosions) {
         if (explosion.tileX === entity.tileX && explosion.tileY === entity.tileY) {
-          if (entity.type === 'player') this.killPlayer(world)
+          if (entity.type === 'player') this.damagePlayer(world)
           else this.killEnemy(world, entity, scoreSystem)
         }
       }
@@ -46,7 +40,7 @@ export class LifeSystem {
     if (player.alive && player.invulnerableTimer <= 0) {
       for (const enemy of world.enemies) {
         if (enemy.alive && this.overlaps(player, enemy)) {
-          this.killPlayer(world)
+          this.damagePlayer(world)
           break
         }
       }
@@ -57,14 +51,20 @@ export class LifeSystem {
     this.checkExitDoor(world)
   }
 
-  killPlayer(world) {
+  damagePlayer(world) {
     const player = world.player
-    if (!player.alive) return
+    if (!player.alive || player.invulnerableTimer > 0) return
 
-    player.lives--
+    player.lives = Math.max(0, player.lives - 1)
+    if (player.lives > 0) {
+      player.invulnerableTimer = 2
+      world.events.push('playerDamaged')
+      return
+    }
+
     player.alive = false
+    world.playerDeathTimer = 2
     world.events.push('playerDeath')
-    world.respawnTimer = 2
   }
 
   killEnemy(world, enemy, scoreSystem) {
@@ -72,20 +72,6 @@ export class LifeSystem {
     enemy.deathTimer = 1
     scoreSystem.addScore(world, enemy)
     world.events.push('enemyDeath')
-  }
-
-  respawn(world) {
-    const player = world.player
-    const spawn = world.playerSpawn
-    const pos = positionFromTile(spawn.x, spawn.y, world.tileSize, player.size)
-
-    player.posX = pos.posX
-    player.posY = pos.posY
-    player.tileX = pos.tileX
-    player.tileY = pos.tileY
-    player.alive = true
-    player.invulnerableTimer = 2
-    player.desiredFacing = DIR_NONE
   }
 
   overlaps(a, b) {
@@ -99,7 +85,8 @@ export class LifeSystem {
 
   checkExitDoor(world) {
     if (!world.exitDoor || !world.player.alive || world.gameWon) return
-    const onExit = world.exitDoor.tiles.some((tile) => (
+    const triggerTiles = world.exitDoor.triggerTiles ?? world.exitDoor.tiles
+    const onExit = triggerTiles.some((tile) => (
       tile.x === world.player.tileX && tile.y === world.player.tileY
     ))
     if (!onExit) return

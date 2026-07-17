@@ -38,7 +38,7 @@ Estos sistemas usan **tile**, no overlap AABB fino:
 
 - Colocación y explosión de bombas
 - Daño por explosión
-- Victoria al pisar cualquiera de los tres tiles de la puerta de salida
+- Victoria al pisar únicamente el trigger central de la puerta de salida
 - IA (`isWalkable`, `isDangerous`, BFS)
 
 ## Qué usa posición continua
@@ -137,7 +137,7 @@ No hay una sola función “¿qué es este tile?”. Cada sistema hace una pregu
 | `BombSystem` | ¿Hacia dónde llega el blast? | Rayos en cruz; para en `WALL`, `TILE_PASS`, `TILE_EXPLOSION`; rompe `DESTRUCTIBLE` |
 | `LifeSystem` (explosión) | ¿Mismo tile entidad–explosión? | `tileX` / `tileY` iguales |
 | `LifeSystem` (enemigo) | ¿Solapan las hitboxes? | AABB 24×24 (`golem_advanced`: 28×28) — **no** solo tile |
-| `LifeSystem` (salida) | ¿Gano el nivel? | `player.tileX/Y` coincide con cualquiera de los 3 tiles de `exitDoor`; no exige eliminar enemigos |
+| `LifeSystem` (salida) | ¿Gano el nivel? | `player.tileX/Y` coincide con el único tile de `exitDoor.triggerTiles`; no exige eliminar enemigos |
 | `GridQuery.isWalkable` | ¿Puede pisar la IA? | En bounds, no sólido, sin bomba |
 | `GridQuery.isDangerous` | ¿Hay daño inminente? | Explosión en tile o zona de bomba a punto de detonar |
 | `GridQuery.lineOfSight` | ¿Hay sólido entre A y B? | Solo `isSolidTile` en el camino |
@@ -152,7 +152,7 @@ Estas reglas **rompen** el “todo por tile” de forma intencional:
 | Caso | Criterio | Por qué |
 |------|----------|---------|
 | Contacto jugador–enemigo | AABB (`LifeSystem.overlaps`) | Margen justo: figura visual independiente, hitbox 24×24 |
-| Victoria en puerta | Coincidencia de tile (`LifeSystem.checkExitDoor`) | Pisar cualquiera de los tres tiles abiertos completa el nivel |
+| Victoria en puerta | Coincidencia de tile (`LifeSystem.checkExitDoor`) | Solo el centro `T` completa el nivel; los laterales son indestructibles |
 | Enemigo `golem_advanced` | Hitbox 28×28 | Contacto más amplio que golem básico / espíritu |
 
 ### Notas de diseño (descubiertas en tests)
@@ -160,7 +160,7 @@ Estas reglas **rompen** el “todo por tile” de forma intencional:
 1. **Bomba sobre destructible:** el centro de la explosión no aplica lógica de destructible al tile de la bomba; hay que alcanzarlo con un rayo adyacente.
 2. **`TILE_PASS`:** transitable y transparente a visión (`lineOfSight`, `IsPlayerInLine`), pero **opaco** al blast — útil para puentes y ventilación en Uncover.
 3. **`passThrough`:** el dueño ignora su bomba en movimiento (`bombBlocksEntity`), pero el tile sigue siendo `!isWalkable` para la IA.
-4. **Respawn:** revive con `lives >= 0`; `gameOver` cuando, tras morir, `lives < 0`.
+4. **Daño y vidas:** un golpe no letal resta una vida, conserva la posición y concede 2 s de invulnerabilidad. Con una sola vida restante, el golpe produce `playerDeath`; tras 2 s comienza `gameOver`. No hay respawn.
 5. **Nuevas mecánicas** (luz, gas, trampas): añadir columna a estas tablas y un test en `tests/interactions/coherence.test.js` antes de implementar en producción.
 
 ## API de grid (`GridQuery`)
@@ -198,7 +198,7 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 
 | Responsabilidad | Implementación |
 |-----------------|----------------|
-| Generación de nivel | `LevelGenerator` → grafo, cámaras, pasillos, lattice, ruido, puertas y spawns deterministas por `seed` |
+| Generación de nivel | `LevelGenerator` → grafo, proximidad, cámaras, pasillos, cobertura orgánica 2×2, puertas y spawns deterministas por `seed` |
 | Mapa visible (provisional) | `TilemapView` dibuja el `Grid` con rectángulos y colores |
 | Destructibles rotos | `TilemapView` redibuja al detectar un cambio del `Grid` |
 | Entidades (provisional) | `EntityView` dibuja círculos, rectángulos y líneas |
@@ -208,7 +208,7 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 | Escalado | buffer interno 640×360, `Scale.FIT` (llena la ventana, 16:9) + nearest + `roundPixels` — sin restricción de zoom entero |
 | Input | `InputAdapter` sobre `keyboard` de Phaser |
 
-El generador implementa el grafo aprobado de cámaras orgánicas y túneles de banda 3/5. Deriva el AABB del layout, conserva el lattice de indestructibles, aplica ruido coherente y corrección de conectividad, distribuye contenido por rol y crea puertas de mina de 3 tiles; ver [`PROCEDURAL_LEVELS.md`](./PROCEDURAL_LEVELS.md). El runtime no carga PNG, spritesheets ni animaciones mientras se prioriza gameplay.
+El generador implementa el grafo aprobado de cámaras orgánicas y túneles de banda 3/5. Deriva el AABB del layout, conecta nodos cercanos (gap ≤ 10), genera indestructibles orgánicos sin lattice (todo 2×2 contiene un muro), corrige conectividad, distribuye contenido por rol y crea puertas de mina de 3 tiles lejos de bocas de pasillo; ver [`PROCEDURAL_LEVELS.md`](./PROCEDURAL_LEVELS.md). El runtime no carga PNG, spritesheets ni animaciones mientras se prioriza gameplay.
 
 ## Pruebas de interacción
 
@@ -246,8 +246,8 @@ Casos cubiertos:
 
 **Vida y victoria**
 - Daño por tile; contacto AABB (jugador, `golem_advanced` 28×28)
-- Invulnerabilidad, respawn, pérdida de vidas y timeout exclusivo de N7
-- Puerta abierta: victoria al pisar cualquiera de sus tres tiles, incluso con enemigos vivos
+- Daño no letal con invulnerabilidad sin reposición, muerte en la última vida y timeout exclusivo de N7
+- Puerta: victoria al pisar el trigger central, incluso con enemigos vivos
 
 **IA**
 - BFS hacia objetivo, huida a tile seguro, hojas de patrulla

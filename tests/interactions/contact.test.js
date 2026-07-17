@@ -39,7 +39,9 @@ describe('contacto continuo (excepciones documentadas)', () => {
     player.posX = e.posX - player.size + 2
     player.posY = e.posY
     life.update(world, 0.016, { addScore: () => {} })
-    expect(player.alive).toBe(false)
+    expect(player.alive).toBe(true)
+    expect(player.lives).toBe(2)
+    expect(player.invulnerableTimer).toBeGreaterThan(0)
   })
 
   it('victoria en puerta usa el tile lógico del jugador', () => {
@@ -56,25 +58,6 @@ describe('contacto continuo (excepciones documentadas)', () => {
 
     life.update(world, 0.016, { addScore: () => {} })
     expect(world.gameWon).toBe(true)
-  })
-
-  it('respawn restaura tile y posición coherentes', () => {
-    const world = createTestWorld(
-      ['#####', '#...#', '#####'],
-      { playerSpawn: { x: 2, y: 1 } },
-    )
-
-    world.player.alive = false
-    world.player.posX = 999
-    world.player.tileX = 99
-    life.respawn(world)
-
-    const expected = positionFromTile(2, 1, TILE_SIZE, PLAYER_SIZE)
-    expect(world.player.posX).toBe(expected.posX)
-    expect(world.player.posY).toBe(expected.posY)
-    expect(world.player.tileX).toBe(2)
-    expect(world.player.tileY).toBe(1)
-    expect(world.player.alive).toBe(true)
   })
 
   it('golem_advanced (28×28) contacta antes que el overlap tile-only sugeriría', () => {
@@ -105,6 +88,7 @@ describe('contacto continuo (excepciones documentadas)', () => {
     player.posX = e.posX - player.size + 1
     player.posY = e.posY + 1
     life.update(world, 0.016, { addScore: () => {} })
-    expect(player.alive).toBe(false)
+    expect(player.alive).toBe(true)
+    expect(player.lives).toBe(2)
   })
 })

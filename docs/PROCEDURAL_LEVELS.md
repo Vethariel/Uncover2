@@ -1,7 +1,7 @@
 # Uncover — Diseño de niveles procedurales
 
 > Contrato de diseño para la generación de minas. Reglas generales de gameplay: [`DESIGN.md`](./DESIGN.md).  
-> **Estado:** diseño objetivo; el generador actual todavía usa un rectángulo con lattice completo y debe migrarse a este modelo.
+> **Estado:** implementado en `LevelGenerator` (grafo, proximidad, cobertura orgánica 2×2, puertas fuera de bocas).
 
 ## Intención
 
@@ -30,60 +30,51 @@ No todos los niveles deben ser árboles. Algunos pueden contener ciclos o atajos
 
 ---
 
-## Regla invariable: grid de indestructibles
+## Regla invariable: sin vacíos abiertos 2×2
 
-El patrón base de **muros/columnas indestructibles siempre permanece** dentro de las zonas excavadas.
+No hay lattice regular. Los indestructibles se generan de forma **orgánica** (ruido + cobertura correctiva).
 
-- Los indestructibles se organizan en una grilla regular.
-- Entre dos columnas consecutivas queda **un tile de separación**.
-- Los pasillos y nodos no eliminan el lattice para convertirse en superficies completamente abiertas.
-- La forma orgánica surge de dónde se excava el nivel, no de abandonar la regla de grilla.
+Restricción dura:
 
-Patrón conceptual:
+- En ninguna ventana **2×2** completamente excavada puede faltar un indestructible.
+- En consecuencia, todo grupo cuadrado de cuatro tiles incluye al menos un muro fijo.
+- Solo cuentan como ocupación los **bloques indestructibles** (`TILE_WALL`). Destructibles y menas no cierran la regla.
+
+Patrón conceptual válido (orgánico, no periódico):
 
 ```text
-W . W . W
-. . . . .
-W . W . W
-. . . . .
-W . W . W
+. . W .
+W . . W
+. W . .
+. . W .
 ```
 
-`W` = indestructible fijo.  
-`.` = casilla disponible para circulación, destructible u otro contenido permitido.
+`W` = indestructible.
+`.` = casilla disponible (vacía, destructible u otro contenido).
+
+Un esqueleto de conectividad (ejes de cámara, centro de pasillos, spawn y puertas) permanece libre de indestructibles para que la salida sea alcanzable sin retirar muros fijos. Después se colocan rompibles, que sí pueden bloquear el avance.
 
 ---
 
 ## Pasillos
 
-Un pasillo es una **banda excavada de 3 o 5 tiles de ancho**, pero no una avenida con 3 o 5 tiles libres.
+Un pasillo es una **banda excavada de 3 o 5 tiles de ancho** con trazado ortogonal (rectos o en L).
 
 ### Contrato
 
 - Ancho exterior de túnel: **3 o 5 tiles**.
-- Ancho de cada canal de circulación entre columnas: **1 tile caminable**.
-- El grid de indestructibles continúa dentro del túnel.
-- Las columnas del lattice producen el ritmo visual y estructural del pasillo.
 - Los túneles conectan nodos mediante tramos ortogonales sobre el grid.
-- La separación libre `d_ij` depende del nodo más grande conectado: pequeño `10±5`, mediano `15±5`, grande `25±5`.
+- La separación libre `d_ij` del árbol/ciclos depende del nodo más grande conectado: pequeño `10±5`, mediano `15±5`, grande `25±5`.
+- **Proximidad:** si dos nodos no conectados quedan con separación entre bordes **≤ 10**, se añade un pasillo automático (sin límite de grado).
 - Toda la banda puede contener destructibles, recursos escasos y enemigos; los rompibles pueden bloquear el avance.
-
-Esquema conceptual de una banda con columnas:
-
-```text
-W . W . W . W
-. . . . . . .
-W . W . W . W
-```
-
-El valor 3 o 5 describe la **banda total excavada**. La circulación efectiva sucede en los espacios de un tile definidos por el lattice.
+- Los indestructibles orgánicos también pueden aparecer en la banda, siempre respetando la regla 2×2 y el esqueleto de conectividad.
 
 ### Uso de anchos
 
 - **3 tiles:** conexión estándar, más contenida y tensa.
 - **5 tiles:** conexión usada para llegar a los **nodos grandes**.
 
-Los pasillos favorecen trazados **horizontales o verticales**. Pueden cambiar de eje mediante codos y pueden cruzarse; los cruces ayudan a crear conexiones emergentes entre partes del grafo.
+Los pasillos favorecen trazados **horizontales o verticales**. Pueden cambiar de eje mediante codos y pueden cruzarse; los cruces y las aristas de proximidad reducen el retroceso forzoso entre cámaras vecinas.
 
 ---
 
@@ -93,13 +84,10 @@ Los nodos son regiones aproximadamente circulares o elípticas rasterizadas al g
 
 ### Reglas
 
-1. El lattice de indestructibles sigue presente dentro de la cámara.
-2. Se añaden **algunos indestructibles adicionales** para romper la lectura repetitiva de grilla.
-3. Estos muros extra forman un **laberinto ligero**, nunca una cámara saturada.
-4. Deben permanecer varias rutas legibles entre las conexiones del nodo.
-5. Los nodos concentran recursos, encuentros y elementos de interés.
-
-Los indestructibles adicionales pueden extender o conectar partes del patrón base, pero deben conservar pasajes de un tile y no producir zonas inaccesibles.
+1. Los indestructibles dentro de la cámara son orgánicos (ruido + cobertura 2×2).
+2. Forman un laberinto ligero, nunca una cámara saturada ni una plaza 2×2 completamente abierta.
+3. Deben permanecer varias rutas legibles entre las conexiones del nodo (el esqueleto y la excavación correctiva lo garantizan frente a indestructibles).
+4. Los nodos concentran recursos, encuentros y elementos de interés.
 
 ### Tipos iniciales
 
@@ -129,15 +117,15 @@ La entrada existe en todos los niveles como una zona pequeña y legible. La tabl
 
 En N3 y N4 el conteo de nodos de recorrido (4 o 5) se decide con probabilidad **50/50** a partir de la semilla del nivel.
 
-Los tamaños se expresarán mediante un radio de nodo. Como referencia inicial para el optimizador:
+Los tamaños se expresan mediante un radio entero de nodo. Los radios originales se aumentaron un 20% y se redondearon al tile más cercano para compensar el espacio perdido durante el sellado de bolsillos inaccesibles:
 
 | Tamaño | Radio |
 |--------|-------|
-| Pequeño | `r = 7` tiles |
-| Mediano | `r = 14` tiles |
-| Grande | `r = 21` tiles; sus conexiones usan pasillos de banda 5 |
+| Pequeño | `r = 8` tiles |
+| Mediano | `r = 17` tiles |
+| Grande | `r = 25` tiles; sus conexiones usan pasillos de banda 5 |
 
-Estos radios implican diámetros aproximados de 15, 29 y 43 tiles al rasterizar el centro. Por tanto, el tamaño final del mapa ya no puede fijarse de antemano en 45×33: debe derivarse del contenedor obtenido por el optimizador, más un margen exterior.
+Estos radios implican diámetros aproximados de 17, 35 y 51 tiles al rasterizar el centro. Por tanto, el tamaño final del mapa ya no puede fijarse de antemano en 45×33: debe derivarse del contenedor obtenido por el optimizador, más un margen exterior.
 
 ---
 
@@ -177,7 +165,7 @@ Cada nodo de recorrido recibe un **rol** primario. Un nivel no debe sentirse uni
 | **Reliquia** | Receta / lore | Fragmento de receta; guardián opcional (espíritu o golem) | **media-baja ≈ 0.25** |
 | **Ágora** | Tránsito | Casi vacío; cruza pasillos; sin enemigos o 1 golem básico | **muy baja ≈ 0.10** |
 
-La densidad se aplica sobre las casillas caminables del nodo que no son pilar fijo ni `EXTRA_WALL`. Solo se excluyen el spawn y los tiles de las puertas. Guaridas abiertas favorecen el combate; vetas densas dan qué picar.
+La densidad se aplica sobre las casillas caminables del nodo que no son indestructibles orgánicos. Solo se excluyen el spawn y los tiles de las puertas. Guaridas abiertas favorecen el combate; vetas densas dan qué picar.
 
 Regla: en un nivel con ≥3 nodos de recorrido, **no repetir el mismo rol** en más de la mitad de los nodos.
 
@@ -253,7 +241,7 @@ Los centros de los nodos no se colocan con dispersión aleatoria libre. Se utili
 ### Variables
 
 - `(x_i, y_i)`: centro discreto del nodo `i`.
-- `r_i`: radio del nodo `i` (`7`, `14` o `21`).
+- `r_i`: radio del nodo `i` (`8`, `17` o `25`).
 - `d_ij`: separación longitudinal mínima reservada entre los bordes de los nodos.
 - `w_ij`: ancho transversal del túnel (`3` o `5` tiles).
 - `c_ij`: fuerza de conexión entre dos nodos conectados; `0` si no existe arista.
@@ -357,7 +345,7 @@ Con esta normalización, un par colocado justo en su distancia mínima aporta ~`
 **Recocido simulado** sobre centros enteros:
 
 1. Sembrar posiciones con un layout ortogonal greedy (árbol desplegado en H/V).
-2. Movimientos candidatos: desplazar un nodo ±2 tiles en un eje (mantiene paridad útil para el lattice), o rotar una arista 90° alrededor de un extremo.
+2. Movimientos candidatos: desplazar un nodo ±2 tiles en un eje, o rotar una arista 90° alrededor de un extremo.
 3. Rechazar movimientos que violen la restricción de no solapamiento o el ancho `w_ij`.
 4. Temperatura inicial alta, enfriamiento geométrico `T ← 0.95 T` cada epoch; ~200–400 epochs según cantidad de nodos.
 5. Conservar la mejor solución factible encontrada.
@@ -371,22 +359,13 @@ La topología se genera antes de optimizar las posiciones.
 ### Contrato
 
 1. Crear todos los nodos exigidos por el nivel.
-2. Garantizar inicialmente que forman un único componente conectado.
-3. Aleatorizar las conexiones.
-4. Podar aristas mientras el grafo siga conectado.
-5. Terminar con entre **1 y 3 conexiones por nodo**, siempre que la cantidad de nodos lo permita.
-
-Para evitar el coste de construir y podar un grafo completo, la implementación puede producir el mismo resultado de forma equivalente:
-
-1. Construir un árbol de expansión aleatorio, que garantiza conectividad.
-2. Añadir algunas aristas aleatorias para formar ciclos.
-3. No superar grado `3` en ningún nodo.
-
-La segunda forma es preferible computacionalmente. Ambas deben producir un grafo conectado con grado objetivo entre 1 y 3.
+2. Construir un árbol de expansión aleatorio (conectividad global).
+3. Añadir ciclos opcionales según el nivel (grado preferente ≤ 3 en esta fase).
+4. Tras el layout, añadir **aristas de proximidad**: todo par no conectado con separación entre bordes **≤ 10** recibe un pasillo. Estas aristas **no** están limitadas por grado 3.
 
 ### Ciclos (aristas extra sobre el árbol)
 
-Un **ciclo** es una arista añadida sobre el árbol de expansión: crea una **ruta alterna** entre nodos ya conectados. Sin ciclos, el grafo es un árbol puro y siempre se vuelve por el mismo pasillo (backtracking); con 1–2 ciclos aparecen rutas alternas y cruces de pasillos, que dan sensación de mina real. Cantidad de aristas extra por nivel:
+Un **ciclo** es una arista añadida sobre el árbol de expansión: crea una **ruta alterna** entre nodos ya conectados.
 
 | Nivel | Ciclos (aristas extra) |
 |------:|------------------------|
@@ -394,48 +373,41 @@ Un **ciclo** es una arista añadida sobre el árbol de expansión: crea una **ru
 | 3–4 | 0–1 |
 | 5–7 | 1–2 |
 
-Cada ciclo debe respetar el grado máximo `3` y no forzar cruces imposibles para el optimizador.
+### Proximidad
 
-Las fuerzas `c_ij` solo existen para las aristas finales. Después de decidir el grafo, el optimizador coloca sus nodos.
+La proximidad evita la frustración de estar al lado de una cámara sin acceso directo. Tras colocar los centros:
+
+```text
+si gap(i, j) ≤ 10 y no existe arista(i, j) → añadir pasillo(i, j)
+```
 
 ---
 
-## Muros adicionales mediante ruido y conectividad
+## Muros orgánicos y conectividad
 
-Los muros indestructibles extra de cada cámara se generan con ruido coherente, sin reemplazar ni eliminar el lattice fijo.
+Los indestructibles se generan sin lattice.
 
-### 1. Máscara de ruido
+### 1. Esqueleto protegido
 
-- Evaluar ruido Perlin sobre las casillas interiores del nodo.
-- Si el valor supera el umbral calibrado (ver abajo), colocar un muro adicional.
-- Los pilares fijos del lattice siempre permanecen.
-- Puertas, conexiones de pasillos y casillas reservadas no pueden cerrarse.
+Quedan libres de indestructibles: ejes cruzados de cada cámara, línea central de cada pasillo, trigger central de puerta y sus tres tiles frontales.
 
-Es útil distinguir dos clases durante la generación:
+### 2. Ruido
 
-```text
-FIXED_WALL   = pilar permanente del lattice
-EXTRA_WALL   = muro creado por ruido; puede corregirse
-```
+- Evaluar ruido coherente sobre las casillas interiores del nodo.
+- Si el valor supera el umbral (~0.62), proponer un muro orgánico.
+- No cerrar casillas protegidas.
 
-Ambos terminan siendo indestructibles en gameplay, pero solo `EXTRA_WALL` puede retirarse durante la validación.
+### 3. Cobertura 2×2
 
-### 2. Flood fill
+Recorrer cada ventana 2×2 completamente excavada. Si no contiene indestructible, insertar uno en la celda no protegida con mejor puntuación de ruido.
 
-Elegir como origen una casilla caminable garantizada —preferiblemente la entrada del nodo— y ejecutar flood fill sobre sus casillas transitables.
+### 4. Flood fill y corrección
 
-Las casillas vacías no visitadas pertenecen a componentes aislados.
+Desde el spawn: flood fill sobre vacíos. Componentes aislados se llenan o se reconectan excavando muros orgánicos. Tras cada corrección se revalida cobertura 2×2 y conectividad (tope ~8 pasadas).
 
-### 3. Corrección
+Tras estabilizar, un **sellado final** vuelve a inundar desde el spawn y convierte en muro cualquier vacío que siga inaccesible (la última pasada de cobertura puede crear bolsillos nuevos). Así ningún recurso, fragmento o enemigo puede colocarse en una celda inalcanzable.
 
-Para cada componente aislado:
-
-- **Opción A — llenado:** si tiene **≤ 4** tiles y no contiene contenido obligatorio, convertirlo en muro.
-- **Opción B — excavación:** si tiene **> 4** tiles, o contiene spawn/recurso/puerta, conectarlo con la región principal eliminando `EXTRA_WALL`.
-
-La excavación no puede destruir `FIXED_WALL`. Si una línea recta cruza un pilar fijo, debe desviarse mediante BFS/A* buscando una ruta que minimice muros extra retirados. Así se conserva siempre la grilla de indestructibles.
-
-Después de cada corrección se repite el flood fill hasta que no queden componentes caminables aislados. Fail-safe: si tras 8 iteraciones siguen aislados, llenar el resto.
+Todos los muros orgánicos pueden retirarse durante la corrección de conectividad. No existe `FIXED_WALL` de lattice.
 
 ---
 
@@ -446,36 +418,53 @@ Entrada y salida ya no se representan mediante portales mágicos.
 ### Puertas de mina
 
 - Son **puertas de mina de 3 tiles de ancho**.
-- Deben estar **pegadas a un muro** de la cámara.
+- Su patrón local es determinista y orientable:
+
+  ```text
+  W W W   detrás de la puerta
+  W T W   puerta: solo T es transitable/trigger
+  . . .   frente despejado hacia la cámara
+  ```
+
+  `W` es indestructible, `T` es el centro de la puerta y `.` es vacío garantizado.
+- Deben estar **pegadas al perímetro** de la cámara.
+- **No pueden coincidir ni quedar adyacentes a una boca de pasillo** (intersección cámara–túnel).
+- Se elige el span de perímetro con mayor separación a todas las bocas del nodo.
 - Se guardan como spans o ubicaciones lógicas, no como un único punto central.
 - Su orientación debe indicar qué muro ocupan: norte, sur, este u oeste.
-- El jugador aparece dentro del nodo de entrada, frente a la puerta.
+- El jugador aparece sobre `T` en la puerta de entrada y avanza hacia los tres tiles frontales.
 - La salida se ubica en un nodo lejano según distancia del grafo.
-- La puerta de salida está **siempre abierta**.
+- Solo `T` activa la salida; los otros dos tiles del span son indestructibles.
 - El desafío no es desbloquearla: es **explorar y encontrarla**.
 
 Modelo de datos objetivo:
 
 ```js
 entryDoor = {
-  x,
-  y,
+  center: { x, y },
   width: 3,
   orientation: 'north',
+  triggerTiles: [{ x, y }],
+  sideTiles: [/* 2 indestructibles */],
+  backingTiles: [/* 3 indestructibles */],
+  frontTiles: [/* 3 vacíos */],
 }
 
 exitDoor = {
-  x,
-  y,
+  center: { x, y },
   width: 3,
   orientation: 'south',
+  triggerTiles: [{ x, y }],
+  sideTiles: [/* 2 indestructibles */],
+  backingTiles: [/* 3 indestructibles */],
+  frontTiles: [/* 3 vacíos */],
 }
 ```
 
 ### Condición de finalización
 
-- **N1–N6:** pisar la puerta de salida completa el nivel. No hace falta matar enemigos ni recolectar un mínimo; el reto es **explorar y encontrarla**.
-- **N7:** es una **carrera contra el tiempo**. Sigue existiendo la puerta de salida (pisarla gana), pero un temporizador acota el intento; agotarlo cuenta como fallo del recorrido.
+- **N1–N6:** pisar el tile central `T` de la salida completa el nivel. No hace falta matar enemigos ni recolectar un mínimo.
+- **N7:** es una **carrera contra el tiempo**. Pisar `T` gana; agotar el temporizador falla el recorrido.
 
 Atravesar la puerta de salida completa el recorrido (salvo el matiz de tiempo en N7). No reutiliza la semántica visual ni la condición de activación del portal anterior.
 
@@ -484,25 +473,26 @@ Atravesar la puerta de salida completa el recorrido (salvo el matiz de tiempo en
 ## Pipeline objetivo de generación
 
 ```text
-1. Crear el grafo según la progresión del nivel
+1. Crear el grafo (árbol + ciclos) según la progresión del nivel
 2. Asignar tamaño/radio a cada nodo
-3. Optimizar las posiciones de sus centros para minimizar el espacio ocupado
-4. Conectar nodos con túneles ortogonales de banda 3 o 5
-5. Rasterizar la silueta excavada
-6. Aplicar siempre el lattice de indestructibles
-7. Colocar puertas de entrada/salida y reservar conexiones críticas
-8. Generar `EXTRA_WALL` mediante ruido Perlin dentro de nodos
-9. Ejecutar flood fill desde la entrada
-10. Llenar o excavar componentes aislados sin retirar `FIXED_WALL`
-11. Repetir la validación hasta garantizar conectividad
-12. Distribuir destructibles, recursos y enemigos
+3. Colocar centros de forma compacta
+4. Añadir aristas de proximidad (gap ≤ 10)
+5. Rasterizar cámaras y túneles ortogonales de banda 3 o 5
+6. Colocar puertas lejos de bocas de pasillo
+7. Reservar esqueleto de conectividad
+8. Generar muros orgánicos por ruido
+9. Forzar cobertura: ninguna ventana excavada 2×2 sin indestructible
+10. Flood fill + excavación/llenado de aislados
+11. Repetir cobertura/conectividad hasta estabilizar
+12. Sellado final: llenar cualquier vacío que siga inaccesible
+13. Distribuir destructibles, recursos y enemigos
 ```
 
 ### Orden importante
 
 La conectividad se valida **antes** de poblar el nivel y solo impone una garantía: los muros indestructibles no pueden impedir llegar desde la entrada hasta la salida.
 
-Después de esa validación se colocan destructibles y menas. Estos **sí pueden bloquear temporalmente** pasillos, conexiones y la ruta hacia la puerta; abrirse camino con bombas forma parte del núcleo Bomberman. Solo quedan excluidos el spawn y los tres tiles de cada puerta.
+Después de esa validación se colocan destructibles y menas. Estos **sí pueden bloquear temporalmente** pasillos y conexiones. Se preservan el trigger central y los tres tiles frontales de cada puerta; el respaldo y los laterales permanecen indestructibles.
 
 ### Semilla
 
@@ -514,19 +504,19 @@ Se genera una **semilla nueva en cada entrada al nivel** (no se guarda ni se reu
 
 1. Todos los nodos del grafo son alcanzables desde la entrada al considerar rompibles como excavables.
 2. Existe al menos una ruta entre entrada y salida que no exige retirar indestructibles.
-3. Las puertas ocupan exactamente 3 tiles y están adyacentes a un muro.
-4. El nodo de entrada permite movimiento inicial.
+3. Las puertas no tocan bocas y cumplen `WWW / WTW / ...` según su orientación.
+4. El jugador surge sobre el trigger de entrada y tiene tres tiles frontales vacíos.
 5. Ningún enemigo aparece sobre una puerta, un muro o el jugador.
-6. Ningún recurso obligatorio queda en una región inaccesible.
-7. Los pasillos mantienen bandas de 3 o 5 tiles y canales caminables de 1 tile entre columnas.
-8. Los muros indestructibles adicionales no cortan todas las rutas internas.
+6. Ningún recurso obligatorio queda en una región inaccesible tras retirar rompibles.
+7. Los pasillos mantienen bandas de 3 o 5 tiles.
+8. Ninguna ventana excavada 2×2 carece de indestructible.
 9. Un mismo `seed` produce el mismo grafo, grid y contenido.
-10. La distancia entre nodos respeta sus radios y la longitud mínima del pasillo.
+10. La distancia entre nodos del árbol/ciclos respeta radios y `d_ij` objetivo.
 11. Todo nodo grande se conecta mediante al menos un túnel de banda 5.
-12. La puerta de salida está abierta; llegar a ella puede exigir destruir obstáculos.
+12. Solo el trigger central de la salida completa el nivel.
 13. Antes de poblar con rompibles, todos los tiles caminables conservados pertenecen al componente alcanzable desde la entrada.
-14. Ningún proceso de corrección elimina un `FIXED_WALL` del lattice.
-15. El grafo final permanece conectado y cada nodo tiene entre 1 y 3 aristas.
+14. Todo par de nodos con separación entre bordes ≤ 10 tiene arista.
+15. El grafo final permanece conectado (el grado puede superar 3 por proximidad).
 
 ---
 
@@ -536,15 +526,15 @@ Simulaciones rápidas en Python (ruido value/Perlin simplificado + packing ortog
 
 ### Ruido y umbral
 
-Objetivo: laberinto ligero ≈ **18–22%** de las casillas caminables del nodo convertidas en `EXTRA_WALL` (sin contar pilares fijos).
+Objetivo: laberinto ligero ≈ **18–22%** de las casillas caminables del nodo convertidas en indestructibles orgánicos (sin contar el esqueleto protegido).
 
-| Tamaño | Escala Perlin | Umbral | Densidad media observada |
-|--------|---------------|--------|--------------------------|
-| Pequeño (`r=7`) | `5` | `0.62` | ≈ 0.18 |
-| Mediano (`r=14`) | `8` | `0.62` | ≈ 0.20 |
-| Grande (`r=21`) | `11` | `0.62` | ≈ 0.21 |
+| Tamaño | Escala | Umbral | Densidad media observada |
+|--------|--------|--------|--------------------------|
+| Pequeño (`r=8`) | `5` | `0.62` | ≈ 0.18 |
+| Mediano (`r=17`) | `8` | `0.62` | ≈ 0.20 |
+| Grande (`r=25`) | `11` | `0.62` | ≈ 0.21 |
 
-Octavas: `3`. El umbral único `0.62` mantiene densidad similar al crecer el nodo; la escala crece con el radio para que los bloques de muro no se vean como ruido de 1 tile.
+Octavas: `3`. Tras el ruido, la cobertura correctiva garantiza que ninguna ventana excavada 2×2 quede sin indestructible.
 
 ### Corrección de aislados
 
@@ -562,12 +552,12 @@ El AABB ya no es fijo. Orden de magnitud con packing ortogonal compacto (mediana
 
 | Nivel | AABB aproximado (tiles) |
 |------:|-------------------------|
-| 1 | ~40×21 |
-| 2 | ~49×49 |
-| 3–4 | ~86×86 |
-| 5 | ~93×95 |
-| 6 | ~110×130 |
-| 7 | ~138×150 |
+| 1 | ~46×25 |
+| 2 | ~53×53 |
+| 3–4 | ~98×95 |
+| 5 | ~105×106 |
+| 6 | ~121×148 |
+| 7 | ~165×168 |
 
 Usarlos solo como expectativa de cámara/scroll, no como constantes hardcodeadas.
 
@@ -575,9 +565,11 @@ Usarlos solo como expectativa de cámara/scroll, no como constantes hardcodeadas
 
 | Elemento | Representación |
 |----------|----------------|
-| Hueco | 3 tiles `EMPTY` alineados en el muro |
-| Marco | trazo `0xb08d57` (bronce) alrededor del span |
-| Entrada | vano tintado `0x3c8991` |
-| Salida | vano tintado `0xffc857` (siempre transitable) |
-| Trigger | pisar cualquiera de los 3 tiles de salida → completar nivel |
+| Respaldo | 3 tiles `WALL` |
+| Span | `WALL`, trigger central, `WALL` |
+| Frente | 3 tiles `EMPTY` |
+| Marco | trazo `0xb08d57` alrededor del span |
+| Entrada | trigger tintado `0x3c8991` |
+| Salida | trigger tintado `0xffc857` |
+| Trigger | pisar únicamente el tile central → completar nivel |
 

@@ -5,7 +5,7 @@ import { Explosion } from '../../src/game/entities/Explosion.js'
 import { TILE_SIZE } from '../../src/config/constants.js'
 
 describe('daño por explosión (tile-based)', () => {
-  it('mata al jugador solo si comparte tile con explosión', () => {
+  it('daña al jugador solo si comparte tile con explosión', () => {
     const world = createTestWorld(
       ['#####', '#...#', '#####'],
       { playerSpawn: { x: 2, y: 1 } },
@@ -14,8 +14,9 @@ describe('daño por explosión (tile-based)', () => {
     world.explosions.push(new Explosion(2, 1, TILE_SIZE))
     stepLife(world, 0.016)
 
-    expect(world.player.alive).toBe(false)
-    expect(world.events).toContain('playerDeath')
+    expect(world.player.alive).toBe(true)
+    expect(world.player.lives).toBe(2)
+    expect(world.events).toContain('playerDamaged')
   })
 
   it('no daña en tile adyacente', () => {

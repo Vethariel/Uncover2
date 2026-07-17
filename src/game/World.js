@@ -31,7 +31,7 @@ export class World {
     this.currentLevelIndex = 0
     this.gameOver = false
     this.gameWon = false
-    this.respawnTimer = 0
+    this.playerDeathTimer = 0
     this.tileAnimTimer = 0
     this.events = []
   }
@@ -53,6 +53,7 @@ export class World {
     this.recipeFragmentSpawns = []
     this.levelGraph = null
     this.levelTimer = null
+    this.playerDeathTimer = 0
     this.tileAnimTimer = 0
     this.events = []
 
