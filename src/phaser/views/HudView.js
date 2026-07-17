@@ -6,7 +6,9 @@ export class HudView {
     this.world = world
     this.gameState = gameState
     this.container = scene.add.container(0, 0)
-    this.banner = scene.add.image(0, 0, 'hud').setOrigin(0)
+    this.banner = scene.add.rectangle(0, 0, scene.scale.width, HUD_HEIGHT, 0x111820)
+      .setOrigin(0)
+      .setStrokeStyle(1, 0x53616d)
     this.livesText = scene.add.text(28, 13, '', {
       fontSize: '10px',
       fontFamily: 'monospace',

@@ -1,291 +1,148 @@
-import { DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT, DIR_NONE, HUD_HEIGHT } from '../../config/constants.js'
-import { SHEET_COLS } from '../AnimationRegistry.js'
-import { positionEntitySprite } from '../utils/entityPosition.js'
+import { DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT, HUD_HEIGHT } from '../../config/constants.js'
+
+const COLORS = {
+  player: 0x4ea5ff,
+  playerDirection: 0xd9efff,
+  enemy: {
+    scout: 0xef5350,
+    hunter: 0xab47bc,
+    brute: 0xff7043,
+  },
+  bomb: 0x20242b,
+  fuse: 0xffc857,
+  explosion: 0xff9f1c,
+  portal: 0x35d0ba,
+  powerUp: {
+    life: 0x66df7d,
+    bomb: 0x4f5968,
+    range: 0xffb52e,
+    speed: 0x61d4ff,
+  },
+}
 
 export class EntityView {
   constructor(scene, world) {
     this.scene = scene
     this.world = world
-    this.container = scene.add.container(0, HUD_HEIGHT)
-    this.playerSprite = null
-    this.enemySprites = new Map()
-    this.bombSprites = new Map()
-    this.explosionSprites = new Map()
-    this.powerUpSprites = new Map()
-    this.portalSprite = null
-    this._createPlayer()
-    this._createPortal()
+    this.graphics = scene.add.graphics({ x: 0, y: HUD_HEIGHT })
   }
 
   update() {
-    this._syncPlayer()
-    this._syncEnemies()
-    this._syncBombs()
-    this._syncExplosions()
-    this._syncPowerUps()
-    this._syncPortal()
-    this._applyDepthSort()
+    this.graphics.clear()
+
+    const drawables = [
+      ...this.world.explosions.map((entity) => ({ entity, kind: 'explosion' })),
+      ...Object.values(this.world.powerUps ?? {})
+        .filter((entity) => entity.alive)
+        .map((entity) => ({ entity, kind: 'powerUp' })),
+      ...(this.world.portal?.visible ? [{ entity: this.world.portal, kind: 'portal' }] : []),
+      ...this.world.bombs.map((entity) => ({ entity, kind: 'bomb' })),
+      ...this.world.enemies.map((entity) => ({ entity, kind: 'enemy' })),
+      { entity: this.world.player, kind: 'player' },
+    ]
+
+    drawables
+      .sort((a, b) => (a.entity.posY + a.entity.size) - (b.entity.posY + b.entity.size))
+      .forEach(({ entity, kind }) => this._draw(kind, entity))
   }
 
   destroy() {
-    this.container.destroy(true)
-    this.enemySprites.clear()
-    this.bombSprites.clear()
-    this.explosionSprites.clear()
-    this.powerUpSprites.clear()
+    this.graphics.destroy()
   }
 
-  _createPlayer() {
-    this.playerSprite = this.scene.add.sprite(0, 0, 'player')
-    this.container.add(this.playerSprite)
-  }
-
-  _createPortal() {
-    this.portalSprite = this.scene.add.sprite(0, 0, 'portal')
-    this.portalSprite.setVisible(false)
-    this.container.add(this.portalSprite)
-  }
-
-  _syncPlayer() {
-    const player = this.world.player
-    const sprite = this.playerSprite
-
-    positionEntitySprite(sprite, player)
-
-    if (!player.alive) {
-      this._playDeath(sprite, 'player_death')
-      return
-    }
-
-    if (player.invulnerableTimer > 0) {
-      sprite.setVisible(Math.floor(player.invulnerableTimer * 20) % 2 === 0)
-    } else {
-      sprite.setVisible(true)
-    }
-
-    const moving = player.desiredFacing !== DIR_NONE
-    const dir = this._dirName(player.facing)
-
-    if (moving) {
-      this._playLoop(sprite, `player_walk${dir}`, player.speed / player.baseSpeed)
-    } else {
-      sprite.anims.stop()
-      sprite.setTexture('player', this._idleFrame('player', player.facing))
+  _draw(kind, entity) {
+    switch (kind) {
+      case 'player':
+        this._drawPlayer(entity)
+        break
+      case 'enemy':
+        this._drawEnemy(entity)
+        break
+      case 'bomb':
+        this._drawBomb(entity)
+        break
+      case 'explosion':
+        this._drawExplosion(entity)
+        break
+      case 'powerUp':
+        this._drawPowerUp(entity)
+        break
+      case 'portal':
+        this._drawPortal(entity)
+        break
     }
   }
 
-  _syncEnemies() {
-    const active = new Set()
+  _drawPlayer(player) {
+    if (player.invulnerableTimer > 0 && Math.floor(player.invulnerableTimer * 20) % 2 !== 0) return
 
-    for (const enemy of this.world.enemies) {
-      active.add(enemy)
-      let sprite = this.enemySprites.get(enemy)
+    const cx = player.posX + player.size / 2
+    const cy = player.posY + player.size / 2
+    const color = player.alive ? COLORS.player : 0x68717d
+    this.graphics.fillStyle(color).fillCircle(cx, cy, player.size / 2)
 
-      if (!sprite) {
-        sprite = this.scene.add.sprite(0, 0, enemy.spriteKey)
-        this.enemySprites.set(enemy, sprite)
-        this.container.add(sprite)
-      }
-
-      positionEntitySprite(sprite, enemy)
-
-      if (!enemy.alive) {
-        this._playDeath(sprite, `${enemy.spriteKey}_death`)
-        continue
-      }
-
-      const moving = enemy.desiredFacing !== DIR_NONE
-      const dir = this._dirName(enemy.facing)
-
-      if (moving) {
-        this._playLoop(sprite, `${enemy.spriteKey}_walk${dir}`, enemy.speed / enemy.baseSpeed)
-      } else {
-        sprite.anims.stop()
-        sprite.setTexture(enemy.spriteKey, this._idleFrame(enemy.spriteKey, enemy.facing))
-      }
-    }
-
-    for (const [enemy, sprite] of this.enemySprites) {
-      if (!active.has(enemy)) {
-        sprite.destroy()
-        this.enemySprites.delete(enemy)
-      }
-    }
+    const direction = this._directionVector(player.facing)
+    this.graphics.lineStyle(2, COLORS.playerDirection)
+    this.graphics.lineBetween(cx, cy, cx + direction.x * 6, cy + direction.y * 6)
   }
 
-  _syncBombs() {
-    const active = new Set()
-
-    for (const bomb of this.world.bombs) {
-      active.add(bomb)
-      let sprite = this.bombSprites.get(bomb)
-
-      if (!sprite) {
-        sprite = this.scene.add.sprite(bomb.posX, bomb.posY, 'bombs')
-        sprite.setOrigin(0)
-        this.bombSprites.set(bomb, sprite)
-        this.container.add(sprite)
-      }
-
-      sprite.setPosition(bomb.posX, bomb.posY)
-      this._playLoop(sprite, 'bomb_pulse')
-    }
-
-    for (const [bomb, sprite] of this.bombSprites) {
-      if (!active.has(bomb)) {
-        sprite.destroy()
-        this.bombSprites.delete(bomb)
-      }
-    }
+  _drawEnemy(enemy) {
+    const color = enemy.alive ? (COLORS.enemy[enemy.kind] ?? COLORS.enemy.scout) : 0x5d3f43
+    this.graphics.fillStyle(color).fillRect(enemy.posX, enemy.posY, enemy.size, enemy.size)
+    this.graphics.lineStyle(1, 0xffffff, 0.65)
+    this.graphics.strokeRect(enemy.posX + 0.5, enemy.posY + 0.5, enemy.size - 1, enemy.size - 1)
   }
 
-  _syncExplosions() {
-    const active = new Set()
-
-    for (const explosion of this.world.explosions) {
-      active.add(explosion)
-      let sprite = this.explosionSprites.get(explosion)
-
-      if (!sprite) {
-        sprite = this.scene.add.sprite(explosion.posX, explosion.posY, 'bombs')
-        sprite.setOrigin(0)
-        this.explosionSprites.set(explosion, sprite)
-        this.container.add(sprite)
-      }
-
-      sprite.setPosition(explosion.posX, explosion.posY)
-      this._playLoop(sprite, `explosion_${explosion.kind}`)
-    }
-
-    for (const [explosion, sprite] of this.explosionSprites) {
-      if (!active.has(explosion)) {
-        sprite.destroy()
-        this.explosionSprites.delete(explosion)
-      }
-    }
+  _drawBomb(bomb) {
+    const cx = bomb.posX + bomb.size / 2
+    const cy = bomb.posY + bomb.size / 2
+    const pulse = 0.75 + 0.15 * Math.sin(bomb.timer * 12)
+    this.graphics.fillStyle(COLORS.bomb).fillCircle(cx, cy + 1, bomb.size * pulse / 2)
+    this.graphics.lineStyle(2, COLORS.fuse).lineBetween(cx, cy - 6, cx + 3, cy - 9)
   }
 
-  _syncPowerUps() {
-    const active = new Set()
-
-    for (const powerUp of Object.values(this.world.powerUps ?? {})) {
-      if (!powerUp.alive) continue
-
-      active.add(powerUp)
-      let sprite = this.powerUpSprites.get(powerUp)
-
-      if (!sprite) {
-        sprite = this.scene.add.sprite(powerUp.posX, powerUp.posY, 'powerUp')
-        sprite.setOrigin(0)
-        this.powerUpSprites.set(powerUp, sprite)
-        this.container.add(sprite)
-      }
-
-      sprite.setPosition(powerUp.posX, powerUp.posY)
-      this._playLoop(sprite, `powerup_${powerUp.kind}`)
-    }
-
-    for (const [powerUp, sprite] of this.powerUpSprites) {
-      if (!active.has(powerUp)) {
-        sprite.destroy()
-        this.powerUpSprites.delete(powerUp)
-      }
-    }
+  _drawExplosion(explosion) {
+    const inset = explosion.kind === 'center' ? 1 : 3
+    this.graphics.fillStyle(COLORS.explosion, 0.85)
+    this.graphics.fillRect(
+      explosion.posX + inset,
+      explosion.posY + inset,
+      explosion.size - inset * 2,
+      explosion.size - inset * 2,
+    )
   }
 
-  _syncPortal() {
-    const portal = this.world.portal
-    if (!portal?.visible) {
-      this.portalSprite.setVisible(false)
-      return
-    }
-
-    this.portalSprite.setVisible(true)
-    positionEntitySprite(this.portalSprite, portal, 16, 48)
-
-    if (portal.animState === 'spawn') {
-      if (!this.portalSprite.anims.isPlaying) {
-        this.portalSprite.play('portal_spawn')
-        this.portalSprite.once('animationcomplete-portal_spawn', () => {
-          portal.animState = 'idle'
-        })
-      }
-    } else if (portal.animState === 'idle') {
-      this._playLoop(this.portalSprite, 'portal_idle')
-    }
+  _drawPowerUp(powerUp) {
+    const cx = powerUp.posX + powerUp.size / 2
+    const cy = powerUp.posY + powerUp.size / 2
+    const radius = powerUp.size * 0.3
+    this.graphics.fillStyle(COLORS.powerUp[powerUp.kind] ?? 0xffffff)
+    this.graphics.fillTriangle(cx, cy - radius, cx + radius, cy, cx, cy + radius)
+    this.graphics.fillTriangle(cx, cy - radius, cx - radius, cy, cx, cy + radius)
   }
 
-  _dirName(facing) {
+  _drawPortal(portal) {
+    const cx = portal.posX + portal.size / 2
+    const cy = portal.posY + portal.size / 2
+    this.graphics.lineStyle(3, COLORS.portal, 0.9)
+    this.graphics.strokeCircle(cx, cy, portal.size * 0.38)
+    this.graphics.lineStyle(1, 0xb8fff5, 0.8)
+    this.graphics.strokeCircle(cx, cy, portal.size * 0.22)
+    if (portal.animState === 'spawn') portal.animState = 'idle'
+  }
+
+  _directionVector(facing) {
     switch (facing) {
       case DIR_UP:
-        return 'Up'
+        return { x: 0, y: -1 }
       case DIR_DOWN:
-        return 'Down'
+        return { x: 0, y: 1 }
       case DIR_LEFT:
-        return 'Left'
+        return { x: -1, y: 0 }
       case DIR_RIGHT:
-        return 'Right'
+        return { x: 1, y: 0 }
       default:
-        return 'Down'
+        return { x: 0, y: 1 }
     }
-  }
-
-  _idleFrame(textureKey, facing) {
-    const cols = SHEET_COLS[textureKey] ?? 4
-    const row = { [DIR_DOWN]: 0, [DIR_LEFT]: 1, [DIR_RIGHT]: 2, [DIR_UP]: 3 }[facing] ?? 0
-    return row * cols
-  }
-
-  _playLoop(sprite, key, speedScale = 1) {
-    if (sprite.anims.currentAnim?.key !== key) {
-      sprite.play({ key, repeat: -1 })
-    }
-    sprite.anims.timeScale = speedScale
-  }
-
-  _playDeath(sprite, key) {
-    if (sprite.anims.currentAnim?.key === key) {
-      sprite.setVisible(sprite.anims.isPlaying)
-      return
-    }
-
-    sprite.setVisible(true)
-    sprite.play({ key, repeat: 0 })
-    sprite.once(`animationcomplete-${key}`, () => {
-      sprite.setVisible(false)
-    })
-  }
-
-  // Mayor Y (más abajo en pantalla) = mayor depth = se dibuja encima.
-  _applyDepthSort() {
-    const entries = []
-
-    const push = (sprite, entity) => {
-      if (!sprite?.active) return
-      entries.push({
-        sprite,
-        y: entity.posY + entity.size,
-        x: entity.posX,
-      })
-    }
-
-    push(this.playerSprite, this.world.player)
-
-    for (const [enemy, sprite] of this.enemySprites) push(sprite, enemy)
-    for (const [bomb, sprite] of this.bombSprites) push(sprite, bomb)
-    for (const [explosion, sprite] of this.explosionSprites) push(sprite, explosion)
-    for (const [powerUp, sprite] of this.powerUpSprites) push(sprite, powerUp)
-
-    if (this.world.portal?.visible) {
-      push(this.portalSprite, this.world.portal)
-    }
-
-    entries.sort((a, b) => (a.y !== b.y ? a.y - b.y : a.x - b.x))
-
-    for (let i = 0; i < entries.length; i++) {
-      entries[i].sprite.setDepth(i)
-    }
-
-    this.container.sort('depth')
   }
 }

@@ -10,7 +10,7 @@ export const GAME_OFFSET_Y = HUD_HEIGHT
 // ── Modelo de espacio (ver docs/DESIGN.md) ────────────────────────────────
 // TILE_SIZE: rejilla lógica del juego (16×16).
 // PLAYER_SIZE / ENEMY_SIZE: hitbox de movimiento y contacto (12×12 dentro del tile).
-// Sprites: 32×32 en render — solo presentación, no definen reglas de gameplay.
+// Render provisional: figuras primitivas independientes de las hitboxes.
 // Reglas de juego (bombas, explosiones, power-ups, trampas, IA): por tile (tileX, tileY).
 
 export const TILE_EMPTY = 0

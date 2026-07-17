@@ -140,7 +140,7 @@ No hay una sola función “¿qué es este tile?”. Cada sistema hace una pregu
 | `InputSystem` | ¿Puedo plantar bomba en mi tile? | Tile ≠ `TILE_PASS`, sin bomba duplicada, `activeBombs < maxBombs` |
 | `BombSystem` | ¿Hacia dónde llega el blast? | Rayos en cruz; para en `WALL`, `TILE_PASS`, `TILE_EXPLOSION`; rompe `DESTRUCTIBLE` |
 | `LifeSystem` (explosión) | ¿Mismo tile entidad–explosión? | `tileX` / `tileY` iguales |
-| `LifeSystem` (enemigo) | ¿Solapan las hitboxes? | AABB 12×12 (bomber: 14×14) — **no** solo tile |
+| `LifeSystem` (enemigo) | ¿Solapan las hitboxes? | AABB 12×12 (`brute`: 14×14) — **no** solo tile |
 | `LifeSystem` (portal) | ¿Gano / activo portal? | Activación: tile vacío + sin enemigos. Victoria: `portal.visible` + AABB estrictamente dentro |
 | `PowerUpSystem` | ¿Pickup? | Mismo tile jugador–power-up y `alive === true` |
 | `GridQuery.isWalkable` | ¿Puede pisar la IA? | En bounds, no sólido, sin bomba |
@@ -156,9 +156,9 @@ Estas reglas **rompen** el “todo por tile” de forma intencional:
 
 | Caso | Criterio | Por qué |
 |------|----------|---------|
-| Contacto jugador–enemigo | AABB (`LifeSystem.overlaps`) | Margen justo: sprites 32×32, hitbox 12×12 |
+| Contacto jugador–enemigo | AABB (`LifeSystem.overlaps`) | Margen justo: figura visual independiente, hitbox 12×12 |
 | Victoria en portal | AABB estricto (`LifeSystem.inside`) | El jugador debe “entrar” al portal, no rozarlo |
-| Enemigo bomber | Hitbox 14×14 | Contacto más amplio que dino/demon |
+| Enemigo `brute` | Hitbox 14×14 | Contacto más amplio que `scout` / `hunter` |
 
 ### Notas de diseño (descubiertas en tests)
 
@@ -203,15 +203,15 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 
 | Responsabilidad | Implementación |
 |-----------------|----------------|
-| Mapa visible | `Phaser.Tilemaps` — TMJ+TSJ embebidos en preload (`embedTileset`) + `createLayer` |
+| Mapa visible (provisional) | `TilemapView` dibuja el `Grid` con rectángulos y colores |
 | Lógica del grid | `LevelLoader` → `Grid` (solo capa `GridMap`) |
-| Destructibles rotos | `TilemapView` → `destructibleLayer.removeTileAt` |
-| Entidades | `EntityView` sincroniza sprites desde el mundo |
+| Destructibles rotos | `TilemapView` redibuja al detectar un cambio del `Grid` |
+| Entidades (provisional) | `EntityView` dibuja círculos, rectángulos, líneas y rombos |
 | Overlays (pausa, victoria…) | `GameOverlayScene` + `scene.pause('Game')` |
 | Escala pixel-perfect | `Phaser.Scale` con `setZoom` entero |
 | Input | `InputAdapter` sobre `keyboard` de Phaser |
 
-Flips y animaciones de tiles Tiled los resuelve el motor; ya no hay `tiledTransform.js` ni un `Image` por tile.
+Los TMJ/TSJ se conservan únicamente como datos lógicos de niveles. El runtime no carga PNG, spritesheets ni animaciones mientras se prioriza gameplay.
 
 ## Pruebas de interacción
 
@@ -248,7 +248,7 @@ Casos cubiertos:
 - `activeBombs--`, power-up oculto/visible bajo explosión
 
 **Vida y victoria**
-- Daño por tile; contacto AABB (jugador, bomber 14×14)
+- Daño por tile; contacto AABB (jugador, `brute` 14×14)
 - Invulnerabilidad, respawn, `gameOver`, `timeUp`
 - Portal: activación, victoria solo si `visible` + AABB estricto
 

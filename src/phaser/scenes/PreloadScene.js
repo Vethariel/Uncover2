@@ -1,6 +1,4 @@
 import Phaser from 'phaser'
-import { registerAnimations } from '../AnimationRegistry.js'
-import { registerTilemaps } from '../level/registerTilemaps.js'
 import { LEVELS } from '../../config/levels.js'
 
 export class PreloadScene extends Phaser.Scene {
@@ -9,21 +7,9 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.spritesheet('player', 'assets/sprites/player.png', { frameWidth: 32, frameHeight: 32 })
-    this.load.spritesheet('dino', 'assets/sprites/dino.png', { frameWidth: 32, frameHeight: 32 })
-    this.load.spritesheet('demon', 'assets/sprites/demon.png', { frameWidth: 32, frameHeight: 32 })
-    this.load.spritesheet('bombs', 'assets/sprites/bomb.png', { frameWidth: 16, frameHeight: 16 })
-    this.load.spritesheet('powerUp', 'assets/sprites/powerUp.png', { frameWidth: 16, frameHeight: 16 })
-    this.load.spritesheet('portal', 'assets/sprites/portal.png', { frameWidth: 16, frameHeight: 48 })
-    this.load.image('hud', 'assets/sprites/hud.png')
-
     for (const level of LEVELS) {
       this.load.json(`tmj_${level.data}`, `assets/tilemaps/${level.data}.tmj`)
       this.load.json(`tsj_${level.data}`, `assets/tilemaps/${level.data}.tsj`)
-      this.load.spritesheet(level.data, `assets/tilemaps/${level.data}.png`, {
-        frameWidth: 16,
-        frameHeight: 16,
-      })
     }
 
     this.load.audio('walk', 'assets/sounds/walk.wav')
@@ -42,8 +28,6 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create() {
-    registerAnimations(this.anims)
-    registerTilemaps(this.cache)
     this.scene.start('Splash')
   }
 }

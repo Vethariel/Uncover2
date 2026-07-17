@@ -1,59 +1,67 @@
-import { BG_LAYER_NAMES, HUD_HEIGHT, TILE_DESTRUCTIBLE } from '../../config/constants.js'
+import {
+  HUD_HEIGHT,
+  TILE_EMPTY,
+  TILE_WALL,
+  TILE_DESTRUCTIBLE,
+  TILE_PASS,
+} from '../../config/constants.js'
 
-const RENDER_LAYERS = [...BG_LAYER_NAMES, 'Destructible']
+const TILE_COLORS = {
+  [TILE_EMPTY]: 0x263440,
+  [TILE_WALL]: 0x64707a,
+  [TILE_DESTRUCTIBLE]: 0xa87342,
+  [TILE_PASS]: 0x3c8991,
+}
 
 export class TilemapView {
   constructor(scene, world) {
     this.scene = scene
     this.world = world
-    this.map = null
-    this.destructibleLayer = null
+    this.graphics = scene.add.graphics({ x: 0, y: HUD_HEIGHT })
+    this.lastGridState = ''
     this.build()
   }
 
   build() {
-    const cfg = this.world.levelVisualConfig
-    if (!cfg) return
-
-    const mapKey = `map_${cfg.tilesetKey}`
-    this.map = this.scene.make.tilemap({ key: mapKey })
-
-    const tileset = this.map.addTilesetImage(cfg.tilesetName, cfg.tilesetKey)
-    if (!tileset) {
-      throw new Error(`TilemapView: tileset "${cfg.tilesetName}" no encontrado para ${mapKey}`)
-    }
-
-    for (const name of RENDER_LAYERS) {
-      if (this.map.getLayerIndex(name) === -1) continue
-
-      const layer = this.map.createLayer(name, tileset, 0, HUD_HEIGHT)
-      if (!layer) continue
-
-      layer.setDepth(0)
-
-      if (name === 'Destructible') {
-        this.destructibleLayer = layer
-      }
-    }
+    this._drawGrid()
   }
 
   update() {
-    if (!this.destructibleLayer) return
-
-    const { grid } = this.world
-    for (let y = 0; y < grid.rows; y++) {
-      for (let x = 0; x < grid.cols; x++) {
-        if (grid.get(x, y) === TILE_DESTRUCTIBLE) continue
-        if (this.destructibleLayer.getTileAt(x, y)) {
-          this.destructibleLayer.removeTileAt(x, y)
-        }
-      }
-    }
+    const state = this.world.grid.tiles.flat().join('')
+    if (state !== this.lastGridState) this._drawGrid(state)
   }
 
   destroy() {
-    this.map?.destroy()
-    this.map = null
-    this.destructibleLayer = null
+    this.graphics.destroy()
+  }
+
+  _drawGrid(state = this.world.grid.tiles.flat().join('')) {
+    const { grid, tileSize } = this.world
+    const graphics = this.graphics
+    graphics.clear()
+
+    for (let y = 0; y < grid.rows; y++) {
+      for (let x = 0; x < grid.cols; x++) {
+        const tile = grid.get(x, y)
+        const px = x * tileSize
+        const py = y * tileSize
+
+        graphics.fillStyle(TILE_COLORS[tile] ?? TILE_COLORS[TILE_EMPTY])
+        graphics.fillRect(px, py, tileSize, tileSize)
+        graphics.lineStyle(1, 0x101820, 0.38)
+        graphics.strokeRect(px + 0.5, py + 0.5, tileSize - 1, tileSize - 1)
+
+        if (tile === TILE_DESTRUCTIBLE) {
+          graphics.lineStyle(1, 0x4d2f22, 0.8)
+          graphics.lineBetween(px + 3, py + 3, px + tileSize - 3, py + tileSize - 3)
+          graphics.lineBetween(px + tileSize - 3, py + 3, px + 3, py + tileSize - 3)
+        } else if (tile === TILE_PASS) {
+          graphics.lineStyle(1, 0xb9e8e7, 0.6)
+          graphics.lineBetween(px + 3, py + tileSize / 2, px + tileSize - 3, py + tileSize / 2)
+        }
+      }
+    }
+
+    this.lastGridState = state
   }
 }

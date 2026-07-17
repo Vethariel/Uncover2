@@ -11,7 +11,7 @@ export class Enemy {
     this.baseSpeed = config.speed
     this.size = config.size
     this.score = config.score
-    this.spriteKey = config.sprite
+    this.kind = config.colorRole
     this.facing = DIR_DOWN
     this.desiredFacing = DIR_NONE
     this.currentDirection = DIR_DOWN

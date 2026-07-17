@@ -2,29 +2,29 @@ import { createBasicEnemyTree } from '../game/ai/trees/basicEnemy.js'
 import { createPatrolEnemyTree } from '../game/ai/trees/patrolEnemy.js'
 
 export const ENEMY_TYPES = {
-  dino: {
+  scout: {
     speed: 25,
     size: 12,
     thinkInterval: 0.2,
-    sprite: 'dino',
+    colorRole: 'scout',
     score: 100,
     tree: () => createPatrolEnemyTree(2, 0.1, 0.2),
   },
 
-  demon: {
+  hunter: {
     speed: 50,
     size: 12,
     thinkInterval: 0.2,
-    sprite: 'demon',
+    colorRole: 'hunter',
     score: 100,
     tree: () => createPatrolEnemyTree(2, 0.01, 0.4),
   },
 
-  bomber: {
+  brute: {
     speed: 50,
     size: 14,
     thinkInterval: 0.5,
-    sprite: 'bomber',
+    colorRole: 'brute',
     score: 100,
     tree: () => createBasicEnemyTree(),
   },

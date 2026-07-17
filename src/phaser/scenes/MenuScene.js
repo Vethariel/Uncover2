@@ -15,9 +15,17 @@ export class MenuScene extends Phaser.Scene {
     const cx = this.scale.width / 2
     const cy = this.scale.height / 2
 
-    this.bombSprite = this.add.sprite(cx, cy - 60, 'bombs')
-    this.bombSprite.setScale(3)
-    this.bombSprite.play('bomb_pulse')
+    this.bombShape = this.add.circle(cx, cy - 60, 18, 0x20242b)
+      .setStrokeStyle(3, 0xffc857)
+
+    this.tweens.add({
+      targets: this.bombShape,
+      scale: 1.15,
+      duration: 450,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    })
 
     this.add.text(cx, cy - 10, 'UNCOVER', {
       fontSize: '16px',
