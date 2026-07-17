@@ -2,15 +2,17 @@ import {
   PLAYER_VISION_RADIUS,
   TILE_DESTRUCTIBLE,
   TILE_WALL,
+  VIEW_TILES_X,
+  VIEW_TILES_Y,
 } from '../../config/constants.js'
 
-const HELMET_LIGHT = 7
-const BOMB_LIGHT = 2
-const ENEMY_LIGHT = 2
-const ENRAGED_SPIRIT_LIGHT = 5
-const EXPLOSION_LIGHT = 5
-const WALL_LIGHT = 10
-const MAX_LIGHT = 10
+export const HELMET_LIGHT = 7
+export const BOMB_LIGHT = 2
+export const ENEMY_LIGHT = 2
+export const ENRAGED_SPIRIT_LIGHT = 5
+export const EXPLOSION_LIGHT = 5
+export const WALL_LIGHT = 10
+export const MAX_LIGHT = 10
 
 function tileKey(x, y) {
   return `${x},${y}`
@@ -25,9 +27,20 @@ function addLight(levels, x, y, amount) {
   levels.set(key, Math.min(MAX_LIGHT, (levels.get(key) ?? 0) + amount))
 }
 
-function shouldStartSource(player, sourceX, sourceY, strength) {
+function sourceCanAffectViewport(sourceX, sourceY, strength, viewport) {
+  const radius = strength - 1
+  return !(
+    sourceX + radius < viewport.minX
+    || sourceX - radius > viewport.maxX
+    || sourceY + radius < viewport.minY
+    || sourceY - radius > viewport.maxY
+  )
+}
+
+function shouldStartSource(player, sourceX, sourceY, strength, viewport) {
   const dist = Math.hypot(sourceX - player.tileX, sourceY - player.tileY)
-  return dist <= PLAYER_VISION_RADIUS + strength - 1
+  if (dist > PLAYER_VISION_RADIUS + strength - 1) return false
+  return sourceCanAffectViewport(sourceX, sourceY, strength, viewport)
 }
 
 function hasLineOfSight(grid, startX, startY, targetX, targetY) {
@@ -57,17 +70,22 @@ function hasLineOfSight(grid, startX, startY, targetX, targetY) {
   return true
 }
 
-function propagateSource(world, levels, startX, startY, strength) {
+function propagateSource(world, levels, startX, startY, strength, viewport) {
   const { grid, player } = world
   if (!grid.inBounds(startX, startY)) return
-  if (!shouldStartSource(player, startX, startY, strength)) return
+  if (!shouldStartSource(player, startX, startY, strength, viewport)) return
 
   const radius = strength - 1
-  for (let y = startY - radius; y <= startY + radius; y++) {
-    for (let x = startX - radius; x <= startX + radius; x++) {
+  const minX = Math.max(viewport.minX, startX - radius)
+  const maxX = Math.min(viewport.maxX, startX + radius)
+  const minY = Math.max(viewport.minY, startY - radius)
+  const maxY = Math.min(viewport.maxY, startY + radius)
+
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
       if (!grid.inBounds(x, y)) continue
 
-      const sourceDistance = Math.ceil(Math.hypot(x - startX, y - startY))
+      const sourceDistance = Math.round(Math.hypot(x - startX, y - startY))
       const intensity = strength - sourceDistance
       if (intensity <= 0) continue
 
@@ -80,11 +98,37 @@ function propagateSource(world, levels, startX, startY, strength) {
   }
 }
 
-function levelsSignature(levels) {
-  return [...levels.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}:${value}`)
-    .join('|')
+function buildVisionViewport(player, grid) {
+  const halfW = Math.ceil(VIEW_TILES_X / 2) + 1
+  const halfH = Math.ceil(VIEW_TILES_Y / 2) + 1
+  return {
+    minX: Math.max(0, player.tileX - halfW),
+    maxX: Math.min(grid.cols - 1, player.tileX + halfW),
+    minY: Math.max(0, player.tileY - halfH),
+    maxY: Math.min(grid.rows - 1, player.tileY + halfH),
+  }
+}
+
+function collectSourceSignature(world) {
+  const bombs = (world.bombs ?? [])
+    .map((bomb) => `${bomb.tileX},${bomb.tileY}:${bomb.lightEmission ?? BOMB_LIGHT}`)
+    .sort()
+    .join(';')
+  const enemies = (world.enemies ?? [])
+    .filter((enemy) => enemy.alive)
+    .map((enemy) => {
+      const emission = typeof enemy.getLightEmission === 'function'
+        ? enemy.getLightEmission()
+        : (enemy.lightEmission ?? ENEMY_LIGHT)
+      return `${enemy.tileX},${enemy.tileY}:${emission}`
+    })
+    .sort()
+    .join(';')
+  const explosions = (world.explosions ?? [])
+    .map((explosion) => `${explosion.tileX},${explosion.tileY}:${explosion.lightEmission ?? EXPLOSION_LIGHT}`)
+    .sort()
+    .join(';')
+  return `${bombs}|${enemies}|${explosions}`
 }
 
 export class VisionSystem {
@@ -92,45 +136,70 @@ export class VisionSystem {
     const { grid, player } = world
     if (!grid || !player) return
 
+    const viewport = buildVisionViewport(player, grid)
+    world.visionViewport = viewport
+
+    const helmet = player.lightEmission ?? HELMET_LIGHT
+    const sourceSignature = collectSourceSignature(world)
+    const frameSignature = `${player.tileX},${player.tileY}|${helmet}|${sourceSignature}`
+    if (frameSignature === world.visionSourceSignature) return
+
     const lightLevels = new Map()
 
-    propagateSource(world, lightLevels, player.tileX, player.tileY, HELMET_LIGHT)
+    propagateSource(world, lightLevels, player.tileX, player.tileY, helmet, viewport)
 
-    for (const bomb of world.bombs) {
-      propagateSource(world, lightLevels, bomb.tileX, bomb.tileY, BOMB_LIGHT)
+    for (const bomb of world.bombs ?? []) {
+      propagateSource(
+        world,
+        lightLevels,
+        bomb.tileX,
+        bomb.tileY,
+        bomb.lightEmission ?? BOMB_LIGHT,
+        viewport,
+      )
     }
 
-    for (const enemy of world.enemies) {
+    for (const enemy of world.enemies ?? []) {
       if (!enemy.alive) continue
-      const strength = enemy.kind === 'spirit' && enemy.aggressive
-        ? ENRAGED_SPIRIT_LIGHT
-        : ENEMY_LIGHT
-      propagateSource(world, lightLevels, enemy.tileX, enemy.tileY, strength)
+      const strength = typeof enemy.getLightEmission === 'function'
+        ? enemy.getLightEmission()
+        : (enemy.lightEmission ?? ENEMY_LIGHT)
+      if (strength <= 0) continue
+      propagateSource(world, lightLevels, enemy.tileX, enemy.tileY, strength, viewport)
     }
 
-    for (const explosion of world.explosions) {
-      propagateSource(world, lightLevels, explosion.tileX, explosion.tileY, EXPLOSION_LIGHT)
+    for (const explosion of world.explosions ?? []) {
+      propagateSource(
+        world,
+        lightLevels,
+        explosion.tileX,
+        explosion.tileY,
+        explosion.lightEmission ?? EXPLOSION_LIGHT,
+        viewport,
+      )
     }
 
     for (const light of world.wallLightSpawns ?? []) {
-      propagateSource(world, lightLevels, light.x, light.y, WALL_LIGHT)
+      propagateSource(
+        world,
+        lightLevels,
+        light.x,
+        light.y,
+        light.intensity ?? WALL_LIGHT,
+        viewport,
+      )
     }
 
     const visible = new Set()
     for (const [cellKey, level] of lightLevels) {
       if (level <= 0) continue
       visible.add(cellKey)
-    }
-
-    const signature = levelsSignature(lightLevels)
-    let changed = signature !== world.visionSignature
-    world.lightLevels = lightLevels
-    world.visibleTiles = visible
-    world.visionSignature = signature
-    for (const cellKey of visible) {
-      if (!world.discoveredTiles.has(cellKey)) changed = true
       world.discoveredTiles.add(cellKey)
     }
-    if (changed) world.visionRevision++
+
+    world.lightLevels = lightLevels
+    world.visibleTiles = visible
+    world.visionSourceSignature = frameSignature
+    world.visionRevision++
   }
 }

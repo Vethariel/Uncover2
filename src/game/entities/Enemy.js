@@ -5,6 +5,7 @@ import {
   ENEMY_INVULNERABLE_DURATION,
   ENEMY_RESPAWN_DELAY,
 } from '../../config/enemyTypes.js'
+import { ENEMY_LIGHT } from '../systems/VisionSystem.js'
 
 export class Enemy {
   constructor(posX, posY, tileX, tileY, config) {
@@ -31,6 +32,8 @@ export class Enemy {
     this.invulnerableDuration = config.invulnerableDuration ?? ENEMY_INVULNERABLE_DURATION
     this.respawnDelay = config.respawnDelay ?? ENEMY_RESPAWN_DELAY
     this.corpseDuration = config.corpseDuration ?? ENEMY_CORPSE_DURATION
+    this.lightEmission = config.lightEmission ?? ENEMY_LIGHT
+    this.aggressiveLightEmission = config.aggressiveLightEmission ?? this.lightEmission
     this.facing = DIR_DOWN
     this.desiredFacing = DIR_NONE
     this.currentDirection = DIR_DOWN
@@ -48,6 +51,12 @@ export class Enemy {
     this.deathTimer = 0
     this.respawnTimer = 0
     this.visible = true
+  }
+
+  getLightEmission() {
+    if (!this.alive) return 0
+    if (this.aggressive) return this.aggressiveLightEmission
+    return this.lightEmission
   }
 
   canDamagePlayer() {

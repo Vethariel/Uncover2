@@ -1,4 +1,5 @@
 import { DIR_DOWN, DIR_NONE } from '../../config/constants.js'
+import { HELMET_LIGHT } from '../systems/VisionSystem.js'
 
 export class Player {
   constructor(posX, posY, tileX, tileY, speed, size, facing) {
@@ -12,6 +13,7 @@ export class Player {
     this.facing = facing
     this.desiredFacing = DIR_NONE
     this.type = 'player'
+    this.lightEmission = HELMET_LIGHT
     this.maxBombs = 1
     this.activeBombs = 0
     this.bombRange = 1

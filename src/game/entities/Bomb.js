@@ -1,3 +1,5 @@
+import { BOMB_LIGHT } from '../systems/VisionSystem.js'
+
 export class Bomb {
   constructor(tileX, tileY, size, owner, range = 1, timer = 2.5) {
     this.tileX = tileX
@@ -10,5 +12,6 @@ export class Bomb {
     this.range = range
     this.passThrough = true
     this.type = 'bomb'
+    this.lightEmission = BOMB_LIGHT
   }
 }

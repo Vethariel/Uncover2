@@ -135,7 +135,9 @@ Reglas:
 - cada tile requiere línea de visión directa desde su fuente;
 - la suma por tile se limita a `10`;
 - la visibilidad efectiva nunca supera radio euclidiano `7` respecto al jugador;
-- indestructibles y destructibles reciben luz como borde, pero proyectan sombra y bloquean todo lo que hay detrás.
+- solo se procesan luces que intersectan el viewport del jugador;
+- indestructibles y destructibles reciben luz como borde, pero proyectan sombra y bloquean todo lo que hay detrás;
+- fuera de luz la pantalla queda negra (el discovery de niebla se diferirá a un minimapa).
 
 Para soportes de luz ambientales, tras el sellado final se eligen tiles vacíos que tengan al menos un indestructible cardinal adyacente. La selección es determinista por semilla, con separación mínima de `8` tiles y objetivo aproximado de **1 soporte por cada 120 tiles excavados**. Cada soporte guarda el muro al que se adhiere y su orientación, útil para renderizar antorchas u otras fuentes.
 

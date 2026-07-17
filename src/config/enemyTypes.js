@@ -42,6 +42,8 @@ export const ENEMY_TYPES = {
     alwaysAggressive: false,
     contactWhenAggressiveOnly: false,
     canPassDestructibles: true,
+    lightEmission: 2,
+    aggressiveLightEmission: 5,
     rageRadius: SPIRIT_RAGE_RADIUS,
     chaseTimeout: SPIRIT_CHASE_TIMEOUT,
     tree: () => createPatrolFleeTree(4, 1.5, 3),

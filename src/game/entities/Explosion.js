@@ -1,3 +1,5 @@
+import { EXPLOSION_LIGHT } from '../systems/VisionSystem.js'
+
 export class Explosion {
   constructor(tileX, tileY, size, kind = 'center', timer = 0.3) {
     this.tileX = tileX
@@ -8,5 +10,6 @@ export class Explosion {
     this.posY = this.tileY * this.size
     this.timer = timer
     this.type = 'explosion'
+    this.lightEmission = EXPLOSION_LIGHT
   }
 }

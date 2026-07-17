@@ -20,11 +20,12 @@ describe('VisionSystem', () => {
     expect(world.lightLevels.get('13,12')).toBe(6)
     expect(world.lightLevels.get('18,12')).toBe(1)
     expect(world.visibleTiles.has('19,12')).toBe(false)
-    expect(world.lightLevels.get('13,13')).toBe(5)
+    expect(world.lightLevels.get('13,13')).toBe(6)
 
     world.player.tileX = 14
     vision.update(world)
 
+    // Se guarda para un futuro minimapa; la niebla de pantalla no lo muestra.
     expect(world.discoveredTiles.has('12,12')).toBe(true)
   })
 
@@ -37,10 +38,9 @@ describe('VisionSystem', () => {
     expect(world.visibleTiles.has('14,12')).toBe(true)
     expect(world.visibleTiles.has('15,12')).toBe(true)
     expect(world.visibleTiles.has('16,12')).toBe(false)
-    expect(world.discoveredTiles.has('16,12')).toBe(false)
   })
 
-  it('aplica intensidades de bomba, monstruos, espíritu, explosión y antorcha', () => {
+  it('aplica intensidades vía lightEmission de cada fuente', () => {
     const world = createTestWorld(openMap(25), {
       playerSpawn: { x: 12, y: 12 },
       bombs: [{ x: 18, y: 12 }],
@@ -50,24 +50,34 @@ describe('VisionSystem', () => {
       ],
     })
     world.enemies[1].setAggressive(true)
-    world.explosions = [{ tileX: 12, tileY: 6 }]
+    world.explosions = [{ tileX: 12, tileY: 6, lightEmission: 5 }]
     world.wallLightSpawns = [{
       x: 16,
       y: 16,
       wallX: 17,
       wallY: 16,
       orientation: 'east',
+      intensity: 10,
     }]
 
     vision.update(world)
 
-    // Casco, fuente local y borde de la antorcha se acumulan.
-    expect(world.lightLevels.get('18,12')).toBe(8)
-    expect(world.lightLevels.get('12,18')).toBe(8)
+    expect(world.enemies[0].getLightEmission()).toBe(2)
+    expect(world.enemies[1].getLightEmission()).toBe(5)
+    expect(world.lightLevels.get('18,12')).toBe(9)
+    expect(world.lightLevels.get('12,18')).toBe(9)
     expect(world.lightLevels.get('6,12')).toBe(6)
     expect(world.lightLevels.get('12,6')).toBe(6)
     expect(world.lightLevels.get('16,16')).toBe(10)
     expect(Math.max(...world.lightLevels.values())).toBe(10)
+  })
+
+  it('no recalcula si el jugador y las fuentes no cambian', () => {
+    const world = createTestWorld(openMap(25), { playerSpawn: { x: 12, y: 12 } })
+    vision.update(world)
+    const revision = world.visionRevision
+    vision.update(world)
+    expect(world.visionRevision).toBe(revision)
   })
 
   it('un muro de luz ligeramente fuera del radio puede iluminar hacia dentro', () => {

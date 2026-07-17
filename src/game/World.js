@@ -36,7 +36,8 @@ export class World {
     this.visibleTiles = new Set()
     this.discoveredTiles = new Set()
     this.lightLevels = new Map()
-    this.visionSignature = ''
+    this.visionViewport = null
+    this.visionSourceSignature = ''
     this.visionRevision = 0
     this.tileAnimTimer = 0
     this.events = []
@@ -64,7 +65,8 @@ export class World {
     this.visibleTiles = new Set()
     this.discoveredTiles = new Set()
     this.lightLevels = new Map()
-    this.visionSignature = ''
+    this.visionViewport = null
+    this.visionSourceSignature = ''
     this.visionRevision = 0
     this.tileAnimTimer = 0
     this.events = []
