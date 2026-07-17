@@ -2,6 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { LevelGenerator } from '../../src/game/level/LevelGenerator.js'
 import { LEVELS } from '../../src/config/levels.js'
 import { TILE_EMPTY, TILE_WALL } from '../../src/config/constants.js'
+import {
+  TERRAIN_REGION,
+  TERRAIN_TILES,
+  logicalTileForTerrain,
+} from '../../src/config/terrainTypes.js'
 
 function gen(spec) {
   const world = {}
@@ -91,6 +96,30 @@ describe('LevelGenerator', () => {
     for (let y = 0; y < grid.rows; y++) {
       expect(grid.get(0, y)).toBe(TILE_WALL)
       expect(grid.get(grid.cols - 1, y)).toBe(TILE_WALL)
+    }
+  })
+
+  it('asigna suelo y muro visual distinto a pasillos y tipos de nodo', () => {
+    const world = gen(spec)
+    const regions = new Set(world.terrainRegions.tiles.flat())
+    expect(regions.has(TERRAIN_REGION.corridor)).toBe(true)
+
+    for (const node of world.levelGraph.nodes) {
+      const expectedRegion = node.id === 0
+        ? TERRAIN_REGION.entry
+        : node.id === world.levelGraph.exitNodeId
+          ? TERRAIN_REGION.exit
+          : TERRAIN_REGION[node.role]
+      expect(world.terrainRegions.get(node.x, node.y)).toBe(expectedRegion)
+    }
+
+    const emptyVariants = Object.values(TERRAIN_TILES).map((tiles) => tiles.empty)
+    const wallVariants = Object.values(TERRAIN_TILES).map((tiles) => tiles.wall)
+    expect(new Set(emptyVariants).size).toBe(emptyVariants.length)
+    expect(new Set(wallVariants).size).toBe(wallVariants.length)
+    for (const tiles of Object.values(TERRAIN_TILES)) {
+      expect(logicalTileForTerrain(tiles.empty)).toBe(TILE_EMPTY)
+      expect(logicalTileForTerrain(tiles.wall)).toBe(TILE_WALL)
     }
   })
 

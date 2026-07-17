@@ -4,6 +4,7 @@ import {
   TILE_WALL,
   TILE_DESTRUCTIBLE,
 } from '../../config/constants.js'
+import { TERRAIN_REGION } from '../../config/terrainTypes.js'
 
 const RADII = {
   small: 8,
@@ -71,6 +72,12 @@ function key(x, y) {
 function parseKey(cellKey) {
   const [x, y] = cellKey.split(',').map(Number)
   return { x, y }
+}
+
+function nodeTerrainRegion(node, exitNodeId) {
+  if (node.id === 0) return TERRAIN_REGION.entry
+  if (node.id === exitNodeId) return TERRAIN_REGION.exit
+  return TERRAIN_REGION[node.role] ?? TERRAIN_REGION.agora
 }
 
 function resolveNodeSizes(spec, rand) {
@@ -1148,6 +1155,26 @@ export class LevelGenerator {
 
     const entryDoor = shiftDoor(unshiftedEntryDoor, offsetX, offsetY)
     const exitDoor = shiftDoor(unshiftedExitDoor, offsetX, offsetY)
+    const terrainRegions = new Grid(cols, rows)
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        terrainRegions.set(x, y, TERRAIN_REGION.outside)
+      }
+    }
+    for (const cells of corridorCells.values()) {
+      for (const cellKey of cells) {
+        const { x, y } = parseKey(cellKey)
+        terrainRegions.set(x, y, TERRAIN_REGION.corridor)
+      }
+    }
+    // Las cámaras prevalecen visualmente sobre el tramo de pasillo que entra en ellas.
+    for (const node of graph.nodes) {
+      const region = nodeTerrainRegion(node, exitNodeId)
+      for (const cell of roomCells.get(node.id) ?? []) {
+        terrainRegions.set(cell.x, cell.y, region)
+      }
+    }
+
     const mandatoryOpen = new Set()
     const forcedDoorWalls = new Set()
     const doorBindings = [
@@ -1155,10 +1182,12 @@ export class LevelGenerator {
       [exitDoor, graph.nodes[exitNodeId]],
     ]
     for (const [door, node] of doorBindings) {
+      const doorRegion = nodeTerrainRegion(node, exitNodeId)
       for (const tile of [...door.backingTiles, ...door.sideTiles]) {
         const tileKey = key(tile.x, tile.y)
         forcedDoorWalls.add(tileKey)
         grid.set(tile.x, tile.y, TILE_WALL)
+        terrainRegions.set(tile.x, tile.y, doorRegion)
         shiftedMask.add(tileKey)
       }
       for (const tile of [...door.triggerTiles, ...door.frontTiles]) {
@@ -1166,6 +1195,7 @@ export class LevelGenerator {
         protectedCells.add(tileKey)
         mandatoryOpen.add(tileKey)
         grid.set(tile.x, tile.y, TILE_EMPTY)
+        terrainRegions.set(tile.x, tile.y, doorRegion)
         shiftedMask.add(tileKey)
       }
       // Conecta el centro del frente con el eje protegido de la cámara.
@@ -1177,6 +1207,7 @@ export class LevelGenerator {
         const y = door.center.y + inward.y * depth
         protectedCells.add(key(x, y))
         grid.set(x, y, TILE_EMPTY)
+        terrainRegions.set(x, y, doorRegion)
         shiftedMask.add(key(x, y))
       }
     }
@@ -1285,6 +1316,7 @@ export class LevelGenerator {
     const shiftedMouths = collectCorridorMouths(graph, roomCells, corridorCells)
 
     world.grid = grid
+    world.terrainRegions = terrainRegions
     world.playerSpawn = playerSpawn
     world.entryDoor = entryDoor
     world.exitDoor = exitDoor

@@ -14,6 +14,7 @@ export class World {
   constructor(tileSize) {
     this.tileSize = tileSize
     this.grid = null
+    this.terrainRegions = null
     this.player = null
     this.enemies = []
     this.bombs = []
@@ -38,6 +39,7 @@ export class World {
 
   reset() {
     this.grid = null
+    this.terrainRegions = null
     this.player = null
     this.enemies = []
     this.explosions = []

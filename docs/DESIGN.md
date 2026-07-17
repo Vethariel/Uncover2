@@ -188,7 +188,7 @@ query.blocksMovement(tx, ty, player)
 | Función | Uso |
 |---------|-----|
 | `syncTileFromPosition(entity, tileSize)` | Tras mover — deriva `tileX`/`tileY` del centro de hitbox |
-| `positionFromTile(tx, ty, tileSize, size)` | Spawn / respawn — posición continua desde tile |
+| `positionFromTile(tx, ty, tileSize, size)` | Spawn — posición continua desde tile |
 
 `tileX`/`tileY` solo deben actualizarse vía estas funciones, no calculados a mano.
 
@@ -199,7 +199,7 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 | Responsabilidad | Implementación |
 |-----------------|----------------|
 | Generación de nivel | `LevelGenerator` → grafo, proximidad, cámaras, pasillos, cobertura orgánica 2×2, puertas y spawns deterministas por `seed` |
-| Mapa visible (provisional) | `TilemapView` dibuja el `Grid` con rectángulos y colores |
+| Mapa visible (provisional) | `TilemapView` combina el `Grid` lógico con `terrainRegions` y dibuja variantes por región mediante rectángulos y colores |
 | Destructibles rotos | `TilemapView` redibuja al detectar un cambio del `Grid` |
 | Entidades (provisional) | `EntityView` dibuja círculos, rectángulos y líneas |
 | Cámara | `GameScene` sigue al jugador (deadzone + `setBounds`); mapas mayores al viewport hacen scroll |

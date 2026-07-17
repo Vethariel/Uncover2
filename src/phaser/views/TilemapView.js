@@ -1,15 +1,33 @@
 import {
-  TILE_EMPTY,
-  TILE_WALL,
   TILE_DESTRUCTIBLE,
   TILE_PASS,
 } from '../../config/constants.js'
+import { TERRAIN_TILES, terrainTileFor } from '../../config/terrainTypes.js'
 
 const TILE_COLORS = {
-  [TILE_EMPTY]: 0x263440,
-  [TILE_WALL]: 0x64707a,
   [TILE_DESTRUCTIBLE]: 0xa87342,
   [TILE_PASS]: 0x3c8991,
+}
+
+const TERRAIN_TILE_COLORS = {
+  [TERRAIN_TILES.outside.empty]: 0x263440,
+  [TERRAIN_TILES.outside.wall]: 0x4d5862,
+  [TERRAIN_TILES.corridor.empty]: 0x39434a,
+  [TERRAIN_TILES.corridor.wall]: 0x737b80,
+  [TERRAIN_TILES.entry.empty]: 0x2f4a43,
+  [TERRAIN_TILES.entry.wall]: 0x5f766d,
+  [TERRAIN_TILES.exit.empty]: 0x4c4430,
+  [TERRAIN_TILES.exit.wall]: 0x7c704e,
+  [TERRAIN_TILES.vein.empty]: 0x3e3540,
+  [TERRAIN_TILES.vein.wall]: 0x755b70,
+  [TERRAIN_TILES.den.empty]: 0x44302f,
+  [TERRAIN_TILES.den.wall]: 0x744945,
+  [TERRAIN_TILES.mixed.empty]: 0x34404a,
+  [TERRAIN_TILES.mixed.wall]: 0x627584,
+  [TERRAIN_TILES.relic.empty]: 0x373252,
+  [TERRAIN_TILES.relic.wall]: 0x665c8d,
+  [TERRAIN_TILES.agora.empty]: 0x3f4036,
+  [TERRAIN_TILES.agora.wall]: 0x727361,
 }
 
 export class TilemapView {
@@ -44,8 +62,13 @@ export class TilemapView {
         const tile = grid.get(x, y)
         const px = x * tileSize
         const py = y * tileSize
+        const region = this.world.terrainRegions?.get(x, y)
+        const terrainTile = terrainTileFor(region, tile)
+        const color = TILE_COLORS[tile]
+          ?? TERRAIN_TILE_COLORS[terrainTile]
+          ?? TERRAIN_TILE_COLORS[TERRAIN_TILES.outside.empty]
 
-        graphics.fillStyle(TILE_COLORS[tile] ?? TILE_COLORS[TILE_EMPTY])
+        graphics.fillStyle(color)
         graphics.fillRect(px, py, tileSize, tileSize)
         graphics.lineStyle(1, 0x101820, 0.38)
         graphics.strokeRect(px + 0.5, py + 0.5, tileSize - 1, tileSize - 1)

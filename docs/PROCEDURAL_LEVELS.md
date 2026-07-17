@@ -99,6 +99,23 @@ Los nodos son regiones aproximadamente circulares o elípticas rasterizadas al g
 | Conector | Nodo pequeño que ramifica o cambia dirección |
 | Salida | Cámara lejana que contiene la puerta de salida |
 
+### Variantes visuales de terreno
+
+La topología conserva un `Grid` lógico común para gameplay, pero añade un `terrainRegions` paralelo para presentación. Cada región posee variantes distintas de **suelo** (`empty`) y **muro indestructible** (`wall`):
+
+- exterior;
+- pasillo;
+- entrada y salida;
+- veta (`vein`);
+- guarida (`den`);
+- mixta (`mixed`);
+- reliquia (`relic`);
+- ágora/conector (`agora`).
+
+En las bocas, la cámara prevalece visualmente sobre el tramo de pasillo que entra en ella. Las puertas heredan la variante de entrada o salida. Por ahora `TilemapView` diferencia las variantes mediante colores primitivos.
+
+Esta distinción es exclusivamente visual: todas las variantes `*:empty` se comportan como `TILE_EMPTY` y todas las variantes `*:wall` como `TILE_WALL`. Movimiento, IA, bombas, explosiones, conectividad y cobertura 2×2 siguen consultando únicamente el `Grid` lógico.
+
 ---
 
 ## Progresión espacial — Movimiento I
