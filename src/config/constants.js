@@ -9,7 +9,7 @@ export const INTERNAL_HEIGHT = 360
 // ── Modelo de espacio (ver docs/DESIGN.md) ────────────────────────────────
 // TILE_SIZE: rejilla lógica del juego (32×32).
 // PLAYER_SIZE / ENEMY_SIZE: hitbox de movimiento y contacto (24×24 dentro del tile).
-// Cámara: sigue al jugador con deadzone; mapas procedurales mayores al viewport.
+// Cámara: centra al jugador; mapas procedurales mayores al viewport.
 // Render provisional: figuras primitivas independientes de las hitboxes.
 // Reglas de juego (bombas, explosiones, trampas, IA): por tile (tileX, tileY).
 
@@ -31,6 +31,7 @@ export const PLAYER_SIZE = 24
 export const PLAYER_LIVES = 3
 export const PLAYER_BOMB_RANGE = 1
 export const PLAYER_MAX_BOMBS = 1
+export const PLAYER_VISION_RADIUS = 5
 
 export const DIR_NONE = 0
 export const DIR_UP = 1

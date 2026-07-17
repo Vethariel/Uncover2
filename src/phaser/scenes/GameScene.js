@@ -1,13 +1,14 @@
 import Phaser from 'phaser'
 import { session } from '../../core/session.js'
 import { LEVELS } from '../../config/levels.js'
-import { TILE_SIZE, INTERNAL_WIDTH, INTERNAL_HEIGHT } from '../../config/constants.js'
+import { TILE_SIZE } from '../../config/constants.js'
 import { GameController } from '../../game/GameController.js'
 import { InputAdapter } from '../input/InputAdapter.js'
 import { getAudio } from '../audio/AudioService.js'
 import { SoundBridge } from '../audio/SoundBridge.js'
 import { TilemapView } from '../views/TilemapView.js'
 import { EntityView } from '../views/EntityView.js'
+import { FogOfWarView } from '../views/FogOfWarView.js'
 import { HudView } from '../views/HudView.js'
 
 export class GameScene extends Phaser.Scene {
@@ -49,6 +50,7 @@ export class GameScene extends Phaser.Scene {
 
     this.tilemapView.update()
     this.entityView.update()
+    this.fogOfWarView.update()
     this.hudView.update()
     this._syncCamera()
 
@@ -114,6 +116,7 @@ export class GameScene extends Phaser.Scene {
 
     this.tilemapView = new TilemapView(this, this.world)
     this.entityView = new EntityView(this, this.world)
+    this.fogOfWarView = new FogOfWarView(this, this.world)
     this.hudView = new HudView(this, this.world)
     this._syncViews()
     this._setupCamera()
@@ -135,8 +138,7 @@ export class GameScene extends Phaser.Scene {
     ).setVisible(false)
 
     cam.setBounds(0, 0, grid.cols * TILE_SIZE, grid.rows * TILE_SIZE)
-    cam.setDeadzone(INTERNAL_WIDTH * 0.35, INTERNAL_HEIGHT * 0.35)
-    cam.startFollow(this.cameraTarget, true, 0.15, 0.15)
+    cam.startFollow(this.cameraTarget, true, 1, 1)
     cam.roundPixels = true
   }
 
@@ -149,6 +151,7 @@ export class GameScene extends Phaser.Scene {
   _syncViews() {
     this.tilemapView?.update()
     this.entityView?.update()
+    this.fogOfWarView?.update()
     this.hudView?.update()
   }
 
@@ -158,6 +161,7 @@ export class GameScene extends Phaser.Scene {
     this.cameraTarget = null
     this.tilemapView?.destroy()
     this.entityView?.destroy()
+    this.fogOfWarView?.destroy()
     this.hudView?.destroy()
   }
 

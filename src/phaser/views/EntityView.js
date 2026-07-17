@@ -40,6 +40,12 @@ export class EntityView {
   }
 
   _draw(kind, entity) {
+    if (
+      kind !== 'player'
+      && this.world.visibleTiles
+      && !this.world.visibleTiles.has(`${entity.tileX},${entity.tileY}`)
+    ) return
+
     switch (kind) {
       case 'player':
         this._drawPlayer(entity)

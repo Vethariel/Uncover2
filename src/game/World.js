@@ -22,6 +22,7 @@ export class World {
     this.playerSpawn = null
     this.entryDoor = null
     this.exitDoor = null
+    this.wallLightSpawns = []
     this.enemySpawns = []
     this.resourceSpawns = []
     this.recipeFragmentSpawns = []
@@ -32,6 +33,11 @@ export class World {
     this.gameOver = false
     this.gameWon = false
     this.playerDeathTimer = 0
+    this.visibleTiles = new Set()
+    this.discoveredTiles = new Set()
+    this.lightLevels = new Map()
+    this.visionSignature = ''
+    this.visionRevision = 0
     this.tileAnimTimer = 0
     this.events = []
   }
@@ -45,6 +51,7 @@ export class World {
     this.playerSpawn = null
     this.entryDoor = null
     this.exitDoor = null
+    this.wallLightSpawns = []
     this.bombs = []
     this.gameOver = false
     this.gameWon = false
@@ -54,6 +61,11 @@ export class World {
     this.levelGraph = null
     this.levelTimer = null
     this.playerDeathTimer = 0
+    this.visibleTiles = new Set()
+    this.discoveredTiles = new Set()
+    this.lightLevels = new Map()
+    this.visionSignature = ''
+    this.visionRevision = 0
     this.tileAnimTimer = 0
     this.events = []
 

@@ -44,7 +44,7 @@ export class TilemapView {
   }
 
   update() {
-    const state = this.world.grid.tiles.flat().join('')
+    const state = `${this.world.grid.tiles.flat().join('')}|${this.world.visionRevision}`
     if (state !== this.lastGridState) this._drawGrid(state)
   }
 
@@ -115,6 +115,24 @@ export class TilemapView {
         px + tileSize - 5, py + tileSize - 5,
         px + 5, py + tileSize - 5,
       )
+    }
+
+    for (const light of this.world.wallLightSpawns ?? []) {
+      const px = light.x * tileSize
+      const py = light.y * tileSize
+      const cx = px + tileSize / 2
+      const cy = py + tileSize / 2
+      let ox = 0
+      let oy = 0
+      if (light.orientation === 'east') ox = tileSize * 0.22
+      else if (light.orientation === 'west') ox = -tileSize * 0.22
+      else if (light.orientation === 'south') oy = tileSize * 0.22
+      else if (light.orientation === 'north') oy = -tileSize * 0.22
+
+      graphics.fillStyle(0xffd27a, 0.9)
+      graphics.fillCircle(cx + ox, cy + oy, tileSize * 0.12)
+      graphics.lineStyle(2, 0x8a6b3f, 0.9)
+      graphics.lineBetween(cx, cy, cx + ox, cy + oy)
     }
 
     this._drawDoor(graphics, this.world.entryDoor, tileSize, 0x3c8991)

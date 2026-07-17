@@ -244,6 +244,26 @@ describe('LevelGenerator', () => {
     }
   })
 
+  it('genera luces de muro dispersas y válidas', () => {
+    const world = gen(spec)
+    expect(world.wallLightSpawns.length).toBeGreaterThan(0)
+
+    for (const light of world.wallLightSpawns) {
+      expect(world.grid.get(light.x, light.y)).toBe(TILE_EMPTY)
+      expect(world.grid.get(light.wallX, light.wallY)).toBe(TILE_WALL)
+      expect(['north', 'south', 'east', 'west']).toContain(light.orientation)
+    }
+
+    for (let i = 0; i < world.wallLightSpawns.length; i++) {
+      for (let j = i + 1; j < world.wallLightSpawns.length; j++) {
+        const a = world.wallLightSpawns[i]
+        const b = world.wallLightSpawns[j]
+        const distance = Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
+        expect(distance).toBeGreaterThanOrEqual(8)
+      }
+    }
+  })
+
   it('es determinista con el mismo seed', () => {
     const a = gen(spec)
     const b = gen(spec)
@@ -251,6 +271,7 @@ describe('LevelGenerator', () => {
     expect(a.levelGraph).toEqual(b.levelGraph)
     expect(a.entryDoor).toEqual(b.entryDoor)
     expect(a.exitDoor).toEqual(b.exitDoor)
+    expect(a.wallLightSpawns).toEqual(b.wallLightSpawns)
     expect(a.enemySpawns).toEqual(b.enemySpawns)
     expect(a.resourceSpawns).toEqual(b.resourceSpawns)
   })

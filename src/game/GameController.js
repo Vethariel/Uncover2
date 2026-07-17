@@ -9,6 +9,7 @@ export class GameController {
     const world = this.loop.createWorld(tileSize)
     world.currentLevelIndex = levelIndex
     world.reset()
+    this.loop.initialize(world)
     return world
   }
 

@@ -34,6 +34,8 @@ const CORRIDOR_BASE_LENGTH = {
 
 const CORRIDOR_DESTRUCTIBLE_DENSITY = 0.08
 const PROXIMITY_GAP = 10
+const WALL_LIGHT_SPACING = 8
+const WALL_LIGHT_TILE_BUDGET = 120
 
 const DIRECTIONS = [
   { x: 1, y: 0 },
@@ -78,6 +80,53 @@ function nodeTerrainRegion(node, exitNodeId) {
   if (node.id === 0) return TERRAIN_REGION.entry
   if (node.id === exitNodeId) return TERRAIN_REGION.exit
   return TERRAIN_REGION[node.role] ?? TERRAIN_REGION.agora
+}
+
+function chooseWallLightSpawns(grid, carvedMask, protectedCells, rand) {
+  const reserved = new Set(protectedCells)
+  const candidates = []
+
+  for (const cellKey of carvedMask) {
+    if (reserved.has(cellKey)) continue
+    const { x, y } = parseKey(cellKey)
+    if (grid.get(x, y) !== TILE_EMPTY) continue
+
+    const adjacentWalls = DIRECTIONS
+      .map((dir) => ({ dir, x: x + dir.x, y: y + dir.y }))
+      .filter(({ x: wx, y: wy }) => grid.get(wx, wy) === TILE_WALL)
+
+    if (!adjacentWalls.length) continue
+    candidates.push({ x, y, adjacentWalls })
+  }
+
+  const targetCount = Math.max(1, Math.floor(carvedMask.size / WALL_LIGHT_TILE_BUDGET))
+  shuffle(candidates, rand)
+
+  const selected = []
+  for (const candidate of candidates) {
+    if (selected.length >= targetCount) break
+    const tooClose = selected.some((light) => (
+      Math.abs(light.x - candidate.x) + Math.abs(light.y - candidate.y) < WALL_LIGHT_SPACING
+    ))
+    if (tooClose) continue
+
+    const wall = candidate.adjacentWalls[Math.floor(rand() * candidate.adjacentWalls.length)]
+    let orientation = 'east'
+    if (wall.dir.x === 1) orientation = 'east'
+    else if (wall.dir.x === -1) orientation = 'west'
+    else if (wall.dir.y === 1) orientation = 'south'
+    else if (wall.dir.y === -1) orientation = 'north'
+
+    selected.push({
+      x: candidate.x,
+      y: candidate.y,
+      wallX: wall.x,
+      wallY: wall.y,
+      orientation,
+    })
+  }
+
+  return selected
 }
 
 function resolveNodeSizes(spec, rand) {
@@ -1339,6 +1388,12 @@ export class LevelGenerator {
       }
       : { organicWallCount: organicWalls.size }
     populate(world, spec, graph, roomCells, corridorCells, rand)
+    world.wallLightSpawns = chooseWallLightSpawns(
+      grid,
+      shiftedMask,
+      protectedCells,
+      rand,
+    )
     world.levelTimer = spec.timeLimit ?? null
     world.levelVisualConfig = {
       name: spec.name ?? 'Mina',

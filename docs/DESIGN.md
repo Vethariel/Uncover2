@@ -203,13 +203,26 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 | Mapa visible (provisional) | `TilemapView` combina el `Grid` lógico con `terrainRegions` y dibuja variantes por región mediante rectángulos y colores |
 | Destructibles rotos | `TilemapView` redibuja al detectar un cambio del `Grid` |
 | Entidades (provisional) | `EntityView` dibuja círculos, rectángulos y líneas |
-| Cámara | `GameScene` sigue al jugador (deadzone + `setBounds`); mapas mayores al viewport hacen scroll |
+| Cámara | `GameScene` centra al jugador (`startFollow` sin deadzone + `setBounds`); mapas mayores al viewport hacen scroll |
+| Visión y niebla | `VisionSystem` acumula luz cardinal (casco, explosiones y muros) con tope 5 y radio Manhattan 5; `FogOfWarView` oscurece según nivel de luz |
 | HUD | `HudView` fijo (`scrollFactor 0`); muestra vidas y temporizador cuando aplica |
 | Overlays (pausa, victoria…) | `GameOverlayScene` + `scene.pause('Game')` |
 | Escalado | buffer interno 640×360, `Scale.FIT` (llena la ventana, 16:9) + nearest + `roundPixels` — sin restricción de zoom entero |
 | Input | `InputAdapter` sobre `keyboard` de Phaser |
 
 El generador implementa el grafo aprobado de cámaras orgánicas y túneles de banda 3/5. Deriva el AABB del layout, conecta nodos cercanos (gap ≤ 10), genera indestructibles orgánicos sin lattice (todo 2×2 contiene un muro), corrige conectividad, distribuye contenido por rol y crea puertas de mina de 3 tiles lejos de bocas de pasillo; ver [`PROCEDURAL_LEVELS.md`](./PROCEDURAL_LEVELS.md). El runtime no carga PNG, spritesheets ni animaciones mientras se prioriza gameplay.
+
+La visión ya no es una cruz rígida, sino un campo de luz tile-based:
+
+- casco del jugador: intensidad 3;
+- explosiones activas: intensidad 2;
+- luces montadas en muro: intensidad 4;
+- suma por tile limitada a 5;
+- cada paso recto consume 1 punto;
+- un giro ortogonal reduce primero la intensidad restante al 50%;
+- muros y destructibles reciben luz como borde, pero bloquean la propagación posterior.
+
+La visibilidad final nunca supera distancia Manhattan 5 respecto al jugador. Los tiles vistos permanecen descubiertos en tono oscuro; las entidades dinámicas solo se muestran bajo luz actual.
 
 ## Pruebas de interacción
 
