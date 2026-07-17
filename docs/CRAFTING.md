@@ -19,7 +19,7 @@ Tensión jugable Mov. I:
 ## Flujo
 
 ```
-Nivel (tiles de mineral)
+Nivel (props de mineral / mena en muro)
     │
     ├─ Pico → mineral intacto → inventario (materiales)
     └─ Blast → mineral destruido → nada o chatarras (ver abajo)
@@ -37,16 +37,18 @@ Run state (maxBombs, bombRange, pickSpeed, moveSpeed, lives, …)
 
 ## Capas de contenido (importante para PixelLab)
 
-PixelLab permite hasta **64 ítems** desde una descripción general. No hace falta que el **sistema** tenga 64 monedas distintas.
+PixelLab permite hasta **64 ítems** por descripción general. Separar **sesión de mapa** vs **sesión de UI/craft**.
 
-| Capa | Qué es | Cuántos en runtime |
-|------|--------|---------------------|
-| **A — Props de nivel** | Variantes visuales de mena en el mapa | ~6–12 looks |
-| **B — Materiales de bolsillo** | Monedas de craft tras recoger | **3** (Mov. I) |
-| **C — Íconos de mejora / rangos** | UI del Taller | ~12–20 |
-| **D — Chatarras / extras** | Feedback si el blast destroza mena | 1–3 |
+| Capa | Qué es | Cuántos en runtime | Dónde |
+|------|--------|---------------------|--------|
+| **A — Ambientación de nivel** | Muros, destructibles, menas en muro, antorchas, props | pack ≤64 (tú listas P0; PixelLab inventa el resto) | [`TILESET_MOV1.md`](./TILESET_MOV1.md) |
+| **B — Materiales de bolsillo** | Monedas de craft tras recoger | **3** (Mov. I) | este doc |
+| **C — Íconos de mejora / rangos** | UI del Taller | ~12–20 | pack UI aparte (hasta 64) |
+| **D — Chatarras / extras** | Feedback si el blast destroza mena | 1–3 | pack UI / VFX |
 
-**A + C + D** alimentan la lista de 64. **B** es la economía real.
+Terreno del mapa = solo **suelo + vacío** (tiles). Menas y muros = **ítems de ambiente** (capa A), no un tercer tipo de tile. **B** es la economía real.
+
+En el flowchart abajo, “tiles de mineral” = **props de mena** sobre suelo/muro.
 
 ---
 

@@ -31,7 +31,7 @@ La **piel visual** aprovecha un PC moderno: gradientes ricos, materiales legible
 
 16×16 queda descartado para producción de arte y para el target de runtime.
 
-**Cómo proceder con tilesets (PixelLab → Tiled → juego):** [`TILESET_MOV1.md`](./TILESET_MOV1.md).
+**Terreno + ambientación (solo suelo/vacío como tiles; muros/menas/luces = ítems ≤64):** [`TILESET_MOV1.md`](./TILESET_MOV1.md).
 
 ---
 
