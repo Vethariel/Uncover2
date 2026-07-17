@@ -31,7 +31,7 @@ export const PLAYER_SIZE = 24
 export const PLAYER_LIVES = 3
 export const PLAYER_BOMB_RANGE = 1
 export const PLAYER_MAX_BOMBS = 1
-export const PLAYER_VISION_RADIUS = 5
+export const PLAYER_VISION_RADIUS = 7
 
 export const DIR_NONE = 0
 export const DIR_UP = 1

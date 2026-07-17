@@ -204,7 +204,7 @@ Separación deliberada: **`game/` = reglas**, **`phaser/` = presentación**.
 | Destructibles rotos | `TilemapView` redibuja al detectar un cambio del `Grid` |
 | Entidades (provisional) | `EntityView` dibuja círculos, rectángulos y líneas |
 | Cámara | `GameScene` centra al jugador (`startFollow` sin deadzone + `setBounds`); mapas mayores al viewport hacen scroll |
-| Visión y niebla | `VisionSystem` acumula luz cardinal (casco, explosiones y muros) con tope 5 y radio Manhattan 5; `FogOfWarView` oscurece según nivel de luz |
+| Visión y niebla | `VisionSystem` acumula luz radial de escala 0–10 con radio euclidiano máximo 7; `FogOfWarView` oscurece según nivel de luz |
 | HUD | `HudView` fijo (`scrollFactor 0`); muestra vidas y temporizador cuando aplica |
 | Overlays (pausa, victoria…) | `GameOverlayScene` + `scene.pause('Game')` |
 | Escalado | buffer interno 640×360, `Scale.FIT` (llena la ventana, 16:9) + nearest + `roundPixels` — sin restricción de zoom entero |
@@ -214,15 +214,17 @@ El generador implementa el grafo aprobado de cámaras orgánicas y túneles de b
 
 La visión ya no es una cruz rígida, sino un campo de luz tile-based:
 
-- casco del jugador: intensidad 3;
-- explosiones activas: intensidad 2;
-- luces montadas en muro: intensidad 4;
-- suma por tile limitada a 5;
-- cada paso recto consume 1 punto;
-- un giro ortogonal reduce primero la intensidad restante al 50%;
+- casco del jugador: intensidad 7;
+- bomba colocada antes de explotar: intensidad 2;
+- enemigos vivos: intensidad 2;
+- espíritu enfurecido: intensidad 5;
+- explosiones activas: intensidad 5;
+- luces montadas en muro/antorchas: intensidad 10;
+- suma por tile limitada a 10;
+- la intensidad cae según la distancia radial al foco;
 - muros y destructibles reciben luz como borde, pero bloquean la propagación posterior.
 
-La visibilidad final nunca supera distancia Manhattan 5 respecto al jugador. Los tiles vistos permanecen descubiertos en tono oscuro; las entidades dinámicas solo se muestran bajo luz actual.
+La visibilidad final nunca supera distancia euclidiana 7 respecto al jugador. Cada tile se valida mediante línea de visión desde la fuente: los obstáculos quedan iluminados, pero proyectan sombra sobre los tiles posteriores. Los tiles vistos permanecen descubiertos en tono oscuro; las entidades dinámicas solo se muestran bajo luz actual.
 
 ## Pruebas de interacción
 

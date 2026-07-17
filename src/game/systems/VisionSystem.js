@@ -4,17 +4,13 @@ import {
   TILE_WALL,
 } from '../../config/constants.js'
 
-const HELMET_LIGHT = 3
-const EXPLOSION_LIGHT = 2
-const WALL_LIGHT = 4
-const MAX_LIGHT = 5
-
-const CARDINAL_DIRECTIONS = [
-  { x: 1, y: 0, id: 'east' },
-  { x: -1, y: 0, id: 'west' },
-  { x: 0, y: 1, id: 'south' },
-  { x: 0, y: -1, id: 'north' },
-]
+const HELMET_LIGHT = 7
+const BOMB_LIGHT = 2
+const ENEMY_LIGHT = 2
+const ENRAGED_SPIRIT_LIGHT = 5
+const EXPLOSION_LIGHT = 5
+const WALL_LIGHT = 10
+const MAX_LIGHT = 10
 
 function tileKey(x, y) {
   return `${x},${y}`
@@ -30,8 +26,35 @@ function addLight(levels, x, y, amount) {
 }
 
 function shouldStartSource(player, sourceX, sourceY, strength) {
-  const dist = Math.abs(sourceX - player.tileX) + Math.abs(sourceY - player.tileY)
-  return dist <= PLAYER_VISION_RADIUS + strength
+  const dist = Math.hypot(sourceX - player.tileX, sourceY - player.tileY)
+  return dist <= PLAYER_VISION_RADIUS + strength - 1
+}
+
+function hasLineOfSight(grid, startX, startY, targetX, targetY) {
+  let x = startX
+  let y = startY
+  const dx = Math.abs(targetX - startX)
+  const dy = Math.abs(targetY - startY)
+  const stepX = startX < targetX ? 1 : -1
+  const stepY = startY < targetY ? 1 : -1
+  let error = dx - dy
+
+  while (x !== targetX || y !== targetY) {
+    const doubledError = error * 2
+    if (doubledError > -dy) {
+      error -= dy
+      x += stepX
+    }
+    if (doubledError < dx) {
+      error += dx
+      y += stepY
+    }
+
+    if (x === targetX && y === targetY) return true
+    if (isOpaque(grid.get(x, y))) return false
+  }
+
+  return true
 }
 
 function propagateSource(world, levels, startX, startY, strength) {
@@ -39,41 +62,20 @@ function propagateSource(world, levels, startX, startY, strength) {
   if (!grid.inBounds(startX, startY)) return
   if (!shouldStartSource(player, startX, startY, strength)) return
 
-  const queue = [{ x: startX, y: startY, direction: null, intensity: strength }]
-  const best = new Map()
+  const radius = strength - 1
+  for (let y = startY - radius; y <= startY + radius; y++) {
+    for (let x = startX - radius; x <= startX + radius; x++) {
+      if (!grid.inBounds(x, y)) continue
 
-  while (queue.length > 0) {
-    const current = queue.shift()
-    const distanceToPlayer = Math.abs(current.x - player.tileX) + Math.abs(current.y - player.tileY)
+      const sourceDistance = Math.ceil(Math.hypot(x - startX, y - startY))
+      const intensity = strength - sourceDistance
+      if (intensity <= 0) continue
 
-    const stateKey = `${current.x},${current.y},${current.direction ?? 'origin'}`
-    if ((best.get(stateKey) ?? -1) >= current.intensity) continue
-    best.set(stateKey, current.intensity)
+      const playerDistance = Math.hypot(x - player.tileX, y - player.tileY)
+      if (playerDistance > PLAYER_VISION_RADIUS) continue
+      if (!hasLineOfSight(grid, startX, startY, x, y)) continue
 
-    if (distanceToPlayer <= PLAYER_VISION_RADIUS) {
-      addLight(levels, current.x, current.y, current.intensity)
-    }
-
-    if (current.intensity <= 1 || isOpaque(grid.get(current.x, current.y))) continue
-
-    for (const nextDirection of CARDINAL_DIRECTIONS) {
-      const nx = current.x + nextDirection.x
-      const ny = current.y + nextDirection.y
-      if (!grid.inBounds(nx, ny)) continue
-
-      let nextIntensity = current.intensity
-      if (current.direction && current.direction !== nextDirection.id) {
-        nextIntensity = Math.floor(nextIntensity * 0.5)
-      }
-      nextIntensity -= 1
-      if (nextIntensity <= 0) continue
-
-      queue.push({
-        x: nx,
-        y: ny,
-        direction: nextDirection.id,
-        intensity: nextIntensity,
-      })
+      addLight(levels, x, y, intensity)
     }
   }
 }
@@ -93,6 +95,18 @@ export class VisionSystem {
     const lightLevels = new Map()
 
     propagateSource(world, lightLevels, player.tileX, player.tileY, HELMET_LIGHT)
+
+    for (const bomb of world.bombs) {
+      propagateSource(world, lightLevels, bomb.tileX, bomb.tileY, BOMB_LIGHT)
+    }
+
+    for (const enemy of world.enemies) {
+      if (!enemy.alive) continue
+      const strength = enemy.kind === 'spirit' && enemy.aggressive
+        ? ENRAGED_SPIRIT_LIGHT
+        : ENEMY_LIGHT
+      propagateSource(world, lightLevels, enemy.tileX, enemy.tileY, strength)
+    }
 
     for (const explosion of world.explosions) {
       propagateSource(world, lightLevels, explosion.tileX, explosion.tileY, EXPLOSION_LIGHT)

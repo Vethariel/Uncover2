@@ -122,18 +122,20 @@ La mina parte en oscuridad. La visión del jugador depende de luz acumulada, no 
 
 Fuentes base:
 
-- casco del jugador: intensidad `3`;
-- explosión activa: intensidad `2`;
-- luz fijada a muro: intensidad `4`.
+- casco del jugador: intensidad `7`;
+- bomba colocada antes de explotar: intensidad `2`;
+- monstruo vivo: intensidad `2`;
+- espíritu enfurecido: intensidad `5`;
+- explosión activa: intensidad `5`;
+- antorcha/luz fijada a muro: intensidad `10`.
 
 Reglas:
 
-- la iluminación se propaga solo en dirección ortogonal;
-- cada tile recorrido consume `1` punto de intensidad;
-- si el rayo gira, primero pierde el `50%` de la intensidad restante;
-- la suma por tile se limita a `5`;
-- la visibilidad efectiva nunca supera radio Manhattan `5` respecto al jugador;
-- indestructibles y destructibles reciben luz como borde, pero bloquean todo lo que hay detrás.
+- la iluminación se propaga radialmente y pierde intensidad según distancia euclidiana;
+- cada tile requiere línea de visión directa desde su fuente;
+- la suma por tile se limita a `10`;
+- la visibilidad efectiva nunca supera radio euclidiano `7` respecto al jugador;
+- indestructibles y destructibles reciben luz como borde, pero proyectan sombra y bloquean todo lo que hay detrás.
 
 Para soportes de luz ambientales, tras el sellado final se eligen tiles vacíos que tengan al menos un indestructible cardinal adyacente. La selección es determinista por semilla, con separación mínima de `8` tiles y objetivo aproximado de **1 soporte por cada 120 tiles excavados**. Cada soporte guarda el muro al que se adhiere y su orientación, útil para renderizar antorchas u otras fuentes.
 

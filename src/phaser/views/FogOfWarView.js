@@ -1,13 +1,6 @@
 const FOG_COLOR = 0x05080b
 const EXPLORED_ALPHA = 0.68
-const LIGHT_ALPHA = {
-  0: 1,
-  1: 0.82,
-  2: 0.64,
-  3: 0.46,
-  4: 0.28,
-  5: 0.14,
-}
+const MAX_LIGHT = 10
 
 function tileKey(x, y) {
   return `${x},${y}`
@@ -31,10 +24,11 @@ export class FogOfWarView {
       for (let x = 0; x < grid.cols; x++) {
         const key = tileKey(x, y)
         const light = lightLevels.get(key) ?? 0
-        if (light >= 5) continue
+        if (light >= MAX_LIGHT) continue
 
         const baseAlpha = discoveredTiles.has(key) ? EXPLORED_ALPHA : 1
-        const alpha = Math.min(baseAlpha, LIGHT_ALPHA[light] ?? baseAlpha)
+        const lightAlpha = 1 - (light / MAX_LIGHT) * 0.92
+        const alpha = Math.min(baseAlpha, lightAlpha)
         this.graphics.fillStyle(FOG_COLOR, alpha)
         this.graphics.fillRect(x * tileSize, y * tileSize, tileSize, tileSize)
       }
