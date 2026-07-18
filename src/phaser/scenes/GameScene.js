@@ -50,7 +50,7 @@ export class GameScene extends Phaser.Scene {
 
     this.tilemapView.update()
     this.entityView.update()
-    this.fogOfWarView.update()
+    this.fogOfWarView.update(dt)
     this.hudView.update()
     this._syncCamera()
 
