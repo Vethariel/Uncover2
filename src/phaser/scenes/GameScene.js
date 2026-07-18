@@ -19,8 +19,7 @@ export class GameScene extends Phaser.Scene {
     this.controller = new GameController()
   }
 
-  init(data) {
-    this.showIntroOnStart = data.showIntro ?? false
+  init(_data) {
   }
 
   create() {
@@ -30,13 +29,6 @@ export class GameScene extends Phaser.Scene {
     this.soundBridge = new SoundBridge(this)
 
     this._startLevel()
-
-    if (this.showIntroOnStart) {
-      this.audio.playOverlayMusic('levelStart', false)
-      this.events.once(Phaser.Scenes.Events.UPDATE, () => {
-        this._openOverlay('levelIntro', 3.7)
-      })
-    }
   }
 
   update(_time, delta) {
@@ -69,37 +61,25 @@ export class GameScene extends Phaser.Scene {
     if (result.gameWon) {
       this.gameState.syncFromPlayer(this.world.player)
       this.gameState.syncRunResourcesFromWorld(this.world)
-      this.completedLevelIndex = this.gameState.currentLevelIndex
+      const completedIndex = this.gameState.currentLevelIndex
       this.world.gameWon = false
-      this.audio.playOverlayMusic('victory', false)
-      this._openOverlay('victory', 4)
+      this._routeAfterVictory(completedIndex)
       return
     }
 
     this.inputAdapter.flush()
   }
 
-  onOverlayFinished(type) {
-    switch (type) {
-      case 'victory': {
-        const completedIndex = this.completedLevelIndex ?? this.gameState.currentLevelIndex
-        const route = this.gameState.routeAfterVictory(completedIndex)
-        if (route === 'menu') {
-          this._cleanupLevel()
-          this.scene.start('Menu')
-        } else if (route === 'workshop') {
-          this._cleanupLevel()
-          this.scene.start('Workshop')
-        } else {
-          this._startLevel()
-          this.audio.playOverlayMusic('levelStart', false)
-          this._openOverlay('levelIntro', 3.7)
-        }
-        break
-      }
-      case 'levelIntro':
-        this.audio.resumeMusic()
-        break
+  _routeAfterVictory(completedIndex) {
+    const route = this.gameState.routeAfterVictory(completedIndex)
+    if (route === 'menu') {
+      this._cleanupLevel()
+      this.scene.start('Menu')
+    } else if (route === 'workshop') {
+      this._cleanupLevel()
+      this.scene.start('Workshop')
+    } else {
+      this._startLevel()
     }
   }
 

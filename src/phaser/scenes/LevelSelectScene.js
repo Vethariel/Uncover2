@@ -58,7 +58,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
   _startLevel() {
     this.gameState.currentLevelIndex = this.selectedIndex
-    this.scene.start('Game', { showIntro: true })
+    this.scene.start('Game')
   }
 
   _drawCards() {

@@ -338,6 +338,6 @@ export class WorkshopScene extends Phaser.Scene {
     }
     this.gameState.hubEntry = null
     this.gameState.save()
-    this.scene.start('Game', { showIntro: true })
+    this.scene.start('Game')
   }
 }
