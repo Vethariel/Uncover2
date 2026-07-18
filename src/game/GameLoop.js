@@ -1,5 +1,6 @@
 import { EnemyAISystem } from './systems/EnemyAISystem.js'
 import { InputSystem } from './systems/InputSystem.js'
+import { MiningSystem } from './systems/MiningSystem.js'
 import { CollisionSystem } from './systems/CollisionSystem.js'
 import { BombSystem } from './systems/BombSystem.js'
 import { LifeSystem } from './systems/LifeSystem.js'
@@ -10,6 +11,7 @@ export class GameLoop {
   constructor() {
     this.enemyAI = new EnemyAISystem()
     this.input = new InputSystem()
+    this.mining = new MiningSystem()
     this.collision = new CollisionSystem()
     this.bomb = new BombSystem()
     this.life = new LifeSystem()
@@ -26,6 +28,7 @@ export class GameLoop {
 
   update(world, dt, input) {
     this.input.update(world, input)
+    this.mining.update(world, dt, input)
     this.enemyAI.update(world, dt)
     this.collision.update(world, dt)
     this.bomb.update(world, dt)

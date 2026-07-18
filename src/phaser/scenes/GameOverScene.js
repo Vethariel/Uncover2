@@ -9,7 +9,8 @@ export class GameOverScene extends Phaser.Scene {
 
   create() {
     this.gameState = session.gameState
-    this.gameState.deleteSave()
+    // Pierde materiales de la run; conserva almacenamiento del taller.
+    this.gameState.onGameOver()
 
     const audio = getAudio(this)
     audio.stopAll()

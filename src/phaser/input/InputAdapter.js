@@ -13,6 +13,7 @@ export class InputAdapter {
       leftArrow: Phaser.Input.Keyboard.KeyCodes.LEFT,
       rightArrow: Phaser.Input.Keyboard.KeyCodes.RIGHT,
       bomb: Phaser.Input.Keyboard.KeyCodes.SPACE,
+      mine: Phaser.Input.Keyboard.KeyCodes.Q,
       enter: Phaser.Input.Keyboard.KeyCodes.ENTER,
       escape: Phaser.Input.Keyboard.KeyCodes.ESC,
     })
@@ -35,6 +36,8 @@ export class InputAdapter {
         return this.keys.right.isDown || this.keys.rightArrow.isDown
       case 'bomb':
         return this.keys.bomb.isDown
+      case 'mine':
+        return this.keys.mine.isDown
       default:
         return false
     }

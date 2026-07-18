@@ -6,6 +6,7 @@ import {
   TILE_PASS,
 } from '../../config/constants.js'
 import { Explosion } from '../entities/Explosion.js'
+import { destroyDestructibleWithoutYield } from './MiningSystem.js'
 
 export class BombSystem {
   update(world, dt) {
@@ -84,6 +85,7 @@ export class BombSystem {
         }
 
         if (isDestructible) {
+          destroyDestructibleWithoutYield(world, tx, ty)
           grid.set(tx, ty, TILE_EXPLOSION)
           break
         }

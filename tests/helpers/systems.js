@@ -8,6 +8,7 @@ import { CollisionSystem } from '../../src/game/systems/CollisionSystem.js'
 import { BombSystem } from '../../src/game/systems/BombSystem.js'
 import { LifeSystem } from '../../src/game/systems/LifeSystem.js'
 import { InputSystem } from '../../src/game/systems/InputSystem.js'
+import { MiningSystem } from '../../src/game/systems/MiningSystem.js'
 import { GameLoop } from '../../src/game/GameLoop.js'
 import { mockInput } from './worldFactory.js'
 
@@ -15,6 +16,7 @@ const collision = new CollisionSystem()
 const bomb = new BombSystem()
 const life = new LifeSystem()
 const input = new InputSystem()
+const mining = new MiningSystem()
 const gameLoop = new GameLoop()
 
 export function stepCollision(world, dt, direction) {
@@ -39,6 +41,10 @@ export function stepGameLoop(world, dt, keys = {}) {
 
 export function stepInput(world, keys) {
   input.update(world, mockInput(keys))
+}
+
+export function stepMining(world, dt, keys = {}) {
+  mining.update(world, dt, mockInput(keys))
 }
 
 export function explodeBomb(world, bombIndex = 0) {

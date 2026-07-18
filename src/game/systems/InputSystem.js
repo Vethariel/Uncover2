@@ -4,9 +4,33 @@ import {
   DIR_LEFT,
   DIR_RIGHT,
   DIR_NONE,
+  TILE_DESTRUCTIBLE,
   TILE_PASS,
 } from '../../config/constants.js'
 import { Bomb } from '../entities/Bomb.js'
+
+function facingVector(facing) {
+  switch (facing) {
+    case DIR_UP:
+      return { x: 0, y: -1 }
+    case DIR_DOWN:
+      return { x: 0, y: 1 }
+    case DIR_LEFT:
+      return { x: -1, y: 0 }
+    case DIR_RIGHT:
+      return { x: 1, y: 0 }
+    default:
+      return { x: 0, y: 0 }
+  }
+}
+
+function isMiningDestructible(world, player) {
+  const vec = facingVector(player.facing)
+  const x = player.tileX + vec.x
+  const y = player.tileY + vec.y
+  if (!world.grid.inBounds(x, y)) return false
+  return world.grid.get(x, y) === TILE_DESTRUCTIBLE
+}
 
 export class InputSystem {
   update(world, input) {
@@ -17,12 +41,15 @@ export class InputSystem {
   }
 
   handlePlayerInput(world, player, input) {
-    let direction = DIR_NONE
+    const mining = input.isDown('mine') && isMiningDestructible(world, player)
 
-    if (input.isDown('left')) direction = DIR_LEFT
-    else if (input.isDown('right')) direction = DIR_RIGHT
-    else if (input.isDown('up')) direction = DIR_UP
-    else if (input.isDown('down')) direction = DIR_DOWN
+    let direction = DIR_NONE
+    if (!mining) {
+      if (input.isDown('left')) direction = DIR_LEFT
+      else if (input.isDown('right')) direction = DIR_RIGHT
+      else if (input.isDown('up')) direction = DIR_UP
+      else if (input.isDown('down')) direction = DIR_DOWN
+    }
 
     if (direction !== DIR_NONE) world.events.push('playerWalk')
 

@@ -66,9 +66,10 @@ Contrato jugable detallado en [`MOVEMENT_I.md`](./MOVEMENT_I.md). Resumen de sis
 | Concepto | Regla |
 |----------|-------|
 | **Bombas** | Magia del viajero (origen “de la nada”, como Bomberman); siguen `maxBombs` / alcance |
-| **Pico** | Herramienta lenta al inicio; extrae minerales sin el destrozimiento amplio de la bomba |
-| **Minerales** | En tiles; la bomba puede abrir camino **y** destruir valor; el pico prioriza conservación |
-| **Taller** | Hub post-nivel (desde N2); fabricación con materiales — **no** se llama La Forja |
+| **Pico** | `Q` mantenida; progreso por bloque; inmoviliza mientras pica; extrae sin destrozar valor |
+| **Minerales** | En destructibles; bomba = 0 yield; pico → `runResources` → `workshopStorage` al completar |
+| **Vida** | Cada nivel empieza con vida máxima; no persiste entre niveles |
+| **Taller** | Hub post-nivel (desde N2, futuro); consume `workshopStorage` — **no** se llama La Forja |
 | **Luz** | Visibilidad por tile (N4+) |
 | **Golems / espíritus** | Perfiles de amenaza; no doctrinales |
 | **Puzzle** | Activar bloques por tile (N5–N6) |

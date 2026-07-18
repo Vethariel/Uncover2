@@ -56,6 +56,7 @@ export class GameScene extends Phaser.Scene {
 
     if (result.gameOver) {
       this.gameState.syncFromPlayer(this.world.player)
+      this.gameState.syncRunResourcesFromWorld(this.world)
       this._cleanupLevel()
       this.scene.start('GameOver')
       return
@@ -63,6 +64,8 @@ export class GameScene extends Phaser.Scene {
 
     if (result.gameWon) {
       this.gameState.syncFromPlayer(this.world.player)
+      this.gameState.syncRunResourcesFromWorld(this.world)
+      this.gameState.depositRunToWorkshop()
       this.gameState.save()
       this.world.gameWon = false
       this.audio.playOverlayMusic('victory', false)
@@ -112,6 +115,7 @@ export class GameScene extends Phaser.Scene {
 
     this.world = this.controller.createWorld(TILE_SIZE, this.gameState.currentLevelIndex)
     this.gameState.applyToPlayer(this.world.player)
+    this.gameState.applyRunResourcesToWorld(this.world)
     this.gameState.save()
 
     this.tilemapView = new TilemapView(this, this.world)

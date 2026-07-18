@@ -1017,11 +1017,12 @@ function populate(world, spec, graph, roomCells, corridorCells, rand) {
     const cell = corridorResourceCandidates.shift()
     excluded.add(key(cell.x, cell.y))
     world.grid.set(cell.x, cell.y, TILE_DESTRUCTIBLE)
+    const material = index % 2 === 0 ? 'bronze' : 'iron'
     world.resourceSpawns.push({
       ...cell,
       location: 'corridor',
-      material: index % 2 === 0 ? 'bronze' : 'iron',
-      amount: 1,
+      material,
+      amount: material === 'crystal' ? 2 : 1,
     })
   }
 
@@ -1073,7 +1074,7 @@ function populate(world, spec, graph, roomCells, corridorCells, rand) {
       nodeId: selectedNode.id,
       location: 'node',
       material,
-      amount: 1,
+      amount: material === 'crystal' ? 2 : 1,
     })
   }
 

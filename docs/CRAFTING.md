@@ -21,11 +21,15 @@ Tensión jugable Mov. I:
 ```
 Nivel (props de mineral / mena en muro)
     │
-    ├─ Pico → mineral crudo → inventario
+    ├─ Pico (Q hold) → mineral crudo → runResources (HUD)
     └─ Blast → mineral destruido → nada (Mov. I temprano)
     │
     ▼
-Taller (hub)
+Al completar nivel: runResources → workshopStorage
+Game over: clear runResources (workshopStorage permanece)
+    │
+    ▼
+Taller (hub, futuro)
     │
     ├─ Smelting: crudo → refinado / aleación (pérdida neta)
     ├─ Recetas rango 1 conocidas; rango 2+ si hay fragmentos
@@ -81,19 +85,23 @@ El jugador gestiona contadores de **crudo** y **refinado** (y aleaciones) en el 
 
 | Acción | Resultado |
 |--------|-----------|
-| **Pico** en tile de mineral | Tile limpio / vacío; +yield al material mapeado |
+| **Pico** (`Q` hold) en destructible | Progreso acumulado en el bloque; al completar → tile vacío |
+| **Pico** en mena | +yield al material (`bronze` / `iron` / `crystal`) en `runResources` |
+| **Pico** en destructible sin mena | Abre camino; 0 material |
 | **Blast** que alcanza mineral | Mineral **destruido**; **0** material de craft *(por defecto Mov. I)* |
 | Opcional (N5+) | Blast deja **Chatarra** (`mat_scrap`) con valor bajo solo para crafts menores / no mejoras principales |
 
 Recomendación Mov. I: **sin chatarras al inicio** — castigo claro por abrir con bomba. La chatarra puede llegar después si hace falta suavizar.
 
-### Yield base (pico)
+### Timing y yield base (pico)
 
-| Tipo de mena | Yield |
-|--------------|-------|
-| Común | 1 |
-| Rica | 2 |
-| Cristal raro | 2–3 |
+| Tipo | Tiempo | Yield |
+|------|--------|-------|
+| Roca / destructible sin mena | 2.5 s | 0 |
+| Bronce / hierro | 2.5 s | 1 |
+| Cristal | 3.5 s | 2 |
+
+Es la velocidad base sin mejoras. Las mejoras de `pickSpeed` pueden recuperar tiempos más rápidos; al inicio, la bomba conserva una ventaja clara para abrir camino.
 
 ---
 

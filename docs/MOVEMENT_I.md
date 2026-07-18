@@ -169,7 +169,9 @@ Aparecen el **pico** y los **minerales**.
 | Herramienta | Ritmo | Efecto sobre minerales |
 | ----------- | ----- | ---------------------- |
 | **Bomba** | Rápida; cubre más terreno | Puede **destruir** minerales valiosos al abrir |
-| **Pico** | Demorado al inicio | Extrae sin (o con mínimo) desperdicio |
+| **Pico** (`Q` mantenida) | Demorado al inicio | Extrae sin desperdicio; progreso vive en el bloque |
+
+**Pico (runtime):** mantener `Q` frente al destructible en la dirección mirando. Soltar no reinicia el progreso del bloque. Mientras se pica, el jugador queda quieto. Cualquier destructible se puede picar; solo las menas entregan material. Bronce/hierro/roca: `2.5 s` (1 unidad si hay mena). Cristal: `3.5 s` / 2 unidades. Esta velocidad base preserva la ventaja inmediata de la bomba; las mejoras del pico podrán reducirla. El HUD muestra materiales de la **run** actual; al completar el nivel van al **almacenamiento del taller**; en game over se pierde solo la run. La vida se reinicia a máximo en cada nivel.
 
 El jugador descubre que la mina no solo se recorre: se **trabaja**.
 

@@ -33,6 +33,8 @@ export class EntityView {
     drawables
       .sort((a, b) => (a.entity.posY + a.entity.size) - (b.entity.posY + b.entity.size))
       .forEach(({ entity, kind }) => this._draw(kind, entity))
+
+    this._drawMiningProgress()
   }
 
   destroy() {
@@ -110,6 +112,22 @@ export class EntityView {
       explosion.size - inset * 2,
       explosion.size - inset * 2,
     )
+  }
+
+  _drawMiningProgress() {
+    const target = this.world.activeMiningTarget
+    if (!target || target.duration <= 0) return
+
+    const tileSize = this.world.tileSize
+    const ratio = Math.min(1, target.progress / target.duration)
+    const x = target.x * tileSize + 4
+    const y = target.y * tileSize + 4
+    const width = tileSize - 8
+
+    this.graphics.fillStyle(0x111820, 0.85)
+    this.graphics.fillRect(x, y, width, 4)
+    this.graphics.fillStyle(0xffc857, 1)
+    this.graphics.fillRect(x, y, width * ratio, 4)
   }
 
   _directionVector(facing) {

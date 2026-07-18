@@ -8,6 +8,7 @@ import {
   DIR_DOWN,
 } from '../config/constants.js'
 import { ENEMY_TYPES } from '../config/enemyTypes.js'
+import { createEmptyResources } from '../config/miningTypes.js'
 import { positionFromTile } from './entityTiles.js'
 
 export class World {
@@ -41,6 +42,9 @@ export class World {
     this.visionRevision = 0
     this.tileAnimTimer = 0
     this.events = []
+    this.runResources = createEmptyResources()
+    this.miningProgress = new Map()
+    this.activeMiningTarget = null
   }
 
   reset() {
@@ -70,6 +74,10 @@ export class World {
     this.visionRevision = 0
     this.tileAnimTimer = 0
     this.events = []
+    this.miningProgress = new Map()
+    this.activeMiningTarget = null
+    // runResources se conserva entre resets del mundo dentro de la misma run;
+    // GameState lo sincroniza al entrar/salir del nivel.
 
     const level = LEVELS[this.currentLevelIndex] ?? LEVELS[0]
     LevelGenerator.generate(this, level)
@@ -95,7 +103,6 @@ export class World {
         new Enemy(enemyPos.posX, enemyPos.posY, enemyPos.tileX, enemyPos.tileY, config),
       )
     }
-
   }
 
   isLastLevel() {
