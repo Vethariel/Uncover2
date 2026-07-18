@@ -25,18 +25,19 @@ Nivel (props de mineral / mena en muro)
     └─ Blast → mineral destruido → nada (Mov. I temprano)
     │
     ▼
-Al completar nivel: runResources → workshopStorage
-Game over: clear runResources (workshopStorage permanece)
+Al completar nivel: runResources → workshopCrude
+Game over N1–N2: wipe total (nueva partida)
+Game over N3+: clear runResources (taller + mejoras permanecen) → hub
     │
     ▼
-Taller (hub, futuro)
+Taller (hub, post-N2)
     │
-    ├─ Smelting: crudo → refinado / aleación (pérdida neta)
-    ├─ Recetas rango 1 conocidas; rango 2+ si hay fragmentos
-    └─ Craft: refinados → mejora
+    ├─ Horno (E): smelting por lote crudo → refinado
+    ├─ Yunque (E): craft rango 1 (6 mejoras)
+    └─ Puerta: siguiente nivel o reintento
     │
     ▼
-Run state (maxBombs, bombRange, pickSpeed, moveSpeed, lives, …)
+upgrades: maxBombs, bombRange, pickSpeed, fortune, moveSpeed, maxLives
 ```
 
 ---
@@ -122,8 +123,8 @@ Base de partida Mov. I: `maxBombs = 1`, `bombRange = 1` (como hoy).
 
 | Mejora | Efecto | Coste base |
 |--------|--------|------------|
-| **Temple** (`pickSpeed`) | Menos tiempo por golpe / swing más rápido | 3 / 5 / 8 Hierro |
-| **Filo** (`pickPower`) *(opcional Mov. I)* | Menos golpes para romper mena dura | 4 / 6 / 9 Hierro |
+| **Temple** (`pickSpeed`) | −15% tiempo de picado por rango | 3 / 5 / 8 Hierro |
+| **Fortuna** (`fortune`) | 20% chance de +1 material por rango | 3 / 5 / 8 Hierro |
 
 Base: pico lento, 1 mena común = 1–2 swings según dureza de tile.
 
@@ -170,7 +171,7 @@ alloys:           { temperedBronze, mineSteel, setCrystal }
 recipesKnown:     { upgradeId → maxRankUnlocked }  // r1 siempre; r2/r3 por fragmentos
 recipeFragments:  [ id, … ]
 upgrades: {
-  maxBombs, bombRange, pickSpeed, pickPower?, moveSpeed, lives
+  maxBombs, bombRange, pickSpeed, fortune, moveSpeed, maxLives
 }
 ```
 

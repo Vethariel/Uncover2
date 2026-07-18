@@ -10,6 +10,10 @@ import {
   addResources,
   miningProfileFor,
 } from '../../config/miningTypes.js'
+import {
+  fortuneChance,
+  miningDurationFactor,
+} from '../../config/crafting.js'
 
 function tileKey(x, y) {
   return `${x},${y}`
@@ -68,23 +72,26 @@ export class MiningSystem {
     const key = tileKey(targetX, targetY)
     const spawn = findResourceSpawn(world, targetX, targetY)
     const profile = miningProfileFor(spawn?.material)
+    const duration = profile.duration * miningDurationFactor(player.pickSpeed ?? 0)
     const progress = (world.miningProgress.get(key) ?? 0) + dt
     world.miningProgress.set(key, progress)
     world.activeMiningTarget = {
       x: targetX,
       y: targetY,
       progress,
-      duration: profile.duration,
+      duration,
     }
 
-    if (progress < profile.duration) return
+    if (progress < duration) return
 
     world.grid.set(targetX, targetY, TILE_EMPTY)
     world.miningProgress.delete(key)
     world.activeMiningTarget = null
 
     if (spawn) {
-      const amount = spawn.amount ?? profile.yield
+      let amount = spawn.amount ?? profile.yield
+      const chance = fortuneChance(player.fortune ?? 0)
+      if (chance > 0 && Math.random() < chance) amount += 1
       addResources(world.runResources, spawn.material, amount)
       clearResourceSpawn(world, targetX, targetY)
       world.events.push('resourceCollected')

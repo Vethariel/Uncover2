@@ -43,12 +43,15 @@ export class GameOverlayScene extends Phaser.Scene {
         this.add.text(cx, cy + 10, 'ESC TO RESUME', { fontSize: '8px', color: '#c8c8c8' }).setOrigin(0.5)
         this.add.text(cx, cy + 25, 'ENTER TO QUIT TO MENU', { fontSize: '8px', color: '#c8c8c8' }).setOrigin(0.5)
         break
-      case 'victory':
+      case 'victory': {
         this.add.text(cx, cy - 20, 'LEVEL CLEAR!', { fontSize: '20px', color: '#ffdc00' }).setOrigin(0.5)
         this.countdownText = this.add
           .text(cx, cy + 15, '', { fontSize: '8px', color: '#ffffff' })
           .setOrigin(0.5)
+        const completed = this.gameState.currentLevelIndex
+        this.victoryGoesToHub = completed >= 1
         break
+      }
       case 'levelIntro':
         this.add.text(cx, cy - 20, 'LEVEL', { fontSize: '10px', color: '#ffffff' }).setOrigin(0.5)
         this.add
@@ -77,7 +80,10 @@ export class GameOverlayScene extends Phaser.Scene {
     if (this.duration > 0) {
       this.duration -= dt
       if (this.overlayType === 'victory' && this.countdownText) {
-        this.countdownText.setText(`NEXT LEVEL IN ${Math.ceil(this.duration)}...`)
+        const label = this.victoryGoesToHub
+          ? `RETURNING TO WORKSHOP IN ${Math.ceil(this.duration)}...`
+          : `NEXT LEVEL IN ${Math.ceil(this.duration)}...`
+        this.countdownText.setText(label)
       }
       if (this.duration > 0) return
     }

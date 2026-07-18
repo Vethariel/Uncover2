@@ -171,13 +171,23 @@ Aparecen el **pico** y los **minerales**.
 | **Bomba** | Rápida; cubre más terreno | Puede **destruir** minerales valiosos al abrir |
 | **Pico** (`Q` mantenida) | Demorado al inicio | Extrae sin desperdicio; progreso vive en el bloque |
 
-**Pico (runtime):** mantener `Q` frente al destructible en la dirección mirando. Soltar no reinicia el progreso del bloque. Mientras se pica, el jugador queda quieto. Cualquier destructible se puede picar; solo las menas entregan material. Bronce/hierro/roca: `2.5 s` (1 unidad si hay mena). Cristal: `3.5 s` / 2 unidades. Esta velocidad base preserva la ventaja inmediata de la bomba; las mejoras del pico podrán reducirla. El HUD muestra materiales de la **run** actual; al completar el nivel van al **almacenamiento del taller**; en game over se pierde solo la run. La vida se reinicia a máximo en cada nivel.
+**Pico (runtime):** mantener `Q` frente al destructible en la dirección mirando. Soltar no reinicia el progreso del bloque. Mientras se pica, el jugador queda quieto. Cualquier destructible se puede picar; solo las menas entregan material. Bronce/hierro/roca: `2.5 s` (1 unidad si hay mena). Cristal: `3.5 s` / 2 unidades. Esta velocidad base preserva la ventaja inmediata de la bomba; **Temple** (`pickSpeed`) reduce el tiempo un 15% por rango y **Fortuna** da 20% de chance de +1 material. El HUD muestra materiales de la **run** actual; al completar el nivel van al crudo del taller. La vida se reinicia a `maxLives` en cada nivel.
 
 El jugador descubre que la mina no solo se recorre: se **trabaja**.
 
 **Tras completar este nivel** (y cada uno siguiente): acceso al **Taller**.
 
-La primera visita al Taller **explica brevemente** fabricar con lo recolectado.
+### Taller (hub)
+
+Espacio rectangular con **horno** y **yunque** (bloques 2×3). Interacción con **E**.
+
+| Estación | Función |
+|----------|---------|
+| **Horno** | Fundir un lote: 3→2 bronce/hierro; 2→1 cristal |
+| **Yunque** | Forjar mejoras de rango 1 con material refinado |
+| **Puerta** | Sale al nivel pendiente (siguiente tras victoria; el fallido tras game over N3+) |
+
+**Progresión:** completar N1 → N2 directo. Completar N2+ → hub. Game over en N1–N2 → partida nueva (menú, wipe total). Game over en N3+ → hub con taller/mejoras intactos.
 
 ---
 

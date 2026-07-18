@@ -9,8 +9,7 @@ export class GameOverScene extends Phaser.Scene {
 
   create() {
     this.gameState = session.gameState
-    // Pierde materiales de la run; conserva almacenamiento del taller.
-    this.gameState.onGameOver()
+    this.route = this.gameState.routeAfterGameOver()
 
     const audio = getAudio(this)
     audio.stopAll()
@@ -21,13 +20,18 @@ export class GameOverScene extends Phaser.Scene {
       color: '#dc3c3c',
     }).setOrigin(0.5)
 
-    this.add.text(this.scale.width / 2, this.scale.height / 2 + 15, 'PRESS ENTER TO RETURN TO MENU', {
+    const hint = this.route === 'workshop'
+      ? 'PRESS ENTER TO RETURN TO WORKSHOP'
+      : 'PRESS ENTER TO RETURN TO MENU'
+
+    this.add.text(this.scale.width / 2, this.scale.height / 2 + 15, hint, {
       fontSize: '8px',
       color: '#c8c8c8',
     }).setOrigin(0.5)
 
     this.input.keyboard.once('keydown-ENTER', () => {
-      this.scene.start('Menu')
+      if (this.route === 'workshop') this.scene.start('Workshop')
+      else this.scene.start('Menu')
     })
   }
 }

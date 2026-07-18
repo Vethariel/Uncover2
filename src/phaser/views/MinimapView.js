@@ -16,6 +16,9 @@ const FLOOR_COLOR = 0x3d4650
 const WALL_COLOR = 0x161b21
 const DESTRUCTIBLE_COLOR = 0x6b5335
 const PLAYER_COLOR = 0x4ea5ff
+const ENTRY_COLOR = 0x3c8991
+const EXIT_COLOR = 0xffc857
+const DEBUG_ALWAYS_SHOW_EXIT = true
 
 export class MinimapView {
   constructor(scene, world) {
@@ -79,6 +82,16 @@ export class MinimapView {
       }
     }
 
+    this._drawDoorMarker(graphics, this.world.entryDoor, ENTRY_COLOR, halfX, halfY)
+    this._drawDoorMarker(
+      graphics,
+      this.world.exitDoor,
+      EXIT_COLOR,
+      halfX,
+      halfY,
+      DEBUG_ALWAYS_SHOW_EXIT,
+    )
+
     // Jugador fijo en el centro; el mapa se desplaza bajo él.
     graphics.fillStyle(PLAYER_COLOR, 1)
     graphics.fillRect(
@@ -94,6 +107,43 @@ export class MinimapView {
       this.originY + 0.5,
       this.width - 1,
       this.height - 1,
+    )
+  }
+
+  _drawDoorMarker(graphics, door, color, halfX, halfY, alwaysVisible = false) {
+    if (!door) return
+    const marker = door.trigger
+      ?? door.triggerTiles?.[0]
+      ?? door.center
+      ?? door.tiles?.[Math.floor((door.tiles?.length ?? 1) / 2)]
+    if (!marker) return
+
+    const doorTiles = [
+      ...(door.tiles ?? []),
+      ...(door.triggerTiles ?? []),
+      marker,
+    ]
+    const discovered = doorTiles.some((tile) => (
+      this.world.discoveredTiles.has(`${tile.x},${tile.y}`)
+    ))
+    if (!alwaysVisible && !discovered) return
+
+    let wx = marker.x - this.world.player.tileX + halfX
+    let wy = marker.y - this.world.player.tileY + halfY
+    const outside = wx < 0 || wy < 0 || wx >= WINDOW_TILES_X || wy >= WINDOW_TILES_Y
+    if (outside && !alwaysVisible) return
+    if (outside) {
+      // Debug: mantener el marcador de salida en el borde indicando su dirección.
+      wx = Math.max(1, Math.min(WINDOW_TILES_X - 2, wx))
+      wy = Math.max(1, Math.min(WINDOW_TILES_Y - 2, wy))
+    }
+
+    graphics.fillStyle(color, 1)
+    graphics.fillRect(
+      this.originX + wx * PIXELS_PER_TILE - 1,
+      this.originY + wy * PIXELS_PER_TILE - 1,
+      PIXELS_PER_TILE + 2,
+      PIXELS_PER_TILE + 2,
     )
   }
 

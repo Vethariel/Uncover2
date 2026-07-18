@@ -9,7 +9,11 @@ export class MenuScene extends Phaser.Scene {
 
   create() {
     this.gameState = session.gameState
-    this.gameState.reset()
+    // No borrar progreso al visitar el menú; New Game solo si no hay save o tras wipe.
+    if (!this.gameState.hasSave()) {
+      this.gameState.resetCampaign()
+    }
+
     getAudio(this).playMusic('menu')
 
     const cx = this.scale.width / 2
@@ -46,7 +50,16 @@ export class MenuScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     })
 
+    this.add.text(cx, cy + 40, 'N — NEW GAME', {
+      fontSize: '8px',
+      color: '#8a93a0',
+    }).setOrigin(0.5)
+
     this.input.keyboard.on('keydown-ENTER', () => {
+      this.scene.start('LevelSelect')
+    })
+    this.input.keyboard.on('keydown-N', () => {
+      this.gameState.wipeProgress()
       this.scene.start('LevelSelect')
     })
   }

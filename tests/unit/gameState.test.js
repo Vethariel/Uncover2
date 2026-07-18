@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GameState } from '../../src/core/GameState.js'
-import { PLAYER_LIVES } from '../../src/config/constants.js'
+import { PLAYER_LIVES, PLAYER_MAX_BOMBS } from '../../src/config/constants.js'
 import { LEVELS } from '../../src/config/levels.js'
 
-describe('GameState resources and lives', () => {
+describe('GameState resources and progression', () => {
   beforeEach(() => {
     const store = new Map()
     vi.stubGlobal('localStorage', {
@@ -13,47 +13,112 @@ describe('GameState resources and lives', () => {
     })
   })
 
-  it('deposita la run en el taller y deja la run en cero', () => {
+  it('deposita la run en crudo del taller', () => {
     const state = new GameState()
     state.runResources = { bronze: 3, iron: 1, crystal: 2 }
-    state.workshopStorage = { bronze: 1, iron: 0, crystal: 0 }
+    state.workshopCrude = { bronze: 1, iron: 0, crystal: 0 }
 
     state.depositRunToWorkshop()
 
     expect(state.runResources).toEqual({ bronze: 0, iron: 0, crystal: 0 })
-    expect(state.workshopStorage).toEqual({ bronze: 4, iron: 1, crystal: 2 })
+    expect(state.workshopCrude).toEqual({ bronze: 4, iron: 1, crystal: 2 })
   })
 
-  it('en game over pierde la run y conserva el taller', () => {
+  it('game over en N1–N2 borra todo el progreso', () => {
     const state = new GameState()
-    state.runResources = { bronze: 2, iron: 2, crystal: 1 }
-    state.workshopStorage = { bronze: 5, iron: 0, crystal: 0 }
+    state.currentLevelIndex = 1
+    state.workshopCrude = { bronze: 5, iron: 0, crystal: 0 }
+    state.workshopRefined = { bronze: 2, iron: 0, crystal: 0 }
+    state.upgrades.maxBombs = 1
+    state.hubUnlocked = true
 
-    state.onGameOver()
-
-    expect(state.runResources).toEqual({ bronze: 0, iron: 0, crystal: 0 })
-    expect(state.workshopStorage).toEqual({ bronze: 5, iron: 0, crystal: 0 })
-    expect(state.hasSave()).toBe(true)
+    expect(state.routeAfterGameOver()).toBe('menu')
+    expect(state.workshopCrude).toEqual({ bronze: 0, iron: 0, crystal: 0 })
+    expect(state.workshopRefined).toEqual({ bronze: 0, iron: 0, crystal: 0 })
+    expect(state.upgrades.maxBombs).toBe(0)
+    expect(state.hubUnlocked).toBe(false)
+    expect(state.currentLevelIndex).toBe(0)
+    expect(state.hasSave()).toBe(false)
   })
 
-  it('aplica siempre vida completa al jugador', () => {
+  it('game over en N3+ pierde la run y conserva el taller', () => {
     const state = new GameState()
-    const player = { lives: 1, speed: 100, bombRange: 1, maxBombs: 1 }
-    state.lives = 1
-    state.applyToPlayer(player)
-    expect(player.lives).toBe(PLAYER_LIVES)
-  })
-
-  it('persiste workshopStorage en save/load', () => {
-    const state = new GameState()
-    state.workshopStorage = { bronze: 7, iron: 3, crystal: 1 }
     state.currentLevelIndex = 2
+    state.runResources = { bronze: 2, iron: 2, crystal: 1 }
+    state.workshopCrude = { bronze: 5, iron: 0, crystal: 0 }
+    state.upgrades.maxBombs = 1
+
+    expect(state.routeAfterGameOver()).toBe('workshop')
+    expect(state.runResources).toEqual({ bronze: 0, iron: 0, crystal: 0 })
+    expect(state.workshopCrude).toEqual({ bronze: 5, iron: 0, crystal: 0 })
+    expect(state.upgrades.maxBombs).toBe(1)
+    expect(state.currentLevelIndex).toBe(2)
+    expect(state.hubEntry).toBe('retry')
+  })
+
+  it('victoria N1 va a nivel; N2+ abre hub', () => {
+    const state = new GameState()
+    state.runResources = { bronze: 1, iron: 0, crystal: 0 }
+    expect(state.routeAfterVictory(0)).toBe('level')
+    expect(state.currentLevelIndex).toBe(1)
+    expect(state.hubUnlocked).toBe(false)
+    expect(state.workshopCrude.bronze).toBe(1)
+
+    state.runResources = { bronze: 2, iron: 0, crystal: 0 }
+    expect(state.routeAfterVictory(1)).toBe('workshop')
+    expect(state.currentLevelIndex).toBe(2)
+    expect(state.hubUnlocked).toBe(true)
+    expect(state.hubEntry).toBe('advance')
+  })
+
+  it('aplica mejoras al jugador incluyendo vida máxima', () => {
+    const state = new GameState()
+    state.upgrades.maxBombs = 1
+    state.upgrades.maxLives = 1
+    state.upgrades.moveSpeed = 1
+    const player = {
+      lives: 1,
+      speed: 100,
+      bombRange: 1,
+      maxBombs: 1,
+      baseSpeed: 100,
+      pickSpeed: 0,
+      fortune: 0,
+      maxLives: 3,
+    }
+    state.applyToPlayer(player)
+    expect(player.maxBombs).toBe(PLAYER_MAX_BOMBS + 1)
+    expect(player.lives).toBe(PLAYER_LIVES + 1)
+    expect(player.maxLives).toBe(PLAYER_LIVES + 1)
+    expect(player.speed).toBeGreaterThan(100)
+  })
+
+  it('funde y forja desde GameState', () => {
+    const state = new GameState()
+    state.workshopCrude.bronze = 3
+    expect(state.trySmelt('bronze').ok).toBe(true)
+    expect(state.workshopRefined.bronze).toBe(2)
+    expect(state.tryCraft('maxBombs').ok).toBe(false)
+    state.workshopRefined.bronze = 3
+    expect(state.tryCraft('maxBombs').ok).toBe(true)
+    expect(state.upgrades.maxBombs).toBe(1)
+  })
+
+  it('persiste crudo, refinado y upgrades', () => {
+    const state = new GameState()
+    state.workshopCrude = { bronze: 7, iron: 3, crystal: 1 }
+    state.workshopRefined = { bronze: 2, iron: 0, crystal: 1 }
+    state.upgrades.fortune = 1
+    state.currentLevelIndex = 2
+    state.hubUnlocked = true
     state.save()
 
     const loaded = new GameState()
     expect(loaded.load()).toBe(true)
-    expect(loaded.workshopStorage).toEqual({ bronze: 7, iron: 3, crystal: 1 })
+    expect(loaded.workshopCrude).toEqual({ bronze: 7, iron: 3, crystal: 1 })
+    expect(loaded.workshopRefined).toEqual({ bronze: 2, iron: 0, crystal: 1 })
+    expect(loaded.upgrades.fortune).toBe(1)
+    expect(loaded.hubUnlocked).toBe(true)
     expect(loaded.unlockedLevels).toBe(LEVELS.length)
-    expect(loaded.lives).toBe(PLAYER_LIVES)
   })
 })

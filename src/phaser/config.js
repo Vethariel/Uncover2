@@ -6,6 +6,7 @@ import { SplashScene } from './scenes/SplashScene.js'
 import { MenuScene } from './scenes/MenuScene.js'
 import { LevelSelectScene } from './scenes/LevelSelectScene.js'
 import { GameScene } from './scenes/GameScene.js'
+import { WorkshopScene } from './scenes/WorkshopScene.js'
 import { GameOverlayScene } from './scenes/GameOverlayScene.js'
 import { GameOverScene } from './scenes/GameOverScene.js'
 
@@ -28,5 +29,15 @@ export const gameConfig = {
     antialias: false,
     roundPixels: true,
   },
-  scene: [BootScene, PreloadScene, SplashScene, MenuScene, LevelSelectScene, GameScene, GameOverlayScene, GameOverScene],
+  scene: [
+    BootScene,
+    PreloadScene,
+    SplashScene,
+    MenuScene,
+    LevelSelectScene,
+    GameScene,
+    WorkshopScene,
+    GameOverlayScene,
+    GameOverScene,
+  ],
 }

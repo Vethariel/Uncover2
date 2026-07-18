@@ -10,40 +10,90 @@ import {
   createEmptyResources,
   transferResources,
 } from '../config/miningTypes.js'
+import {
+  canCraft,
+  canSmelt,
+  craftUpgrade,
+  createEmptyUpgrades,
+  fortuneChance,
+  miningDurationFactor,
+  smeltBatch,
+} from '../config/crafting.js'
 
 const SAVE_KEY = 'uncover_save'
+const SAVE_VERSION = 2
+const MOVE_SPEED_PER_RANK = 18
 
 export class GameState {
   constructor() {
-    this.reset()
+    this.resetCampaign()
+    // Debug: LevelSelect abierto.
     this.unlockedLevels = LEVELS.length
-    this.workshopStorage = createEmptyResources()
   }
 
-  reset() {
+  resetCampaign() {
     this.currentLevelIndex = 0
     this.lives = PLAYER_LIVES
+    this.maxLives = PLAYER_LIVES
     this.speed = PLAYER_SPEED
     this.bombRange = PLAYER_BOMB_RANGE
     this.maxBombs = PLAYER_MAX_BOMBS
+    this.pickSpeed = 0
+    this.fortune = 0
     this.runResources = createEmptyResources()
+    this.workshopCrude = createEmptyResources()
+    this.workshopRefined = createEmptyResources()
+    this.upgrades = createEmptyUpgrades()
+    this.hubUnlocked = false
+    this.hubEntry = null
+  }
+
+  /** Compat: menú "nueva partida" / wipe. */
+  reset() {
+    this.resetCampaign()
+    this.unlockedLevels = LEVELS.length
+  }
+
+  wipeProgress() {
+    this.resetCampaign()
+    this.unlockedLevels = LEVELS.length
+    this.deleteSave()
   }
 
   applyToPlayer(player) {
+    this.recomputeStatsFromUpgrades()
     player.speed = this.speed
+    player.baseSpeed = this.speed
     player.bombRange = this.bombRange
     player.maxBombs = this.maxBombs
-    // Cada nivel / run empieza con vida completa.
-    player.lives = PLAYER_LIVES
-    this.lives = PLAYER_LIVES
+    player.pickSpeed = this.pickSpeed
+    player.fortune = this.fortune
+    player.maxLives = this.maxLives
+    player.lives = this.maxLives
+    this.lives = this.maxLives
   }
 
   syncFromPlayer(player) {
-    this.speed = player.speed
-    this.bombRange = player.bombRange
-    this.maxBombs = player.maxBombs
-    // La vida no persiste entre niveles; solo se usa dentro del nivel actual.
-    this.lives = PLAYER_LIVES
+    // Stats persistentes vienen de upgrades; no sobrescribir desde daño de nivel.
+    this.lives = this.maxLives
+  }
+
+  recomputeStatsFromUpgrades() {
+    const u = this.upgrades
+    this.maxBombs = PLAYER_MAX_BOMBS + (u.maxBombs ?? 0)
+    this.bombRange = PLAYER_BOMB_RANGE + (u.bombRange ?? 0)
+    this.speed = PLAYER_SPEED + MOVE_SPEED_PER_RANK * (u.moveSpeed ?? 0)
+    this.maxLives = PLAYER_LIVES + (u.maxLives ?? 0)
+    this.pickSpeed = u.pickSpeed ?? 0
+    this.fortune = u.fortune ?? 0
+  }
+
+  miningDurationFactor() {
+    return miningDurationFactor(this.pickSpeed)
+  }
+
+  fortuneChance() {
+    return fortuneChance(this.fortune)
   }
 
   syncRunResourcesFromWorld(world) {
@@ -63,11 +113,27 @@ export class GameState {
   }
 
   depositRunToWorkshop() {
-    transferResources(this.runResources, this.workshopStorage)
+    transferResources(this.runResources, this.workshopCrude)
   }
 
   clearRunResources() {
     clearResources(this.runResources)
+  }
+
+  trySmelt(material) {
+    if (!canSmelt(this.workshopCrude, material)) {
+      return { ok: false, reason: 'insufficient' }
+    }
+    return smeltBatch(this.workshopCrude, this.workshopRefined, material)
+  }
+
+  tryCraft(upgradeId) {
+    if (!canCraft(this.workshopRefined, this.upgrades, upgradeId)) {
+      return { ok: false, reason: 'blocked' }
+    }
+    const result = craftUpgrade(this.workshopRefined, this.upgrades, upgradeId)
+    if (result.ok) this.recomputeStatsFromUpgrades()
+    return result
   }
 
   nextLevel() {
@@ -78,19 +144,69 @@ export class GameState {
     )
   }
 
+  /**
+   * Tras victoria. completedIndex = índice del nivel acabado de completar.
+   * @returns {'level'|'workshop'|'menu'}
+   */
+  routeAfterVictory(completedIndex) {
+    this.depositRunToWorkshop()
+    if (completedIndex >= 1) this.hubUnlocked = true
+    this.nextLevel()
+    this.hubEntry = null
+    this.save()
+
+    if (this.currentLevelIndex >= LEVELS.length) return 'menu'
+    if (completedIndex === 0) return 'level'
+    this.hubEntry = 'advance'
+    return 'workshop'
+  }
+
+  /**
+   * Tras game over.
+   * @returns {'menu'|'workshop'}
+   */
+  routeAfterGameOver() {
+    const failedIndex = this.currentLevelIndex
+    if (failedIndex <= 1) {
+      this.wipeProgress()
+      return 'menu'
+    }
+    this.clearRunResources()
+    this.lives = this.maxLives
+    this.hubEntry = 'retry'
+    this.hubUnlocked = true
+    this.save()
+    return 'workshop'
+  }
+
+  /** Destino al salir del hub por la puerta. */
+  levelIndexForHubExit() {
+    return this.currentLevelIndex
+  }
+
   hasSave() {
     return localStorage.getItem(SAVE_KEY) !== null
   }
 
   save() {
+    this.recomputeStatsFromUpgrades()
     const data = {
+      saveVersion: SAVE_VERSION,
       currentLevelIndex: this.currentLevelIndex,
       speed: this.speed,
       bombRange: this.bombRange,
       maxBombs: this.maxBombs,
+      maxLives: this.maxLives,
+      pickSpeed: this.pickSpeed,
+      fortune: this.fortune,
       unlockedLevels: this.unlockedLevels,
+      hubUnlocked: this.hubUnlocked,
+      hubEntry: this.hubEntry,
       runResources: { ...this.runResources },
-      workshopStorage: { ...this.workshopStorage },
+      workshopCrude: { ...this.workshopCrude },
+      workshopRefined: { ...this.workshopRefined },
+      workshopStorage: { ...this.workshopCrude },
+      upgrades: { ...this.upgrades },
     }
     localStorage.setItem(SAVE_KEY, JSON.stringify(data))
   }
@@ -102,19 +218,30 @@ export class GameState {
     try {
       const data = JSON.parse(raw)
       this.currentLevelIndex = data.currentLevelIndex ?? 0
-      this.lives = PLAYER_LIVES
-      this.speed = data.speed ?? PLAYER_SPEED
-      this.bombRange = data.bombRange ?? PLAYER_BOMB_RANGE
-      this.maxBombs = data.maxBombs ?? PLAYER_MAX_BOMBS
-      // Debug: selector abierto; conservar valor si existe pero no bloquear.
+      this.upgrades = {
+        ...createEmptyUpgrades(),
+        ...(data.upgrades ?? {}),
+      }
+      this.recomputeStatsFromUpgrades()
+      if (data.maxLives != null) this.maxLives = data.maxLives
+      this.lives = this.maxLives
       this.unlockedLevels = LEVELS.length
+      this.hubUnlocked = data.hubUnlocked != null
+        ? Boolean(data.hubUnlocked)
+        : ((data.currentLevelIndex ?? 0) >= 2 || (data.unlockedLevels ?? 0) > 2)
+      this.hubEntry = data.hubEntry ?? null
       this.runResources = {
         ...createEmptyResources(),
         ...(data.runResources ?? {}),
       }
-      this.workshopStorage = {
+      const crudeSource = data.workshopCrude ?? data.workshopStorage ?? {}
+      this.workshopCrude = {
         ...createEmptyResources(),
-        ...(data.workshopStorage ?? {}),
+        ...crudeSource,
+      }
+      this.workshopRefined = {
+        ...createEmptyResources(),
+        ...(data.workshopRefined ?? {}),
       }
       return true
     } catch {
@@ -126,10 +253,8 @@ export class GameState {
     localStorage.removeItem(SAVE_KEY)
   }
 
-  /** Game over: pierde la run, conserva almacenamiento del taller. */
+  /** Soft game over legacy helper. */
   onGameOver() {
-    this.clearRunResources()
-    this.lives = PLAYER_LIVES
-    this.save()
+    return this.routeAfterGameOver()
   }
 }

@@ -1,6 +1,5 @@
 import Phaser from 'phaser'
 import { session } from '../../core/session.js'
-import { LEVELS } from '../../config/levels.js'
 import { TILE_SIZE } from '../../config/constants.js'
 import { GameController } from '../../game/GameController.js'
 import { InputAdapter } from '../input/InputAdapter.js'
@@ -67,8 +66,7 @@ export class GameScene extends Phaser.Scene {
     if (result.gameWon) {
       this.gameState.syncFromPlayer(this.world.player)
       this.gameState.syncRunResourcesFromWorld(this.world)
-      this.gameState.depositRunToWorkshop()
-      this.gameState.save()
+      this.completedLevelIndex = this.gameState.currentLevelIndex
       this.world.gameWon = false
       this.audio.playOverlayMusic('victory', false)
       this._openOverlay('victory', 4)
@@ -80,17 +78,22 @@ export class GameScene extends Phaser.Scene {
 
   onOverlayFinished(type) {
     switch (type) {
-      case 'victory':
-        this.gameState.nextLevel()
-        if (this.gameState.currentLevelIndex >= LEVELS.length) {
+      case 'victory': {
+        const completedIndex = this.completedLevelIndex ?? this.gameState.currentLevelIndex
+        const route = this.gameState.routeAfterVictory(completedIndex)
+        if (route === 'menu') {
           this._cleanupLevel()
           this.scene.start('Menu')
+        } else if (route === 'workshop') {
+          this._cleanupLevel()
+          this.scene.start('Workshop')
         } else {
           this._startLevel()
           this.audio.playOverlayMusic('levelStart', false)
           this._openOverlay('levelIntro', 3.7)
         }
         break
+      }
       case 'levelIntro':
         this.audio.resumeMusic()
         break

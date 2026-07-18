@@ -59,6 +59,15 @@ describe('MiningSystem', () => {
     expect(world.runResources.crystal).toBe(2)
   })
 
+  it('pickSpeed reduce el tiempo de picado', () => {
+    const world = oreWorld('bronze', 1)
+    world.player.pickSpeed = 1
+
+    stepMining(world, 2.13, { held: ['mine'] })
+    expect(world.grid.get(3, 1)).toBe(TILE_EMPTY)
+    expect(world.runResources.bronze).toBe(1)
+  })
+
   it('destructible sin mena solo abre camino', () => {
     const world = createTestWorld(
       ['#####', '#..D#', '#####'],

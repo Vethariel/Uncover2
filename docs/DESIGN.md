@@ -67,9 +67,9 @@ Contrato jugable detallado en [`MOVEMENT_I.md`](./MOVEMENT_I.md). Resumen de sis
 |----------|-------|
 | **Bombas** | Magia del viajero (origen “de la nada”, como Bomberman); siguen `maxBombs` / alcance |
 | **Pico** | `Q` mantenida; progreso por bloque; inmoviliza mientras pica; extrae sin destrozar valor |
-| **Minerales** | En destructibles; bomba = 0 yield; pico → `runResources` → `workshopStorage` al completar |
-| **Vida** | Cada nivel empieza con vida máxima; no persiste entre niveles |
-| **Taller** | Hub post-nivel (desde N2, futuro); consume `workshopStorage` — **no** se llama La Forja |
+| **Minerales** | En destructibles; bomba = 0 yield; pico → `runResources` → `workshopCrude` al completar |
+| **Vida** | Cada nivel empieza con `maxLives`; no arrastra vidas heridas entre niveles |
+| **Taller** | Hub post-N2 con horno/yunque (`E`) y puerta al siguiente/reintento — **no** se llama La Forja |
 | **Luz** | Visibilidad por tile (N4+) |
 | **Golems / espíritus** | Perfiles de amenaza; no doctrinales |
 | **Puzzle** | Activar bloques por tile (N5–N6) |
@@ -227,7 +227,7 @@ La visión ya no es una cruz rígida, sino un campo de luz tile-based:
 
 La visibilidad final nunca supera distancia euclidiana 7 respecto al jugador. Solo se calculan fuentes que intersectan el viewport centrado en el jugador. Cada fuente expone `lightEmission` (o `getLightEmission()`). Cada tile requiere línea de visión tanto desde la fuente como desde el jugador: los obstáculos quedan iluminados como borde, pero ninguna luz revela lo que queda detrás de ellos. Una fuente fuera del radio puede iluminar el interior del radio si existe línea de visión, pero su sprite/antorcha no se dibuja hasta entrar en visión. Lo desconocido es negro; lo explorado sin luz actual usa un neutro muy oscuro de memoria. Las entidades dinámicas solo se muestran bajo luz actual. La capa visual interpola cada cambio de iluminación durante `140 ms` con una curva suave; la visibilidad lógica sigue actualizándose de inmediato.
 
-Un minimapa permanente (arriba a la derecha, bajo el HUD) muestra los tiles descubiertos: suelo, muros y destructibles con tonos distintos. El jugador es el centro fijo del minimapa y el mapa interno se desplaza con su posición.
+Un minimapa permanente (arriba a la derecha, bajo el HUD) muestra los tiles descubiertos: suelo, muros y destructibles con tonos distintos. El jugador es el centro fijo del minimapa y el mapa interno se desplaza con su posición. La entrada se marca en turquesa. Temporalmente, para depurar el flujo hacia el Taller, la salida se marca siempre en dorado; si está fuera de la ventana, el marcador se fija al borde indicando su dirección.
 
 ## Pruebas de interacción
 

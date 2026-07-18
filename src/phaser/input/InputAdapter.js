@@ -14,6 +14,7 @@ export class InputAdapter {
       rightArrow: Phaser.Input.Keyboard.KeyCodes.RIGHT,
       bomb: Phaser.Input.Keyboard.KeyCodes.SPACE,
       mine: Phaser.Input.Keyboard.KeyCodes.Q,
+      interact: Phaser.Input.Keyboard.KeyCodes.E,
       enter: Phaser.Input.Keyboard.KeyCodes.ENTER,
       escape: Phaser.Input.Keyboard.KeyCodes.ESC,
     })
@@ -55,6 +56,8 @@ export class InputAdapter {
         return Phaser.Input.Keyboard.JustDown(this.keys.right) || Phaser.Input.Keyboard.JustDown(this.keys.rightArrow)
       case 'bomb':
         return Phaser.Input.Keyboard.JustDown(this.keys.bomb)
+      case 'interact':
+        return Phaser.Input.Keyboard.JustDown(this.keys.interact)
       case 'mouse':
         return this.scene.input.activePointer.isDown && this.justPressed.has('pointer')
       default:

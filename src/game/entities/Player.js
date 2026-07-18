@@ -1,4 +1,4 @@
-import { DIR_DOWN, DIR_NONE } from '../../config/constants.js'
+import { DIR_DOWN, DIR_NONE, PLAYER_LIVES } from '../../config/constants.js'
 import { HELMET_LIGHT } from '../systems/VisionSystem.js'
 
 export class Player {
@@ -17,7 +17,10 @@ export class Player {
     this.maxBombs = 1
     this.activeBombs = 0
     this.bombRange = 1
-    this.lives = 3
+    this.lives = PLAYER_LIVES
+    this.maxLives = PLAYER_LIVES
+    this.pickSpeed = 0
+    this.fortune = 0
     this.alive = true
     this.invulnerableTimer = 0
   }
