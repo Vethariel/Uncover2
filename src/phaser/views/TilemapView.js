@@ -32,7 +32,7 @@ const TERRAIN_TILE_COLORS = {
 }
 
 // Destello de menas/fragmentos visibles: pulso breve cada SPARKLE_PERIOD.
-const SPARKLE_PERIOD = 2.0
+const SPARKLE_PERIOD = 5.0
 const SPARKLE_DURATION = 0.45
 
 export class TilemapView {
@@ -40,7 +40,8 @@ export class TilemapView {
     this.scene = scene
     this.world = world
     this.graphics = scene.add.graphics({ x: 0, y: 0 })
-    this.sparkleGraphics = scene.add.graphics({ x: 0, y: 0 })
+    // Encima de la niebla (depth 950): señala menas/fragmentos aún no visibles.
+    this.sparkleGraphics = scene.add.graphics({ x: 0, y: 0 }).setDepth(960)
     this.sparkleTimer = 0
     this.lastGridState = ''
     this.build()
@@ -51,7 +52,22 @@ export class TilemapView {
   }
 
   update(dt = 0) {
-    const state = `${this.world.grid.tiles.flat().join('')}|${this.world.visionRevision}`
+    const tablets = (this.world.puzzleTablets ?? [])
+      .map((tablet) => `${tablet.x},${tablet.y}:${tablet.visual}`)
+      .join(';')
+    const chest = this.world.chest
+      ? `${this.world.chest.x},${this.world.chest.y}:${this.world.chest.opened ? 1 : 0}`
+      : ''
+    const traps = (this.world.traps ?? [])
+      .map((trap) => `${trap.id}:${trap.state}`)
+      .join(';')
+    const state = [
+      this.world.grid.tiles.flat().join(''),
+      this.world.visionRevision,
+      tablets,
+      chest,
+      traps,
+    ].join('|')
     if (state !== this.lastGridState) this._drawGrid(state)
 
     this.sparkleTimer += dt
@@ -130,6 +146,56 @@ export class TilemapView {
       )
     }
 
+    for (const tablet of this.world.puzzleTablets ?? []) {
+      const px = tablet.x * tileSize
+      const py = tablet.y * tileSize
+      const inset = 4 + Math.max(0, 3 - tablet.order)
+      const base = tablet.visual === 'on' ? 0xc9a35a : 0x6a6254
+      graphics.fillStyle(base, 0.9)
+      graphics.fillRect(px + inset, py + inset, tileSize - inset * 2, tileSize - inset * 2)
+      graphics.lineStyle(1, 0xb08d57, 0.85)
+      graphics.strokeRect(px + inset, py + inset, tileSize - inset * 2, tileSize - inset * 2)
+      // Marca de orden (1..N).
+      graphics.fillStyle(0x1a1f18, 0.8)
+      graphics.fillCircle(px + tileSize / 2, py + tileSize / 2, 2 + tablet.order * 0.6)
+    }
+
+    const chest = this.world.chest
+    if (chest) {
+      const px = chest.x * tileSize
+      const py = chest.y * tileSize
+      graphics.fillStyle(chest.opened ? 0x5a4630 : 0xc4a35a, 0.95)
+      graphics.fillRect(px + 6, py + 8, tileSize - 12, tileSize - 12)
+      graphics.lineStyle(2, 0x8a6b3f, 0.95)
+      graphics.strokeRect(px + 6, py + 8, tileSize - 12, tileSize - 12)
+      if (!chest.opened) {
+        graphics.fillStyle(0xffc857, 0.9)
+        graphics.fillRect(px + tileSize / 2 - 2, py + 12, 4, 6)
+      }
+    }
+
+    for (const trap of this.world.traps ?? []) {
+      if (trap.state === 'disabled') continue
+      const platePx = trap.plate.x * tileSize
+      const platePy = trap.plate.y * tileSize
+      graphics.fillStyle(0x8a4f3a, 0.75)
+      graphics.fillRect(platePx + 5, platePy + 5, tileSize - 10, tileSize - 10)
+      graphics.lineStyle(1, 0xff9f6b, 0.8)
+      graphics.strokeRect(platePx + 5, platePy + 5, tileSize - 10, tileSize - 10)
+
+      const lx = trap.launcher.x * tileSize + tileSize / 2
+      const ly = trap.launcher.y * tileSize + tileSize / 2
+      graphics.fillStyle(0x4a5560, 0.95)
+      graphics.fillCircle(lx, ly, tileSize * 0.18)
+      graphics.lineStyle(2, 0xc8d0d8, 0.9)
+      graphics.lineBetween(
+        lx,
+        ly,
+        lx + trap.dir.x * tileSize * 0.28,
+        ly + trap.dir.y * tileSize * 0.28,
+      )
+    }
+
     for (const light of this.world.wallLightSpawns ?? []) {
       // Solo se ve la fuente si su tile está dentro de la visión actual.
       // Fuera del radio puede iluminar el área, pero la antorcha permanece oculta.
@@ -164,8 +230,7 @@ export class TilemapView {
     const phase = this.sparkleTimer % SPARKLE_PERIOD
     if (phase > SPARKLE_DURATION) return
 
-    const visible = this.world.visibleTiles
-    if (!visible?.size) return
+    const visible = this.world.visibleTiles ?? new Set()
 
     // Fade in-out del pulso (0 → 1 → 0).
     const t = phase / SPARKLE_DURATION
@@ -185,7 +250,8 @@ export class TilemapView {
     }
 
     for (const target of targets) {
-      if (!visible.has(`${target.x},${target.y}`)) continue
+      // Solo destellan los que la niebla aún oculta; al hacerse visibles cesan.
+      if (visible.has(`${target.x},${target.y}`)) continue
       const cx = target.x * tileSize + tileSize / 2
       const cy = target.y * tileSize + tileSize / 2
       graphics.fillStyle(0xffffff, alpha)

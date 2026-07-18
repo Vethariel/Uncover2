@@ -11,6 +11,7 @@ import { EntityView } from '../views/EntityView.js'
 import { FogOfWarView } from '../views/FogOfWarView.js'
 import { MinimapView } from '../views/MinimapView.js'
 import { HudView } from '../views/HudView.js'
+import { isNearOpenableChest } from '../../game/systems/PuzzleSystem.js'
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -54,6 +55,7 @@ export class GameScene extends Phaser.Scene {
     this.fogOfWarView.update(dt)
     this.minimapView.update()
     this.hudView.update()
+    this._updateChestPrompt()
     this._syncCamera()
 
     if (result.gameOver) {
@@ -140,6 +142,13 @@ export class GameScene extends Phaser.Scene {
     this.fogOfWarView = new FogOfWarView(this, this.world)
     this.minimapView = new MinimapView(this, this.world)
     this.hudView = new HudView(this, this.world)
+    this.chestPrompt = this.add.text(0, 0, 'E — ABRIR COFRE', {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#ffc857',
+      backgroundColor: '#111820cc',
+      padding: { x: 4, y: 2 },
+    }).setDepth(980).setVisible(false)
     this._syncViews()
     this._setupCamera()
 
@@ -170,6 +179,22 @@ export class GameScene extends Phaser.Scene {
     this.cameraTarget.setPosition(player.posX + player.size / 2, player.posY + player.size / 2)
   }
 
+  _updateChestPrompt() {
+    if (!this.chestPrompt || !this.world?.player) return
+    const player = this.world.player
+    if (!isNearOpenableChest(this.world, player)) {
+      this.chestPrompt.setVisible(false)
+      return
+    }
+    this.chestPrompt.setText('E — ABRIR COFRE')
+    this.chestPrompt.setPosition(
+      player.posX + player.size / 2,
+      player.posY - 10,
+    )
+    this.chestPrompt.setOrigin(0.5, 1)
+    this.chestPrompt.setVisible(true)
+  }
+
   _syncViews() {
     this.tilemapView?.update()
     this.entityView?.update()
@@ -187,6 +212,8 @@ export class GameScene extends Phaser.Scene {
     this.fogOfWarView?.destroy()
     this.minimapView?.destroy()
     this.hudView?.destroy()
+    this.chestPrompt?.destroy()
+    this.chestPrompt = null
   }
 
   shutdown() {

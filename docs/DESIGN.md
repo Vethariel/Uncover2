@@ -53,11 +53,11 @@ Nuevas mecánicas deben preferir **tile** salvo que necesiten lo contrario:
 | Sistema | Resolución sugerida |
 |---------|---------------------|
 | Luz / oscuridad | Visibilidad por tile |
-| Trampas (gas, suelo inestable) | Activación y daño por tile |
+| Trampas de dardo | Placa/lanzador overlay; dardo por tile; destruible por blast |
 | Fragmentos de memoria | Coleccionable por tile |
 | Derrumbe | Tiles que pasan a sólido |
 | Minerales / pico | Extracción y destrucción por tile |
-| Bloques de puzzle (activar) | Estado por tile |
+| Puzzle de tabletas | Overlay walkable; secuencia por tile; cofre con E |
 
 ## Curriculum técnico — Movimiento I
 
@@ -72,7 +72,8 @@ Contrato jugable detallado en [`MOVEMENT_I.md`](./MOVEMENT_I.md). Resumen de sis
 | **Taller** | Hub post-N2 con horno/yunque (`E`) y puerta al siguiente/reintento — **no** se llama La Forja |
 | **Luz** | Visibilidad por tile (N4+) |
 | **Golems / espíritus** | Perfiles de amenaza; no doctrinales |
-| **Puzzle** | Activar bloques por tile (N5–N6) |
+| **Puzzle** | Tabletas en orden (N5–N6); cofre con E al completar |
+| **Trampas** | Dardos con aviso (N7); bomba desactiva; `GridQuery.isDangerous` |
 | **Umbral (N7)** | Encontrar y pisar la salida antes de agotar el tiempo |
 | **Portales del Primer Eje** | Presentes tras el umbral; **aún no activos** |
 

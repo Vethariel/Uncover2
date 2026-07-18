@@ -329,6 +329,39 @@ describe('LevelGenerator', () => {
     expect(world.recipeFragmentSpawns.every((f) => f.kind === 'generic')).toBe(true)
   })
 
+  it('coloca tabletas de puzzle en N5–N6 sobre EMPTY alcanzable', () => {
+    for (const index of [4, 5]) {
+      const world = gen({ ...LEVELS[index], seed: 11 })
+      expect(world.puzzleTablets).toHaveLength(LEVELS[index].puzzle.count)
+      const reachable = reachableTiles(world.grid, world.playerSpawn)
+      const orders = world.puzzleTablets.map((tablet) => tablet.order).sort((a, b) => a - b)
+      expect(orders).toEqual([...Array(LEVELS[index].puzzle.count).keys()])
+      for (const tablet of world.puzzleTablets) {
+        expect(world.grid.get(tablet.x, tablet.y)).toBe(TILE_EMPTY)
+        expect(reachable.has(`${tablet.x},${tablet.y}`)).toBe(true)
+      }
+    }
+  })
+
+  it('coloca trampas de dardo en N7 con LOS y distancia >= 3', () => {
+    for (let seed = 1; seed <= 8; seed++) {
+      const world = gen({ ...LEVELS[6], seed })
+      expect(world.traps.length).toBeGreaterThan(0)
+      expect(world.traps.length).toBeLessThanOrEqual(LEVELS[6].trapCap)
+      for (const trap of world.traps) {
+        const dist = Math.abs(trap.plate.x - trap.launcher.x)
+          + Math.abs(trap.plate.y - trap.launcher.y)
+        expect(dist).toBeGreaterThanOrEqual(3)
+        expect(world.grid.get(trap.plate.x, trap.plate.y)).toBe(TILE_EMPTY)
+        expect(world.grid.get(trap.launcher.x, trap.launcher.y)).toBe(TILE_EMPTY)
+        expect(
+          trap.launcher.x + trap.dir.x * dist === trap.plate.x
+          && trap.launcher.y + trap.dir.y * dist === trap.plate.y,
+        ).toBe(true)
+      }
+    }
+  })
+
   it('N3 decide cuatro o cinco nodos de recorrido', () => {
     for (let seed = 1; seed <= 12; seed++) {
       const world = gen({ ...LEVELS[2], seed })

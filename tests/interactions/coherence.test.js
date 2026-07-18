@@ -102,4 +102,23 @@ describe('coherencia del modelo tile', () => {
     expect(q.isWalkable(2, 1)).toBe(true)
     expect(q.lineOfSight(1, 1, 3, 1)).toBe(true)
   })
+
+  it('overlays de puzzle/trampa no cambian walkable del tile EMPTY', () => {
+    const world = createTestWorld(map, { playerSpawn: { x: 1, y: 1 } })
+    world.puzzleTablets = [{ x: 4, y: 2, order: 0, visual: 'off' }]
+    world.traps = [{
+      id: 0,
+      plate: { x: 5, y: 2 },
+      launcher: { x: 1, y: 2 },
+      dir: { x: 1, y: 0 },
+      state: 'idle',
+      warningTimer: 0,
+      occupiedLastFrame: false,
+    }]
+    const q = GridQuery.for(world)
+    expect(world.grid.get(4, 2)).toBe(TILE_EMPTY)
+    expect(q.isWalkable(4, 2)).toBe(true)
+    expect(q.isWalkable(5, 2)).toBe(true)
+    expect(q.isWalkable(1, 2)).toBe(true)
+  })
 })

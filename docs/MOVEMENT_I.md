@@ -229,7 +229,9 @@ Sin spoiler de doctrinas: luz y espíritus se leen como clima de la mina, no com
 
 **Tema:** Recursos con inteligencia.
 
-Se introduce un **puzzle básico**: activar bloques / mecanismos.
+Se introduce un **puzzle básico** de tabletas en el suelo: pisarlas **en orden**.
+Correcto → destello verde; incorrecto → destello rojo y reinicio. Al completar
+aparece un **cofre** cerca; abrirlo con **E** entrega un lote rico de recursos.
 
 Convive con enemigos ya conocidos.
 
@@ -269,7 +271,8 @@ Encuentro con el **Primer Excavador**.
 
 - **Carrera de recursos:** encontrar pasadizos, recolectar, gestionar bombas vs pico.
 - Versión **avanzada** de golems descompuestos.
-- **Trampas.**
+- **Trampas de dardo:** pisar placa → aviso → dardo desde lanzador a ≥3 tiles;
+  el proyectil muere en muro/destructible; se rearma al salir; bomba desactiva la trampa.
 - Termina cuando se acaba el **tiempo**; hay **recuento**.
 - Gana quien termine con **más recursos** según las reglas del encuentro *(definidas en [`DESIGN.md`](./DESIGN.md))*.
 

@@ -6,6 +6,8 @@ import {
 } from '../../config/constants.js'
 import { TERRAIN_REGION } from '../../config/terrainTypes.js'
 import { buildFragmentPlan, normalizeFragmentSlots } from '../../config/crafting.js'
+import { clonePuzzleReward } from '../../config/puzzleTypes.js'
+import { createTrap, DART_MIN_DISTANCE } from '../../config/trapTypes.js'
 
 const RADII = {
   small: 8,
@@ -1062,6 +1064,9 @@ function populate(world, spec, graph, roomCells, corridorCells, rand, layout = {
     ]),
   )
 
+  // Reservar tabletas antes de densificar destructibles/recursos.
+  placePuzzleTablets(world, spec, graph, roomCells, excluded, rand)
+
   for (const node of graph.nodes) {
     if (node.role === 'entry') continue
     const density = ROLE_DESTRUCTIBLE_DENSITY[node.role] ?? 0.2
@@ -1252,6 +1257,140 @@ function populate(world, spec, graph, roomCells, corridorCells, rand, layout = {
     layout.carvedMask ?? new Set(),
     rand,
   )
+
+  placeDartTraps(world, spec, graph, roomCells, pureCorridorCells, excluded, rand)
+}
+
+function placePuzzleTablets(world, spec, graph, roomCells, excluded, rand) {
+  world.puzzleTablets = []
+  world.chest = null
+  const puzzle = spec.puzzle
+  if (!puzzle?.count) return
+
+  const preferredRoles = ['relic', 'agora', 'mixed']
+  const nodes = [
+    ...graph.nodes.filter((node) => preferredRoles.includes(node.role)),
+    ...graph.nodes.filter((node) => node.role !== 'entry'),
+  ].filter((node, index, list) => (
+    list.findIndex((candidate) => candidate.id === node.id) === index
+  ))
+
+  const reachable = floodReachable(world.grid, world.playerSpawn)
+  let chosenCells = null
+  let chosenNodeId = null
+
+  for (const node of nodes) {
+    const cells = candidateCells(world.grid, roomCells.get(node.id) ?? [], excluded)
+      .filter((cell) => reachable.has(key(cell.x, cell.y)))
+    if (cells.length < puzzle.count) continue
+    shuffle(cells, rand)
+    chosenCells = cells.slice(0, puzzle.count)
+    chosenNodeId = node.id
+    break
+  }
+
+  if (!chosenCells) {
+    const fallback = []
+    for (const node of graph.nodes) {
+      if (node.role === 'entry') continue
+      for (const cell of candidateCells(world.grid, roomCells.get(node.id) ?? [], excluded)) {
+        if (!reachable.has(key(cell.x, cell.y))) continue
+        fallback.push({ ...cell, nodeId: node.id })
+      }
+    }
+    shuffle(fallback, rand)
+    if (fallback.length < puzzle.count) return
+    chosenCells = fallback.slice(0, puzzle.count)
+    chosenNodeId = chosenCells[0].nodeId
+  }
+
+  // Orden espacial legible: izquierda→derecha, luego arriba→abajo.
+  chosenCells.sort((a, b) => a.y - b.y || a.x - b.x)
+  for (let order = 0; order < chosenCells.length; order++) {
+    const cell = chosenCells[order]
+    excluded.add(key(cell.x, cell.y))
+    world.puzzleTablets.push({
+      x: cell.x,
+      y: cell.y,
+      order,
+      visual: 'off',
+      nodeId: chosenNodeId,
+    })
+  }
+  world.puzzleReward = clonePuzzleReward(puzzle.reward)
+}
+
+function placeDartTraps(world, spec, graph, roomCells, pureCorridorCells, excluded, rand) {
+  world.traps = []
+  world.darts = []
+  const trapCap = spec.trapCap ?? 0
+  if (trapCap <= 0) return
+
+  const reachable = floodReachable(world.grid, world.playerSpawn)
+  const plateCandidates = []
+
+  for (const cells of pureCorridorCells.values()) {
+    for (const cell of candidateCells(world.grid, cells, excluded)) {
+      if (!reachable.has(key(cell.x, cell.y))) continue
+      plateCandidates.push({ ...cell, prefer: 0 })
+    }
+  }
+  for (const node of graph.nodes) {
+    if (node.role !== 'den' && node.role !== 'mixed') continue
+    for (const cell of candidateCells(world.grid, roomCells.get(node.id) ?? [], excluded)) {
+      if (!reachable.has(key(cell.x, cell.y))) continue
+      plateCandidates.push({ ...cell, prefer: 1, nodeId: node.id })
+    }
+  }
+  shuffle(plateCandidates, rand)
+  plateCandidates.sort((a, b) => a.prefer - b.prefer)
+
+  let trapId = 0
+  for (const plate of plateCandidates) {
+    if (world.traps.length >= trapCap) break
+    if (excluded.has(key(plate.x, plate.y))) continue
+
+    const launchers = []
+    for (const dir of DIRECTIONS) {
+      for (let dist = DART_MIN_DISTANCE; dist <= DART_MIN_DISTANCE + 4; dist++) {
+        const lx = plate.x - dir.x * dist
+        const ly = plate.y - dir.y * dist
+        if (!world.grid.inBounds(lx, ly)) break
+        if (world.grid.get(lx, ly) !== TILE_EMPTY) break
+        if (excluded.has(key(lx, ly))) break
+        if (!reachable.has(key(lx, ly))) break
+
+        let clear = true
+        for (let step = 1; step < dist; step++) {
+          const mx = plate.x - dir.x * step
+          const my = plate.y - dir.y * step
+          if (world.grid.get(mx, my) !== TILE_EMPTY) {
+            clear = false
+            break
+          }
+        }
+        if (!clear) break
+
+        launchers.push({
+          launcher: { x: lx, y: ly },
+          dir: { x: dir.x, y: dir.y },
+          dist,
+        })
+      }
+    }
+    if (!launchers.length) continue
+
+    const chosen = launchers[Math.floor(rand() * launchers.length)]
+    excluded.add(key(plate.x, plate.y))
+    excluded.add(key(chosen.launcher.x, chosen.launcher.y))
+    world.traps.push(createTrap({
+      id: trapId,
+      plate: { x: plate.x, y: plate.y },
+      launcher: chosen.launcher,
+      dir: chosen.dir,
+    }))
+    trapId += 1
+  }
 }
 
 export class LevelGenerator {

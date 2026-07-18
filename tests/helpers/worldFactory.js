@@ -59,6 +59,17 @@ export function createTestWorld(rows, options = {}) {
       maxLives: 0,
     },
   }
+  world.puzzleTablets = options.puzzleTablets ?? []
+  world.puzzle = options.puzzle ?? {
+    nextExpected: 0,
+    completed: false,
+    flashTimer: 0,
+    lastPlayerTile: null,
+  }
+  world.puzzleReward = options.puzzleReward ?? { bronze: 3, iron: 2, crystal: 1 }
+  world.chest = options.chest ?? null
+  world.traps = options.traps ?? []
+  world.darts = options.darts ?? []
   world.currentLevelIndex = 0
   world.gameOver = false
   world.gameWon = false

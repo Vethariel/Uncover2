@@ -30,6 +30,15 @@ export class SoundBridge {
         case 'enemyDeath':
           this.audio.playSFX('enemyDeath')
           break
+        case 'puzzleStep':
+        case 'puzzleFail':
+        case 'puzzleComplete':
+        case 'chestOpen':
+        case 'trapArmed':
+        case 'dartFire':
+        case 'trapDestroyed':
+          // Hooks listos; SFX dedicados cuando haya assets.
+          break
       }
     }
   }

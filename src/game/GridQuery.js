@@ -55,10 +55,20 @@ export class GridQuery {
     return true
   }
 
-  /** Explosión activa o zona de detonación inminente. */
+  /** Explosión activa, zona de detonación inminente, dardo o placa en aviso. */
   isDangerous(x, y) {
     for (const explosion of this.world.explosions) {
       if (explosion.tileX === x && explosion.tileY === y) return true
+    }
+
+    for (const dart of this.world.darts ?? []) {
+      if (dart.alive && dart.tileX === x && dart.tileY === y) return true
+    }
+
+    for (const trap of this.world.traps ?? []) {
+      if (trap.state === 'warning' && trap.plate.x === x && trap.plate.y === y) {
+        return true
+      }
     }
 
     for (const bomb of this.world.bombs) {

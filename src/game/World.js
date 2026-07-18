@@ -10,6 +10,7 @@ import {
 import { ENEMY_TYPES } from '../config/enemyTypes.js'
 import { createEmptyResources } from '../config/miningTypes.js'
 import { createEmptyFragmentBag } from '../config/crafting.js'
+import { createPuzzleState, clonePuzzleReward } from '../config/puzzleTypes.js'
 import { positionFromTile } from './entityTiles.js'
 
 export class World {
@@ -28,6 +29,12 @@ export class World {
     this.enemySpawns = []
     this.resourceSpawns = []
     this.recipeFragmentSpawns = []
+    this.puzzleTablets = []
+    this.puzzle = createPuzzleState()
+    this.puzzleReward = null
+    this.chest = null
+    this.traps = []
+    this.darts = []
     this.levelGraph = null
     this.levelTimer = null
     this.levelVisualConfig = null
@@ -68,6 +75,12 @@ export class World {
     this.enemySpawns = []
     this.resourceSpawns = []
     this.recipeFragmentSpawns = []
+    this.puzzleTablets = []
+    this.puzzle = createPuzzleState()
+    this.puzzleReward = null
+    this.chest = null
+    this.traps = []
+    this.darts = []
     this.levelGraph = null
     this.levelTimer = null
     this.playerDeathTimer = 0
@@ -89,6 +102,10 @@ export class World {
       ?? LEVELS[0]
     this.pendingLevelSpec = null
     LevelGenerator.generate(this, level)
+
+    if (level.puzzle?.reward) {
+      this.puzzleReward = clonePuzzleReward(level.puzzle.reward)
+    }
 
     const spawn = this.playerSpawn
     const playerPos = positionFromTile(spawn.x, spawn.y, this.tileSize, PLAYER_SIZE)

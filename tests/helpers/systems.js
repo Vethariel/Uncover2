@@ -10,6 +10,8 @@ import { LifeSystem } from '../../src/game/systems/LifeSystem.js'
 import { InputSystem } from '../../src/game/systems/InputSystem.js'
 import { MiningSystem } from '../../src/game/systems/MiningSystem.js'
 import { FragmentExtractSystem } from '../../src/game/systems/FragmentExtractSystem.js'
+import { PuzzleSystem } from '../../src/game/systems/PuzzleSystem.js'
+import { TrapSystem } from '../../src/game/systems/TrapSystem.js'
 import { GameLoop } from '../../src/game/GameLoop.js'
 import { mockInput } from './worldFactory.js'
 
@@ -19,6 +21,8 @@ const life = new LifeSystem()
 const input = new InputSystem()
 const mining = new MiningSystem()
 const fragments = new FragmentExtractSystem()
+const puzzle = new PuzzleSystem()
+const traps = new TrapSystem(life)
 const gameLoop = new GameLoop()
 
 export function stepCollision(world, dt, direction) {
@@ -51,6 +55,14 @@ export function stepMining(world, dt, keys = {}) {
 
 export function stepFragments(world, dt, keys = {}) {
   fragments.update(world, dt, mockInput(keys))
+}
+
+export function stepPuzzle(world, dt = 0, keys = {}) {
+  puzzle.update(world, dt, mockInput(keys))
+}
+
+export function stepTrap(world, dt = 0) {
+  traps.update(world, dt)
 }
 
 export function explodeBomb(world, bombIndex = 0) {

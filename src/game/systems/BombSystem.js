@@ -7,6 +7,7 @@ import {
 } from '../../config/constants.js'
 import { Explosion } from '../entities/Explosion.js'
 import { destroyDestructibleWithoutYield } from './MiningSystem.js'
+import { disableTrapAt } from './TrapSystem.js'
 
 export class BombSystem {
   update(world, dt) {
@@ -51,6 +52,7 @@ export class BombSystem {
     const tileY = bomb.tileY
 
     this.spawnExplosion(world, tileX, tileY)
+    disableTrapAt(world, tileX, tileY)
 
     const range = bomb.range || 1
     const directions = [
@@ -83,6 +85,8 @@ export class BombSystem {
         } else {
           this.spawnExplosion(world, tx, ty, kind)
         }
+
+        disableTrapAt(world, tx, ty)
 
         if (isDestructible) {
           destroyDestructibleWithoutYield(world, tx, ty)

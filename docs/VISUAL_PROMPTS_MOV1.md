@@ -258,18 +258,25 @@ The bronze inset on the stone floor block lights up with amber glow as it activa
 
 ### Deseos
 
-Peligro de cámara (N7): púas, gas o placa inestable — lectura clara sin gore.
+Peligro de cámara (N7): **placa de dardos** + lanzador a distancia — lectura clara sin gore.
+Placa en suelo; lanzador (embocadura / ranura) alineado a ≥3 tiles; proyectil de dardo breve.
 
-### Still (placa inestable)
+### Still (placa de activación)
 
 ```
-top-down unstable Nordic mine floor plate, cracked gray stone, faint warning amber dust in the seams, soft shadow, rich gradients, one 32x32 tile, blank background
+top-down Nordic mine dart trap pressure plate, cracked gray stone disc with faint warning amber dust in the seams, soft shadow, rich gradients, one 32x32 tile, blank background
+```
+
+### Still (lanzador)
+
+```
+top-down Nordic mine wall dart launcher aperture, bronze-rimmed stone slit facing a corridor, rich gradients, one 32x32 tile prop, blank background
 ```
 
 ### Acción
 
 ```
-The cracked floor plate shudders and dust puffs up from the seams.
+The pressure plate flashes amber warning, then a short dart streak flies from the distant launcher toward the plate.
 ```
 
 ---
