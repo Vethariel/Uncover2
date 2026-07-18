@@ -52,22 +52,31 @@ export function destroyDestructibleWithoutYield(world, x, y) {
 export class MiningSystem {
   update(world, dt, input) {
     const player = world.player
-    if (!player?.alive || !input?.isDown('mine')) {
+    if (!player?.alive) {
       world.activeMiningTarget = null
       return
     }
 
-    const vec = facingVector(player.facing)
-    const targetX = player.tileX + vec.x
-    const targetY = player.tileY + vec.y
-    if (!world.grid.inBounds(targetX, targetY)) {
+    // Debug: T = pico instantáneo sobre el destructible frontal.
+    if (input?.isJustDown?.('debugMine')) {
+      const target = this._facingDestructible(world, player)
+      if (target) {
+        this._completeMining(world, player, target.x, target.y)
+        return
+      }
+    }
+
+    if (!input?.isDown('mine')) {
       world.activeMiningTarget = null
       return
     }
-    if (world.grid.get(targetX, targetY) !== TILE_DESTRUCTIBLE) {
+
+    const target = this._facingDestructible(world, player)
+    if (!target) {
       world.activeMiningTarget = null
       return
     }
+    const { x: targetX, y: targetY } = target
 
     const key = tileKey(targetX, targetY)
     const spawn = findResourceSpawn(world, targetX, targetY)
@@ -84,8 +93,24 @@ export class MiningSystem {
 
     if (progress < duration) return
 
+    this._completeMining(world, player, targetX, targetY)
+  }
+
+  _facingDestructible(world, player) {
+    const vec = facingVector(player.facing)
+    const x = player.tileX + vec.x
+    const y = player.tileY + vec.y
+    if (!world.grid.inBounds(x, y)) return null
+    if (world.grid.get(x, y) !== TILE_DESTRUCTIBLE) return null
+    return { x, y }
+  }
+
+  _completeMining(world, player, targetX, targetY) {
+    const spawn = findResourceSpawn(world, targetX, targetY)
+    const profile = miningProfileFor(spawn?.material)
+
     world.grid.set(targetX, targetY, TILE_EMPTY)
-    world.miningProgress.delete(key)
+    world.miningProgress.delete(tileKey(targetX, targetY))
     world.activeMiningTarget = null
 
     if (spawn) {

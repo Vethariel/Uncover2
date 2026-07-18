@@ -5,6 +5,7 @@ import {
   TILE_DESTRUCTIBLE,
 } from '../../config/constants.js'
 import { TERRAIN_REGION } from '../../config/terrainTypes.js'
+import { buildFragmentPlan, normalizeFragmentSlots } from '../../config/crafting.js'
 
 const RADII = {
   small: 8,
@@ -225,7 +226,7 @@ function createGraph(spec, rand) {
   const roles = assignRoles(
     traversalSizes.length,
     spec.resourceCap ?? 0,
-    spec.recipeFragments ?? 0,
+    normalizeFragmentSlots(spec).length,
     rand,
   )
   const nodes = [
@@ -723,7 +724,7 @@ function fractalNoise(x, y, scale, seed) {
   return total / normalization
 }
 
-function floodReachable(grid, start) {
+function floodReachable(grid, start, { destructiblesPassable = false } = {}) {
   const visited = new Set()
   const queue = [start]
   visited.add(key(start.x, start.y))
@@ -734,7 +735,11 @@ function floodReachable(grid, start) {
       const x = current.x + direction.x
       const y = current.y + direction.y
       const cellKey = key(x, y)
-      if (visited.has(cellKey) || grid.get(x, y) !== TILE_EMPTY) continue
+      if (visited.has(cellKey) || !grid.inBounds(x, y)) continue
+      const tile = grid.get(x, y)
+      const passable = tile === TILE_EMPTY
+        || (destructiblesPassable && tile === TILE_DESTRUCTIBLE)
+      if (!passable) continue
       visited.add(cellKey)
       queue.push({ x, y })
     }
@@ -942,7 +947,104 @@ function pointsFromKeys(keys) {
   return [...keys].map((cellKey) => parseKey(cellKey))
 }
 
-function populate(world, spec, graph, roomCells, corridorCells, rand) {
+function placeRecipeFragmentsOnWalls(
+  world,
+  plan,
+  graph,
+  roomCells,
+  organicWalls,
+  forcedDoorWalls,
+  carvedMask,
+  rand,
+) {
+  world.recipeFragmentSpawns = []
+  if (!plan?.length) return
+
+  const reachable = floodReachable(
+    world.grid,
+    world.playerSpawn,
+    { destructiblesPassable: true },
+  )
+  const takenWalls = new Set()
+  const doorWalls = new Set(forcedDoorWalls ?? [])
+  for (const door of [world.entryDoor, world.exitDoor]) {
+    for (const tile of [
+      ...(door.tiles ?? []),
+      ...(door.sideTiles ?? []),
+      ...(door.backingTiles ?? []),
+    ]) {
+      doorWalls.add(key(tile.x, tile.y))
+    }
+  }
+
+  const nodePriority = [...graph.nodes].sort((a, b) => {
+    const roleScore = (role) => (
+      role === 'relic' ? 0 : role === 'mixed' ? 1 : role === 'vein' ? 2 : 3
+    )
+    const sizeScore = (size) => (
+      size === 'large' ? 0 : size === 'medium' ? 1 : 2
+    )
+    return roleScore(a.role) - roleScore(b.role)
+      || sizeScore(a.size) - sizeScore(b.size)
+      || a.id - b.id
+  })
+
+  function collectCandidates(preferLarge) {
+    const candidates = []
+    for (const node of nodePriority) {
+      if (preferLarge && node.size !== 'large' && node.size !== 'medium') continue
+      for (const cell of roomCells.get(node.id) ?? []) {
+        for (const dir of DIRECTIONS) {
+          const wx = cell.x + dir.x
+          const wy = cell.y + dir.y
+          const wallKey = key(wx, wy)
+          if (takenWalls.has(wallKey) || doorWalls.has(wallKey)) continue
+          if (!organicWalls.has(wallKey) && !carvedMask.has(wallKey)) continue
+          if (world.grid.get(wx, wy) !== TILE_WALL) continue
+
+          const interacts = DIRECTIONS
+            .map((d) => ({ x: wx + d.x, y: wy + d.y }))
+            .filter((tile) => (
+              world.grid.inBounds(tile.x, tile.y)
+              && world.grid.get(tile.x, tile.y) !== TILE_WALL
+              && reachable.has(key(tile.x, tile.y))
+            ))
+          if (!interacts.length) continue
+          candidates.push({
+            x: wx,
+            y: wy,
+            nodeId: node.id,
+            interacts,
+          })
+        }
+      }
+    }
+    return shuffle(candidates, rand)
+  }
+
+  for (const assignment of plan) {
+    let candidates = assignment.kind === 'specialized'
+      ? collectCandidates(true)
+      : collectCandidates(false)
+    if (!candidates.length) candidates = collectCandidates(false)
+    const chosen = candidates.find((candidate) => !takenWalls.has(key(candidate.x, candidate.y)))
+    if (!chosen) continue
+
+    takenWalls.add(key(chosen.x, chosen.y))
+    const interact = chosen.interacts[Math.floor(rand() * chosen.interacts.length)]
+    world.recipeFragmentSpawns.push({
+      x: chosen.x,
+      y: chosen.y,
+      nodeId: chosen.nodeId,
+      rank: assignment.rank,
+      kind: assignment.kind,
+      upgradeId: assignment.upgradeId ?? null,
+      interact,
+    })
+  }
+}
+
+function populate(world, spec, graph, roomCells, corridorCells, rand, layout = {}) {
   const excluded = new Set()
   excluded.add(key(world.playerSpawn.x, world.playerSpawn.y))
   for (const door of [world.entryDoor, world.exitDoor]) {
@@ -1138,17 +1240,18 @@ function populate(world, spec, graph, roomCells, corridorCells, rand) {
     })
   }
 
-  world.recipeFragmentSpawns = []
-  const relicNodes = graph.nodes.filter((node) => node.role === 'relic')
-  const fragmentCount = Math.min(spec.recipeFragments ?? 0, relicNodes.length)
-  for (let index = 0; index < fragmentCount; index++) {
-    const node = relicNodes[index]
-    const cells = candidateCells(world.grid, roomCells.get(node.id) ?? [], excluded)
-    if (!cells.length) continue
-    const cell = cells[Math.floor(rand() * cells.length)]
-    excluded.add(key(cell.x, cell.y))
-    world.recipeFragmentSpawns.push({ ...cell, nodeId: node.id, rank: 2 })
-  }
+  const fragmentPlan = spec.fragmentPlan
+    ?? buildFragmentPlan(spec, spec.fragmentEligibility ?? {})
+  placeRecipeFragmentsOnWalls(
+    world,
+    fragmentPlan,
+    graph,
+    roomCells,
+    layout.organicWalls ?? new Set(),
+    layout.forcedDoorWalls ?? new Set(),
+    layout.carvedMask ?? new Set(),
+    rand,
+  )
 }
 
 export class LevelGenerator {
@@ -1432,7 +1535,11 @@ export class LevelGenerator {
         protectedCells,
       }
       : { organicWallCount: organicWalls.size }
-    populate(world, spec, graph, roomCells, corridorCells, rand)
+    populate(world, spec, graph, roomCells, corridorCells, rand, {
+      organicWalls,
+      forcedDoorWalls,
+      carvedMask: shiftedMask,
+    })
     world.wallLightSpawns = chooseWallLightSpawns(
       grid,
       shiftedMask,

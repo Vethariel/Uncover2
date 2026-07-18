@@ -9,6 +9,7 @@ import {
 } from '../config/constants.js'
 import { ENEMY_TYPES } from '../config/enemyTypes.js'
 import { createEmptyResources } from '../config/miningTypes.js'
+import { createEmptyFragmentBag } from '../config/crafting.js'
 import { positionFromTile } from './entityTiles.js'
 
 export class World {
@@ -43,8 +44,12 @@ export class World {
     this.tileAnimTimer = 0
     this.events = []
     this.runResources = createEmptyResources()
+    this.runFragments = createEmptyFragmentBag()
     this.miningProgress = new Map()
+    this.fragmentProgress = new Map()
     this.activeMiningTarget = null
+    this.activeFragmentTarget = null
+    this.pendingLevelSpec = null
   }
 
   reset() {
@@ -75,11 +80,14 @@ export class World {
     this.tileAnimTimer = 0
     this.events = []
     this.miningProgress = new Map()
+    this.fragmentProgress = new Map()
     this.activeMiningTarget = null
-    // runResources se conserva entre resets del mundo dentro de la misma run;
-    // GameState lo sincroniza al entrar/salir del nivel.
+    this.activeFragmentTarget = null
 
-    const level = LEVELS[this.currentLevelIndex] ?? LEVELS[0]
+    const level = this.pendingLevelSpec
+      ?? LEVELS[this.currentLevelIndex]
+      ?? LEVELS[0]
+    this.pendingLevelSpec = null
     LevelGenerator.generate(this, level)
 
     const spawn = this.playerSpawn

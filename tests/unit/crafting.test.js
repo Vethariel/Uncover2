@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildFragmentPlan,
+  canCraft,
   canSmelt,
-  smeltBatch,
+  canUnlockRank2,
+  canUnlockRank3,
   craftUpgrade,
+  createDefaultRecipesKnown,
+  createEmptyFragmentBag,
   createEmptyUpgrades,
-  miningDurationFactor,
   fortuneChance,
+  miningDurationFactor,
+  smeltBatch,
+  unlockRank2,
+  unlockRank3,
 } from '../../src/config/crafting.js'
 import { createEmptyResources } from '../../src/config/miningTypes.js'
 
@@ -30,15 +38,85 @@ describe('crafting', () => {
     expect(crude.crystal).toBe(0)
   })
 
-  it('forja mejoras de rango 1 y bloquea repetir', () => {
+  it('forja rango 1 y bloquea sin receta R2', () => {
     const refined = createEmptyResources()
     const upgrades = createEmptyUpgrades()
+    const recipesKnown = createDefaultRecipesKnown()
     refined.bronze = 6
 
-    expect(craftUpgrade(refined, upgrades, 'maxBombs').ok).toBe(true)
+    expect(craftUpgrade(refined, upgrades, recipesKnown, 'maxBombs').ok).toBe(true)
     expect(upgrades.maxBombs).toBe(1)
     expect(refined.bronze).toBe(3)
-    expect(craftUpgrade(refined, upgrades, 'maxBombs').ok).toBe(false)
+    expect(canCraft(refined, upgrades, recipesKnown, 'maxBombs')).toBe(false)
+    expect(craftUpgrade(refined, upgrades, recipesKnown, 'maxBombs').reason).toBe('recipe_locked')
+  })
+
+  it('desbloquea R2 con 2 genéricos y permite forjar', () => {
+    const fragments = createEmptyFragmentBag()
+    const recipesKnown = createDefaultRecipesKnown()
+    const upgrades = createEmptyUpgrades()
+    upgrades.maxBombs = 1
+    fragments.generic = 2
+
+    expect(canUnlockRank2(fragments, recipesKnown, 'maxBombs')).toBe(true)
+    expect(unlockRank2(fragments, recipesKnown, 'maxBombs')).toEqual({
+      ok: true,
+      rank: 2,
+      upgradeId: 'maxBombs',
+    })
+    expect(fragments.generic).toBe(0)
+    expect(recipesKnown.maxBombs).toBe(2)
+
+    const refined = createEmptyResources()
+    refined.bronze = 5
+    expect(craftUpgrade(refined, upgrades, recipesKnown, 'maxBombs').ok).toBe(true)
+    expect(upgrades.maxBombs).toBe(2)
+  })
+
+  it('desbloquea R3 con 3 especializados tras R2', () => {
+    const fragments = createEmptyFragmentBag()
+    const recipesKnown = createDefaultRecipesKnown()
+    recipesKnown.pickSpeed = 2
+    fragments.specialized.pickSpeed = 3
+
+    expect(canUnlockRank3(fragments, recipesKnown, 'pickSpeed')).toBe(true)
+    expect(unlockRank3(fragments, recipesKnown, 'pickSpeed').ok).toBe(true)
+    expect(recipesKnown.pickSpeed).toBe(3)
+    expect(fragments.specialized.pickSpeed).toBe(0)
+  })
+
+  it('plan N6 cae a genéricos si no hay elegibles R2', () => {
+    const plan = buildFragmentPlan(
+      {
+        fragmentSlots: [
+          { rank: 3, kind: 'specialized' },
+          { rank: 3, kind: 'specialized' },
+          { rank: 3, kind: 'specialized' },
+        ],
+      },
+      { r2UpgradeIds: [] },
+    )
+    expect(plan).toEqual([
+      { rank: 2, kind: 'generic', upgradeId: null },
+      { rank: 2, kind: 'generic', upgradeId: null },
+      { rank: 2, kind: 'generic', upgradeId: null },
+    ])
+  })
+
+  it('plan N6 asigna especializados desde elegibilidad', () => {
+    const plan = buildFragmentPlan(
+      {
+        fragmentSlots: [
+          { rank: 3, kind: 'specialized' },
+          { rank: 3, kind: 'specialized' },
+        ],
+      },
+      { r2UpgradeIds: ['maxBombs', 'fortune'] },
+    )
+    expect(plan).toEqual([
+      { rank: 3, kind: 'specialized', upgradeId: 'maxBombs' },
+      { rank: 3, kind: 'specialized', upgradeId: 'fortune' },
+    ])
   })
 
   it('calcula factores de pico', () => {

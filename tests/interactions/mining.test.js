@@ -114,4 +114,24 @@ describe('MiningSystem', () => {
     stepGameLoop(world, 2.5, { held: ['mine'] })
     expect(world.runResources.bronze).toBe(1)
   })
+
+  it('debug: T elimina el destructible frontal al instante', () => {
+    const world = oreWorld('bronze', 1)
+
+    stepMining(world, 0.016, { justDown: ['debugMine'] })
+    expect(world.grid.get(3, 1)).toBe(TILE_EMPTY)
+    expect(world.runResources.bronze).toBe(1)
+    expect(world.resourceSpawns).toHaveLength(0)
+    expect(world.events).toContain('resourceCollected')
+  })
+
+  it('debug: T sin destructible al frente no hace nada', () => {
+    const world = createTestWorld(
+      ['#####', '#...#', '#####'],
+      { playerSpawn: { x: 2, y: 1 }, player: { facing: DIR_RIGHT } },
+    )
+
+    stepMining(world, 0.016, { justDown: ['debugMine'] })
+    expect(world.events).toHaveLength(0)
+  })
 })

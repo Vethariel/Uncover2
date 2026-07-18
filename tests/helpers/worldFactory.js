@@ -42,9 +42,23 @@ export function createTestWorld(rows, options = {}) {
   world.enemies = []
   world.events = []
   world.resourceSpawns = []
+  world.recipeFragmentSpawns = []
   world.miningProgress = new Map()
+  world.fragmentProgress = new Map()
   world.activeMiningTarget = null
+  world.activeFragmentTarget = null
   world.runResources = { bronze: 0, iron: 0, crystal: 0 }
+  world.runFragments = {
+    generic: 0,
+    specialized: {
+      maxBombs: 0,
+      bombRange: 0,
+      pickSpeed: 0,
+      fortune: 0,
+      moveSpeed: 0,
+      maxLives: 0,
+    },
+  }
   world.currentLevelIndex = 0
   world.gameOver = false
   world.gameWon = false

@@ -268,12 +268,17 @@ El generador **intenta** colocar exactamente el soft-cap en casillas alcanzables
 
 ### Fragmentos de receta (colocación)
 
-| Rango objetivo | Dónde | Cantidad Mov. I |
-|----------------|-------|-----------------|
-| Recetas rango 2 | Nodos **reliquia** o cofre en mediano | 1 fragmento en N3 o N4; 1 en N5; 1 en N6 |
-| Esquema rango 3 | Nodo grande N6 o hallazgo N7 | 1 esquema (o 2–3 fragmentos que lo completen) |
+| Nivel | Slots | Tipo |
+|------:|-------|------|
+| N3 | 1 | genérico (R2) |
+| N4 | 1 | genérico (R2) |
+| N5 | 2 | genéricos (R2) |
+| N6 | 3 | especializados (R3); fallback a genéricos si no hay mejoras con `recipesKnown ≥ 2` |
 
-No spawnear fragmentos en N1–N2.
+- Candidatos = muros orgánicos/tallados con **≥1 vecino cardinal alcanzable** (flood-fill con destructibles transitables).
+- El tile permanece `TILE_WALL`; el spawn guarda `{x,y,rank,kind,upgradeId,interact,nodeId}`.
+- Preferencia de nodos: reliquia → mixto → veta; especializados prefieren nodos medium/large.
+- No spawnear fragmentos en N1–N2.
 
 ### Pasillos
 

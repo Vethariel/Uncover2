@@ -8,6 +8,7 @@ import {
   TILE_PASS,
 } from '../../config/constants.js'
 import { Bomb } from '../entities/Bomb.js'
+import { isExtractingFragment } from './FragmentExtractSystem.js'
 
 function facingVector(facing) {
   switch (facing) {
@@ -42,9 +43,10 @@ export class InputSystem {
 
   handlePlayerInput(world, player, input) {
     const mining = input.isDown('mine') && isMiningDestructible(world, player)
+    const extracting = isExtractingFragment(world, player, input)
 
     let direction = DIR_NONE
-    if (!mining) {
+    if (!mining && !extracting) {
       if (input.isDown('left')) direction = DIR_LEFT
       else if (input.isDown('right')) direction = DIR_RIGHT
       else if (input.isDown('up')) direction = DIR_UP

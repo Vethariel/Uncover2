@@ -11,17 +11,28 @@ import {
   transferResources,
 } from '../config/miningTypes.js'
 import {
+  buildFragmentPlan,
   canCraft,
   canSmelt,
+  canUnlockRank2,
+  canUnlockRank3,
+  clearFragmentBag,
+  cloneFragmentBag,
   craftUpgrade,
+  createDefaultRecipesKnown,
+  createEmptyFragmentBag,
   createEmptyUpgrades,
   fortuneChance,
   miningDurationFactor,
   smeltBatch,
+  transferFragmentBag,
+  UPGRADE_IDS,
+  unlockRank2,
+  unlockRank3,
 } from '../config/crafting.js'
 
 const SAVE_KEY = 'uncover_save'
-const SAVE_VERSION = 2
+const SAVE_VERSION = 3
 const MOVE_SPEED_PER_RANK = 18
 
 export class GameState {
@@ -43,9 +54,13 @@ export class GameState {
     this.runResources = createEmptyResources()
     this.workshopCrude = createEmptyResources()
     this.workshopRefined = createEmptyResources()
+    this.runFragments = createEmptyFragmentBag()
+    this.workshopFragments = createEmptyFragmentBag()
     this.upgrades = createEmptyUpgrades()
+    this.recipesKnown = createDefaultRecipesKnown()
     this.hubUnlocked = false
     this.hubEntry = null
+    this.pendingFragmentPlan = null
   }
 
   /** Compat: menú "nueva partida" / wipe. */
@@ -74,7 +89,6 @@ export class GameState {
   }
 
   syncFromPlayer(player) {
-    // Stats persistentes vienen de upgrades; no sobrescribir desde daño de nivel.
     this.lives = this.maxLives
   }
 
@@ -102,6 +116,7 @@ export class GameState {
       iron: world.runResources?.iron ?? 0,
       crystal: world.runResources?.crystal ?? 0,
     }
+    this.runFragments = cloneFragmentBag(world.runFragments)
   }
 
   applyRunResourcesToWorld(world) {
@@ -110,14 +125,28 @@ export class GameState {
       iron: this.runResources.iron ?? 0,
       crystal: this.runResources.crystal ?? 0,
     }
+    world.runFragments = cloneFragmentBag(this.runFragments)
   }
 
   depositRunToWorkshop() {
     transferResources(this.runResources, this.workshopCrude)
+    transferFragmentBag(this.runFragments, this.workshopFragments)
   }
 
   clearRunResources() {
     clearResources(this.runResources)
+    clearFragmentBag(this.runFragments)
+  }
+
+  fragmentEligibility() {
+    return {
+      r2UpgradeIds: UPGRADE_IDS.filter((id) => (this.recipesKnown[id] ?? 1) >= 2),
+    }
+  }
+
+  prepareFragmentPlanForLevel(levelSpec) {
+    this.pendingFragmentPlan = buildFragmentPlan(levelSpec, this.fragmentEligibility())
+    return this.pendingFragmentPlan
   }
 
   trySmelt(material) {
@@ -128,12 +157,31 @@ export class GameState {
   }
 
   tryCraft(upgradeId) {
-    if (!canCraft(this.workshopRefined, this.upgrades, upgradeId)) {
+    if (!canCraft(this.workshopRefined, this.upgrades, this.recipesKnown, upgradeId)) {
       return { ok: false, reason: 'blocked' }
     }
-    const result = craftUpgrade(this.workshopRefined, this.upgrades, upgradeId)
+    const result = craftUpgrade(
+      this.workshopRefined,
+      this.upgrades,
+      this.recipesKnown,
+      upgradeId,
+    )
     if (result.ok) this.recomputeStatsFromUpgrades()
     return result
+  }
+
+  tryUnlockRank2(upgradeId) {
+    if (!canUnlockRank2(this.workshopFragments, this.recipesKnown, upgradeId)) {
+      return { ok: false, reason: 'blocked' }
+    }
+    return unlockRank2(this.workshopFragments, this.recipesKnown, upgradeId)
+  }
+
+  tryUnlockRank3(upgradeId) {
+    if (!canUnlockRank3(this.workshopFragments, this.recipesKnown, upgradeId)) {
+      return { ok: false, reason: 'blocked' }
+    }
+    return unlockRank3(this.workshopFragments, this.recipesKnown, upgradeId)
   }
 
   nextLevel() {
@@ -179,7 +227,6 @@ export class GameState {
     return 'workshop'
   }
 
-  /** Destino al salir del hub por la puerta. */
   levelIndexForHubExit() {
     return this.currentLevelIndex
   }
@@ -206,7 +253,10 @@ export class GameState {
       workshopCrude: { ...this.workshopCrude },
       workshopRefined: { ...this.workshopRefined },
       workshopStorage: { ...this.workshopCrude },
+      runFragments: cloneFragmentBag(this.runFragments),
+      workshopFragments: cloneFragmentBag(this.workshopFragments),
       upgrades: { ...this.upgrades },
+      recipesKnown: { ...this.recipesKnown },
     }
     localStorage.setItem(SAVE_KEY, JSON.stringify(data))
   }
@@ -221,6 +271,14 @@ export class GameState {
       this.upgrades = {
         ...createEmptyUpgrades(),
         ...(data.upgrades ?? {}),
+      }
+      this.recipesKnown = {
+        ...createDefaultRecipesKnown(),
+        ...(data.recipesKnown ?? {}),
+      }
+      for (const id of UPGRADE_IDS) {
+        const owned = this.upgrades[id] ?? 0
+        this.recipesKnown[id] = Math.max(this.recipesKnown[id] ?? 1, owned, 1)
       }
       this.recomputeStatsFromUpgrades()
       if (data.maxLives != null) this.maxLives = data.maxLives
@@ -243,6 +301,8 @@ export class GameState {
         ...createEmptyResources(),
         ...(data.workshopRefined ?? {}),
       }
+      this.runFragments = cloneFragmentBag(data.runFragments)
+      this.workshopFragments = cloneFragmentBag(data.workshopFragments)
       return true
     } catch {
       return false
@@ -253,7 +313,6 @@ export class GameState {
     localStorage.removeItem(SAVE_KEY)
   }
 
-  /** Soft game over legacy helper. */
   onGameOver() {
     return this.routeAfterGameOver()
   }

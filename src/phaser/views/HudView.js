@@ -1,4 +1,5 @@
 import { HUD_HEIGHT } from '../../config/constants.js'
+import { sumSpecializedFragments } from '../../config/crafting.js'
 
 export class HudView {
   constructor(scene, world) {
@@ -20,7 +21,7 @@ export class HudView {
     }).setOrigin(0, 0.5)
 
     this.resourcesText = scene.add.text(width / 2, HUD_HEIGHT / 2, '', {
-      fontSize: '11px',
+      fontSize: '10px',
       fontFamily: 'monospace',
       color: '#c8d0d8',
     }).setOrigin(0.5, 0.5)
@@ -37,10 +38,12 @@ export class HudView {
   update() {
     const player = this.world.player
     const resources = this.world.runResources ?? { bronze: 0, iron: 0, crystal: 0 }
+    const fragments = this.world.runFragments ?? { generic: 0, specialized: {} }
+    const specialized = sumSpecializedFragments(fragments)
 
     this.livesText.setText(`x${Math.max(0, player.lives)}`)
     this.resourcesText.setText(
-      `B ${resources.bronze}  H ${resources.iron}  C ${resources.crystal}`,
+      `B ${resources.bronze}  H ${resources.iron}  C ${resources.crystal}  F ${fragments.generic}+${specialized}`,
     )
     this.timerText.setText(
       this.world.levelTimer === null ? '' : `TIEMPO ${Math.ceil(this.world.levelTimer)}`,

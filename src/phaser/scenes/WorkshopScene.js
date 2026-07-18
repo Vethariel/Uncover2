@@ -2,7 +2,16 @@ import Phaser from 'phaser'
 import { session } from '../../core/session.js'
 import { LEVELS } from '../../config/levels.js'
 import { HUD_HEIGHT, TILE_SIZE } from '../../config/constants.js'
-import { UPGRADE_DEFS, UPGRADE_IDS, SMELT_RECIPES } from '../../config/crafting.js'
+import {
+  GENERIC_R2_COST,
+  MAX_UPGRADE_RANK,
+  SMELT_RECIPES,
+  SPECIALIZED_R3_COST,
+  UPGRADE_DEFS,
+  UPGRADE_IDS,
+  nextCraftCost,
+  sumSpecializedFragments,
+} from '../../config/crafting.js'
 import { InputAdapter } from '../input/InputAdapter.js'
 import { getAudio } from '../audio/AudioService.js'
 import { WorkshopView } from '../views/WorkshopView.js'
@@ -119,20 +128,19 @@ export class WorkshopScene extends Phaser.Scene {
   _refreshHud() {
     const c = this.gameState.workshopCrude
     const r = this.gameState.workshopRefined
+    const f = this.gameState.workshopFragments
+    const specialized = sumSpecializedFragments(f)
     this.hudResources.setText(
-      `Crudo B${c.bronze}/H${c.iron}/C${c.crystal}   Ref B${r.bronze}/H${r.iron}/C${r.crystal}`,
+      `Crudo B${c.bronze}/H${c.iron}/C${c.crystal}  Ref B${r.bronze}/H${r.iron}/C${r.crystal}  Frag ${f.generic}+${specialized}`,
     )
   }
 
   _updatePrompt(focus) {
-    if (!focus) {
+    if (!focus || focus.type === 'door') {
       this.promptText.setVisible(false)
       return
     }
-    const label = focus.type === 'door'
-      ? 'E — SALIR AL NIVEL'
-      : `E — ${focus.station.label}`
-    this.promptText.setText(label)
+    this.promptText.setText(`E — ${focus.station.label}`)
     this.promptText.setPosition(
       this.world.player.posX + this.world.player.size / 2,
       this.world.player.posY - 10,
@@ -162,16 +170,74 @@ export class WorkshopScene extends Phaser.Scene {
     })
   }
 
+  _anvilStatus(upgradeId) {
+    const def = UPGRADE_DEFS[upgradeId]
+    const rank = this.gameState.upgrades[upgradeId] ?? 0
+    const known = this.gameState.recipesKnown[upgradeId] ?? 1
+    const cost = nextCraftCost(upgradeId, rank)
+    const refined = this.gameState.workshopRefined[def.material] ?? 0
+    const fragments = this.gameState.workshopFragments
+
+    if (rank >= MAX_UPGRADE_RANK) {
+      return { status: 'max', rank, known, cost, refined, def }
+    }
+    if (rank >= known) {
+      if (known < 2) {
+        return {
+          status: 'locked_r2',
+          rank,
+          known,
+          cost: GENERIC_R2_COST,
+          refined: fragments.generic,
+          def,
+        }
+      }
+      return {
+        status: 'locked_r3',
+        rank,
+        known,
+        cost: SPECIALIZED_R3_COST,
+        refined: fragments.specialized[upgradeId] ?? 0,
+        def,
+      }
+    }
+    if (cost != null && refined >= cost) {
+      return { status: 'craftable', rank, known, cost, refined, def }
+    }
+    return { status: 'insufficient', rank, known, cost, refined, def }
+  }
+
   _anvilItems() {
     return UPGRADE_IDS.map((id) => {
-      const def = UPGRADE_DEFS[id]
-      const rank = this.gameState.upgrades[id] ?? 0
-      const owned = rank >= 1 ? ' [OK]' : ` (${def.cost} ${def.material})`
-      return {
-        id,
-        text: `${def.name}${owned} — ${def.description}`,
-        action: () => this.gameState.tryCraft(id),
+      const info = this._anvilStatus(id)
+      const { def, rank, known, cost, refined, status } = info
+      let text
+      let action
+
+      switch (status) {
+        case 'max':
+          text = `${def.name} R${rank} — MÁX`
+          action = () => ({ ok: false, reason: 'max_rank' })
+          break
+        case 'locked_r2':
+          text = `${def.name} R${rank}/R${known} — Desbloquear R2 (${GENERIC_R2_COST}F gen, tienes ${refined})`
+          action = () => this.gameState.tryUnlockRank2(id)
+          break
+        case 'locked_r3':
+          text = `${def.name} R${rank}/R${known} — Desbloquear R3 (${SPECIALIZED_R3_COST}F ${def.name}, tienes ${refined})`
+          action = () => this.gameState.tryUnlockRank3(id)
+          break
+        case 'insufficient':
+          text = `${def.name} R${rank}→${rank + 1} — Falta ${def.material} (${refined}/${cost})`
+          action = () => this.gameState.tryCraft(id)
+          break
+        default:
+          text = `${def.name} R${rank}→${rank + 1} — Forjar (${cost} ${def.material})`
+          action = () => this.gameState.tryCraft(id)
+          break
       }
+
+      return { id, status, text, action }
     })
   }
 
@@ -180,13 +246,17 @@ export class WorkshopScene extends Phaser.Scene {
     const cx = this.scale.width / 2
     const cy = this.scale.height / 2
     const title = this.menu.kind === 'furnace' ? 'HORNO — FUNDICIÓN' : 'YUNQUE — FORJA'
+    const rowCount = this.menu.items.length
+    const panelHeight = Math.max(220, 120 + rowCount * 18)
     this.menuNodes = []
 
     this.menuNodes.push(
-      this.add.rectangle(cx, cy, 420, 220, 0x000000, 0.72).setScrollFactor(0).setDepth(1100),
+      this.add.rectangle(cx, cy, 520, panelHeight, 0x000000, 0.72)
+        .setScrollFactor(0)
+        .setDepth(1100),
     )
     this.menuNodes.push(
-      this.add.text(cx, cy - 90, title, {
+      this.add.text(cx, cy - panelHeight / 2 + 20, title, {
         fontSize: '14px',
         fontFamily: 'monospace',
         color: '#ffc857',
@@ -195,17 +265,23 @@ export class WorkshopScene extends Phaser.Scene {
 
     this.menu.items.forEach((item, index) => {
       const selected = index === this.menuIndex
+      const muted = item.status === 'max' || item.status === 'insufficient'
       this.menuNodes.push(
-        this.add.text(cx, cy - 50 + index * 22, `${selected ? '>' : ' '} ${item.text}`, {
-          fontSize: '11px',
-          fontFamily: 'monospace',
-          color: selected ? '#ffffff' : '#9aa3ad',
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(1101),
+        this.add.text(
+          cx,
+          cy - panelHeight / 2 + 48 + index * 18,
+          `${selected ? '>' : ' '} ${item.text}`,
+          {
+            fontSize: '10px',
+            fontFamily: 'monospace',
+            color: selected ? '#ffffff' : muted ? '#6f7780' : '#9aa3ad',
+          },
+        ).setOrigin(0.5).setScrollFactor(0).setDepth(1101),
       )
     })
 
     this.menuNodes.push(
-      this.add.text(cx, cy + 90, '↑↓ elegir   ENTER confirmar   ESC cerrar', {
+      this.add.text(cx, cy + panelHeight / 2 - 18, '↑↓ elegir   ENTER confirmar   ESC cerrar', {
         fontSize: '9px',
         fontFamily: 'monospace',
         color: '#8a93a0',

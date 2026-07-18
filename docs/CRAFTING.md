@@ -33,7 +33,7 @@ Game over N3+: clear runResources (taller + mejoras permanecen) → hub
 Taller (hub, post-N2)
     │
     ├─ Horno (E): smelting por lote crudo → refinado
-    ├─ Yunque (E): craft rango 1 (6 mejoras)
+    ├─ Yunque (E): craft por recipesKnown + ensamblar R2/R3
     └─ Puerta: siguiente nivel o reintento
     │
     ▼
@@ -165,11 +165,12 @@ UI del Taller: mostrar coste **siguiente** claro; sin “máximo teórico” int
 ## Run state (datos)
 
 ```text
-materialsCrude:   { copper, iron, vein }
-materialsRefined: { copper, iron, vein }
-alloys:           { temperedBronze, mineSteel, setCrystal }
-recipesKnown:     { upgradeId → maxRankUnlocked }  // r1 siempre; r2/r3 por fragmentos
-recipeFragments:  [ id, … ]
+runResources / workshopCrude / workshopRefined: { bronze, iron, crystal }
+runFragments / workshopFragments: {
+  generic: number,
+  specialized: { upgradeId → count }
+}
+recipesKnown: { upgradeId → maxRankUnlocked }  // r1 siempre; r2/r3 vía yunque
 upgrades: {
   maxBombs, bombRange, pickSpeed, fortune, moveSpeed, maxLives
 }
@@ -264,15 +265,18 @@ Aleaciones son **opcionales** para rango 1 (esas van solo con refinados simples)
 | Rango | Cómo se obtiene la receta |
 |------:|---------------------------|
 | **1** | El Taller las **brinda todas** al desbloquear craft (post-N2) |
-| **2** | Requiere **fragmento de receta** encontrado explorando |
-| **3** | Requiere **esquema completo** (2–3 fragmentos o un hallazgo raro en nodo grande / N6–N7) |
+| **2** | Ensamblar en el yunque con **2 fragmentos genéricos** (elige la mejora) |
+| **3** | Ensamblar en el yunque con **3 fragmentos especializados** de esa mejora; requiere `recipesKnown ≥ 2` |
+
+Costes de forja por rango (refinado): `[3, 5, 8]` (maxLives `[4, 7, 11]`). `canCraft` exige `nextRank ≤ recipesKnown[id]`.
 
 ### Fragmentos en el mapa
 
-- Aparecen en nodos de recurso o en destructibles marcados (cofres de mina / placas).
-- No se destruyen con blast si están en prop “esquema”; sí pueden quedar inaccesibles tras derrumbes de diseño.
-- UI: “Receta incompleta — faltan N partes”.
-- Sin la receta, el Taller muestra la mejora en gris con tip: *explora las minas*.
+- Embebidos en **muros indestructibles** (`TILE_WALL`), no en suelo.
+- Recolección: **E mantenida** (genérico **2.5 s**, especializado **3.5 s**); soltar no reinicia el progreso; inmoviliza mientras se extrae.
+- Accesibilidad: flood-fill desde spawn tratando destructibles como transitables; basta 1 casilla cardinal interactuable.
+- Persistencia como minerales: run → taller en victoria; game over pierde la run; N3+ conserva taller; N1–N2 wipe total.
+- Distribución Mov. I: **N3=1 genérico**, **N4=1 genérico**, **N5=2 genéricos**, **N6=3 especializados** (fallback a genéricos si no hay mejoras con R2 conocido).
 
 Así el techo económico (stock) y el techo de conocimiento (recetas) son dos frenos distintos: puedes tener mineral y no poder subir a rango 3, o tener el esquema y no el stock.
 

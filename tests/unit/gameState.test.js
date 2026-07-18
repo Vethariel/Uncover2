@@ -13,15 +13,22 @@ describe('GameState resources and progression', () => {
     })
   })
 
-  it('deposita la run en crudo del taller', () => {
+  it('deposita la run en crudo y fragmentos del taller', () => {
     const state = new GameState()
     state.runResources = { bronze: 3, iron: 1, crystal: 2 }
     state.workshopCrude = { bronze: 1, iron: 0, crystal: 0 }
+    state.runFragments.generic = 2
+    state.runFragments.specialized.maxBombs = 1
+    state.workshopFragments.generic = 1
 
     state.depositRunToWorkshop()
 
     expect(state.runResources).toEqual({ bronze: 0, iron: 0, crystal: 0 })
     expect(state.workshopCrude).toEqual({ bronze: 4, iron: 1, crystal: 2 })
+    expect(state.runFragments.generic).toBe(0)
+    expect(state.runFragments.specialized.maxBombs).toBe(0)
+    expect(state.workshopFragments.generic).toBe(3)
+    expect(state.workshopFragments.specialized.maxBombs).toBe(1)
   })
 
   it('game over en N1–N2 borra todo el progreso', () => {
@@ -45,13 +52,19 @@ describe('GameState resources and progression', () => {
     const state = new GameState()
     state.currentLevelIndex = 2
     state.runResources = { bronze: 2, iron: 2, crystal: 1 }
+    state.runFragments.generic = 2
     state.workshopCrude = { bronze: 5, iron: 0, crystal: 0 }
+    state.workshopFragments.generic = 1
     state.upgrades.maxBombs = 1
+    state.recipesKnown.maxBombs = 2
 
     expect(state.routeAfterGameOver()).toBe('workshop')
     expect(state.runResources).toEqual({ bronze: 0, iron: 0, crystal: 0 })
+    expect(state.runFragments.generic).toBe(0)
     expect(state.workshopCrude).toEqual({ bronze: 5, iron: 0, crystal: 0 })
+    expect(state.workshopFragments.generic).toBe(1)
     expect(state.upgrades.maxBombs).toBe(1)
+    expect(state.recipesKnown.maxBombs).toBe(2)
     expect(state.currentLevelIndex).toBe(2)
     expect(state.hubEntry).toBe('retry')
   })
@@ -104,11 +117,27 @@ describe('GameState resources and progression', () => {
     expect(state.upgrades.maxBombs).toBe(1)
   })
 
-  it('persiste crudo, refinado y upgrades', () => {
+  it('desbloquea R2/R3 desde el yunque', () => {
+    const state = new GameState()
+    state.upgrades.maxBombs = 1
+    state.workshopFragments.generic = 2
+    expect(state.tryUnlockRank2('maxBombs').ok).toBe(true)
+    expect(state.recipesKnown.maxBombs).toBe(2)
+    expect(state.fragmentEligibility().r2UpgradeIds).toContain('maxBombs')
+
+    state.workshopFragments.specialized.maxBombs = 3
+    expect(state.tryUnlockRank3('maxBombs').ok).toBe(true)
+    expect(state.recipesKnown.maxBombs).toBe(3)
+  })
+
+  it('persiste crudo, refinado, fragmentos y upgrades', () => {
     const state = new GameState()
     state.workshopCrude = { bronze: 7, iron: 3, crystal: 1 }
     state.workshopRefined = { bronze: 2, iron: 0, crystal: 1 }
+    state.workshopFragments.generic = 2
+    state.workshopFragments.specialized.fortune = 1
     state.upgrades.fortune = 1
+    state.recipesKnown.fortune = 2
     state.currentLevelIndex = 2
     state.hubUnlocked = true
     state.save()
@@ -117,7 +146,10 @@ describe('GameState resources and progression', () => {
     expect(loaded.load()).toBe(true)
     expect(loaded.workshopCrude).toEqual({ bronze: 7, iron: 3, crystal: 1 })
     expect(loaded.workshopRefined).toEqual({ bronze: 2, iron: 0, crystal: 1 })
+    expect(loaded.workshopFragments.generic).toBe(2)
+    expect(loaded.workshopFragments.specialized.fortune).toBe(1)
     expect(loaded.upgrades.fortune).toBe(1)
+    expect(loaded.recipesKnown.fortune).toBe(2)
     expect(loaded.hubUnlocked).toBe(true)
     expect(loaded.unlockedLevels).toBe(LEVELS.length)
   })

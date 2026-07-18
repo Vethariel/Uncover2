@@ -35,6 +35,7 @@ export class EntityView {
       .forEach(({ entity, kind }) => this._draw(kind, entity))
 
     this._drawMiningProgress()
+    this._drawFragmentProgress()
   }
 
   destroy() {
@@ -115,7 +116,14 @@ export class EntityView {
   }
 
   _drawMiningProgress() {
-    const target = this.world.activeMiningTarget
+    this._drawProgressBar(this.world.activeMiningTarget, 0xffc857)
+  }
+
+  _drawFragmentProgress() {
+    this._drawProgressBar(this.world.activeFragmentTarget, 0xd28cff)
+  }
+
+  _drawProgressBar(target, fillColor) {
     if (!target || target.duration <= 0) return
 
     const tileSize = this.world.tileSize
@@ -126,7 +134,7 @@ export class EntityView {
 
     this.graphics.fillStyle(0x111820, 0.85)
     this.graphics.fillRect(x, y, width, 4)
-    this.graphics.fillStyle(0xffc857, 1)
+    this.graphics.fillStyle(fillColor, 1)
     this.graphics.fillRect(x, y, width * ratio, 4)
   }
 

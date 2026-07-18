@@ -285,6 +285,48 @@ describe('LevelGenerator', () => {
     expect(a.wallLightSpawns).toEqual(b.wallLightSpawns)
     expect(a.enemySpawns).toEqual(b.enemySpawns)
     expect(a.resourceSpawns).toEqual(b.resourceSpawns)
+    expect(a.recipeFragmentSpawns).toEqual(b.recipeFragmentSpawns)
+  })
+
+  it('coloca fragmentos de receta en muros alcanzables (N3–N6)', () => {
+    const expectations = [
+      { index: 2, count: 1, kind: 'generic' },
+      { index: 3, count: 1, kind: 'generic' },
+      { index: 4, count: 2, kind: 'generic' },
+      { index: 5, count: 3, kind: 'specialized' },
+    ]
+
+    for (const { index, count, kind } of expectations) {
+      const world = gen({
+        ...LEVELS[index],
+        seed: 42,
+        fragmentEligibility: kind === 'specialized'
+          ? { r2UpgradeIds: ['maxBombs', 'fortune', 'pickSpeed'] }
+          : { r2UpgradeIds: [] },
+      })
+      expect(world.recipeFragmentSpawns).toHaveLength(count)
+
+      const reachable = reachableTiles(world.grid, world.playerSpawn, true)
+      for (const fragment of world.recipeFragmentSpawns) {
+        expect(world.grid.get(fragment.x, fragment.y)).toBe(TILE_WALL)
+        expect(fragment.kind).toBe(kind)
+        expect(fragment.interact).toBeTruthy()
+        expect(reachable.has(`${fragment.interact.x},${fragment.interact.y}`)).toBe(true)
+        const dx = Math.abs(fragment.interact.x - fragment.x)
+        const dy = Math.abs(fragment.interact.y - fragment.y)
+        expect(dx + dy).toBe(1)
+      }
+    }
+  })
+
+  it('N6 cae a genéricos si no hay mejoras con R2', () => {
+    const world = gen({
+      ...LEVELS[5],
+      seed: 7,
+      fragmentEligibility: { r2UpgradeIds: [] },
+    })
+    expect(world.recipeFragmentSpawns).toHaveLength(3)
+    expect(world.recipeFragmentSpawns.every((f) => f.kind === 'generic')).toBe(true)
   })
 
   it('N3 decide cuatro o cinco nodos de recorrido', () => {

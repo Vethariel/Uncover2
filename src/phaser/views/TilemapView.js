@@ -1,6 +1,7 @@
 import {
   TILE_DESTRUCTIBLE,
   TILE_PASS,
+  TILE_WALL,
 } from '../../config/constants.js'
 import { TERRAIN_TILES, terrainTileFor } from '../../config/terrainTypes.js'
 
@@ -30,11 +31,17 @@ const TERRAIN_TILE_COLORS = {
   [TERRAIN_TILES.agora.wall]: 0x212217,
 }
 
+// Destello de menas/fragmentos visibles: pulso breve cada SPARKLE_PERIOD.
+const SPARKLE_PERIOD = 2.0
+const SPARKLE_DURATION = 0.45
+
 export class TilemapView {
   constructor(scene, world) {
     this.scene = scene
     this.world = world
     this.graphics = scene.add.graphics({ x: 0, y: 0 })
+    this.sparkleGraphics = scene.add.graphics({ x: 0, y: 0 })
+    this.sparkleTimer = 0
     this.lastGridState = ''
     this.build()
   }
@@ -43,13 +50,17 @@ export class TilemapView {
     this._drawGrid()
   }
 
-  update() {
+  update(dt = 0) {
     const state = `${this.world.grid.tiles.flat().join('')}|${this.world.visionRevision}`
     if (state !== this.lastGridState) this._drawGrid(state)
+
+    this.sparkleTimer += dt
+    this._drawSparkles()
   }
 
   destroy() {
     this.graphics.destroy()
+    this.sparkleGraphics.destroy()
   }
 
   _drawGrid(state = this.world.grid.tiles.flat().join('')) {
@@ -107,9 +118,11 @@ export class TilemapView {
     }
 
     for (const fragment of this.world.recipeFragmentSpawns ?? []) {
+      if (this.world.grid.get(fragment.x, fragment.y) !== TILE_WALL) continue
       const px = fragment.x * tileSize
       const py = fragment.y * tileSize
-      graphics.fillStyle(0xd28cff, 0.95)
+      const color = fragment.kind === 'specialized' ? 0xff9f6b : 0xd28cff
+      graphics.fillStyle(color, 0.95)
       graphics.fillTriangle(
         px + tileSize / 2, py + 5,
         px + tileSize - 5, py + tileSize - 5,
@@ -142,6 +155,44 @@ export class TilemapView {
 
     this._drawDoor(graphics, this.world.entryDoor, tileSize, 0x3c8991)
     this._drawDoor(graphics, this.world.exitDoor, tileSize, 0xffc857)
+  }
+
+  _drawSparkles() {
+    const graphics = this.sparkleGraphics
+    graphics.clear()
+
+    const phase = this.sparkleTimer % SPARKLE_PERIOD
+    if (phase > SPARKLE_DURATION) return
+
+    const visible = this.world.visibleTiles
+    if (!visible?.size) return
+
+    // Fade in-out del pulso (0 → 1 → 0).
+    const t = phase / SPARKLE_DURATION
+    const intensity = Math.sin(t * Math.PI)
+    const alpha = 0.35 * intensity
+    const tileSize = this.world.tileSize
+    const radius = tileSize * (0.2 + 0.16 * intensity)
+
+    const targets = []
+    for (const resource of this.world.resourceSpawns ?? []) {
+      if (this.world.grid.get(resource.x, resource.y) !== TILE_DESTRUCTIBLE) continue
+      targets.push(resource)
+    }
+    for (const fragment of this.world.recipeFragmentSpawns ?? []) {
+      if (this.world.grid.get(fragment.x, fragment.y) !== TILE_WALL) continue
+      targets.push(fragment)
+    }
+
+    for (const target of targets) {
+      if (!visible.has(`${target.x},${target.y}`)) continue
+      const cx = target.x * tileSize + tileSize / 2
+      const cy = target.y * tileSize + tileSize / 2
+      graphics.fillStyle(0xffffff, alpha)
+      graphics.fillCircle(cx, cy, radius)
+      graphics.fillStyle(0xffffff, Math.min(1, alpha * 2))
+      graphics.fillCircle(cx, cy, radius * 0.4)
+    }
   }
 
   _drawDoor(graphics, door, tileSize, fillColor) {

@@ -15,7 +15,7 @@ const ROWS = 11
 
 /**
  * Habitación rectangular del taller.
- * Horno 2×3 a la izquierda, yunque 2×3 a la derecha, puerta al norte.
+ * Horno y yunque 2×3 juntos al norte; puerta de salida al sur.
  */
 export function createWorkshopWorld(tileSize = TILE_SIZE) {
   const grid = new Grid(COLS, ROWS)
@@ -30,13 +30,13 @@ export function createWorkshopWorld(tileSize = TILE_SIZE) {
     id: 'furnace',
     label: 'HORNO',
     kind: 'furnace',
-    tiles: fillRect(4, 3, 2, 3),
+    tiles: fillRect(7, 2, 2, 3),
   }
   const anvil = {
     id: 'anvil',
     label: 'YUNQUE',
     kind: 'anvil',
-    tiles: fillRect(14, 3, 2, 3),
+    tiles: fillRect(11, 2, 2, 3),
   }
 
   for (const station of [furnace, anvil]) {
@@ -45,25 +45,25 @@ export function createWorkshopWorld(tileSize = TILE_SIZE) {
     }
   }
 
-  // Puerta norte centrada (3 tiles de muro se abren como trigger frontal).
+  // Puerta sur centrada. Al pisar su trigger interior se sale automáticamente.
   const doorTiles = [
-    { x: 9, y: 0 },
-    { x: 10, y: 0 },
-    { x: 11, y: 0 },
+    { x: 9, y: ROWS - 1 },
+    { x: 10, y: ROWS - 1 },
+    { x: 11, y: ROWS - 1 },
   ]
   for (const tile of doorTiles) grid.set(tile.x, tile.y, TILE_EMPTY)
   const exitDoor = {
     kind: 'exit',
     tiles: doorTiles,
     triggerTiles: [
-      { x: 9, y: 1 },
-      { x: 10, y: 1 },
-      { x: 11, y: 1 },
+      { x: 9, y: ROWS - 2 },
+      { x: 10, y: ROWS - 2 },
+      { x: 11, y: ROWS - 2 },
     ],
-    center: { x: 10, y: 0 },
+    center: { x: 10, y: ROWS - 1 },
   }
 
-  const spawn = { x: 10, y: 8 }
+  const spawn = { x: 10, y: 6 }
   const playerPos = positionFromTile(spawn.x, spawn.y, tileSize, PLAYER_SIZE)
   const player = new Player(
     playerPos.posX,

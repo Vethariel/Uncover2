@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { session } from '../../core/session.js'
 import { TILE_SIZE } from '../../config/constants.js'
+import { LEVELS } from '../../config/levels.js'
 import { GameController } from '../../game/GameController.js'
 import { InputAdapter } from '../input/InputAdapter.js'
 import { getAudio } from '../audio/AudioService.js'
@@ -48,7 +49,7 @@ export class GameScene extends Phaser.Scene {
     const result = this.controller.update(this.world, dt, this.inputAdapter)
     this.soundBridge.handleEvents(result.events, dt)
 
-    this.tilemapView.update()
+    this.tilemapView.update(dt)
     this.entityView.update()
     this.fogOfWarView.update(dt)
     this.minimapView.update()
@@ -118,7 +119,18 @@ export class GameScene extends Phaser.Scene {
   _startLevel() {
     this._cleanupLevel()
 
-    this.world = this.controller.createWorld(TILE_SIZE, this.gameState.currentLevelIndex)
+    const levelSpec = LEVELS[this.gameState.currentLevelIndex] ?? LEVELS[0]
+    const fragmentPlan = this.gameState.prepareFragmentPlanForLevel(levelSpec)
+    this.world = this.controller.createWorld(
+      TILE_SIZE,
+      this.gameState.currentLevelIndex,
+      {
+        levelSpec: {
+          fragmentPlan,
+          fragmentEligibility: this.gameState.fragmentEligibility(),
+        },
+      },
+    )
     this.gameState.applyToPlayer(this.world.player)
     this.gameState.applyRunResourcesToWorld(this.world)
     this.gameState.save()
