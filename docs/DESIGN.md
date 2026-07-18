@@ -227,6 +227,8 @@ La visión ya no es una cruz rígida, sino un campo de luz tile-based:
 
 La visibilidad final nunca supera distancia euclidiana 7 respecto al jugador. Solo se calculan fuentes que intersectan el viewport centrado en el jugador. Cada fuente expone `lightEmission` (o `getLightEmission()`). Cada tile requiere línea de visión tanto desde la fuente como desde el jugador: los obstáculos quedan iluminados como borde, pero ninguna luz revela lo que queda detrás de ellos. Una fuente fuera del radio puede iluminar el interior del radio si existe línea de visión, pero su sprite/antorcha no se dibuja hasta entrar en visión. Lo desconocido es negro; lo explorado sin luz actual usa un neutro muy oscuro de memoria. Las entidades dinámicas solo se muestran bajo luz actual. La capa visual interpola cada cambio de iluminación durante `140 ms` con una curva suave; la visibilidad lógica sigue actualizándose de inmediato.
 
+Un minimapa permanente (arriba a la derecha, bajo el HUD) muestra los tiles descubiertos: suelo, muros y destructibles con tonos distintos. El jugador es el centro fijo del minimapa y el mapa interno se desplaza con su posición.
+
 ## Pruebas de interacción
 
 Suite en `tests/` con [Vitest](https://vitest.dev/). Ejecutar:

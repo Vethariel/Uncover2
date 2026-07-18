@@ -9,6 +9,7 @@ import { SoundBridge } from '../audio/SoundBridge.js'
 import { TilemapView } from '../views/TilemapView.js'
 import { EntityView } from '../views/EntityView.js'
 import { FogOfWarView } from '../views/FogOfWarView.js'
+import { MinimapView } from '../views/MinimapView.js'
 import { HudView } from '../views/HudView.js'
 
 export class GameScene extends Phaser.Scene {
@@ -51,6 +52,7 @@ export class GameScene extends Phaser.Scene {
     this.tilemapView.update()
     this.entityView.update()
     this.fogOfWarView.update(dt)
+    this.minimapView.update()
     this.hudView.update()
     this._syncCamera()
 
@@ -121,6 +123,7 @@ export class GameScene extends Phaser.Scene {
     this.tilemapView = new TilemapView(this, this.world)
     this.entityView = new EntityView(this, this.world)
     this.fogOfWarView = new FogOfWarView(this, this.world)
+    this.minimapView = new MinimapView(this, this.world)
     this.hudView = new HudView(this, this.world)
     this._syncViews()
     this._setupCamera()
@@ -156,6 +159,7 @@ export class GameScene extends Phaser.Scene {
     this.tilemapView?.update()
     this.entityView?.update()
     this.fogOfWarView?.update()
+    this.minimapView?.update()
     this.hudView?.update()
   }
 
@@ -166,6 +170,7 @@ export class GameScene extends Phaser.Scene {
     this.tilemapView?.destroy()
     this.entityView?.destroy()
     this.fogOfWarView?.destroy()
+    this.minimapView?.destroy()
     this.hudView?.destroy()
   }
 
