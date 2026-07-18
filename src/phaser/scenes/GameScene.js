@@ -2,7 +2,10 @@ import Phaser from 'phaser'
 import { session } from '../../core/session.js'
 import { TILE_SIZE } from '../../config/constants.js'
 import { LEVELS } from '../../config/levels.js'
+import { levelStartDialogue } from '../../config/dialogues.js'
+import { DialogueController } from '../../core/DialogueController.js'
 import { GameController } from '../../game/GameController.js'
+import { positionFromTile, syncTileFromPosition } from '../../game/entityTiles.js'
 import { InputAdapter } from '../input/InputAdapter.js'
 import { getAudio } from '../audio/AudioService.js'
 import { SoundBridge } from '../audio/SoundBridge.js'
@@ -11,6 +14,7 @@ import { EntityView } from '../views/EntityView.js'
 import { FogOfWarView } from '../views/FogOfWarView.js'
 import { MinimapView } from '../views/MinimapView.js'
 import { HudView } from '../views/HudView.js'
+import { DialogueView } from '../views/DialogueView.js'
 import { isNearOpenableChest } from '../../game/systems/PuzzleSystem.js'
 
 export class GameScene extends Phaser.Scene {
@@ -33,6 +37,11 @@ export class GameScene extends Phaser.Scene {
 
   update(_time, delta) {
     const dt = Math.min(delta / 1000, 0.05)
+
+    if (this.dialogueController?.active) {
+      this._updateDialogue(dt)
+      return
+    }
 
     if (Phaser.Input.Keyboard.JustDown(this.inputAdapter.keys.escape)) {
       this._openOverlay('pause')
@@ -122,6 +131,8 @@ export class GameScene extends Phaser.Scene {
     this.fogOfWarView = new FogOfWarView(this, this.world)
     this.minimapView = new MinimapView(this, this.world)
     this.hudView = new HudView(this, this.world)
+    this.dialogueController = new DialogueController()
+    this.dialogueView = new DialogueView(this, this.dialogueController)
     this.chestPrompt = this.add.text(0, 0, 'E — ABRIR COFRE', {
       fontSize: '10px',
       fontFamily: 'monospace',
@@ -134,6 +145,10 @@ export class GameScene extends Phaser.Scene {
 
     const musicKey = this.world.levelVisualConfig?.bgMusic ?? 'world1'
     this.audio.playMusic(musicKey)
+    this._startDialogue(levelStartDialogue(
+      this.gameState.currentLevelIndex,
+      levelSpec.name,
+    ))
   }
 
   _setupCamera() {
@@ -157,6 +172,56 @@ export class GameScene extends Phaser.Scene {
     const player = this.world?.player
     if (!player || !this.cameraTarget) return
     this.cameraTarget.setPosition(player.posX + player.size / 2, player.posY + player.size / 2)
+  }
+
+  _startDialogue(entries) {
+    this.dialogueController.start(entries)
+    this.dialogueView.show()
+    this.chestPrompt?.setVisible(false)
+    this.inputAdapter.flush()
+  }
+
+  _updateDialogue(dt) {
+    // El GameLoop no avanza: enemigos, timer, bombas y control quedan congelados.
+    // Solo se actualizan el tipeo y animaciones explícitas del guion.
+    this.dialogueController.update(dt)
+    this._updateDialogueAnimation(dt)
+
+    if (Phaser.Input.Keyboard.JustDown(this.inputAdapter.keys.bomb)) {
+      const result = this.dialogueController.advance()
+      if (result.type === 'finished') this.dialogueView.hide()
+    }
+
+    this.dialogueView.sync()
+    this.entityView.update()
+    this._syncCamera()
+    this.inputAdapter.flush()
+  }
+
+  /**
+   * Hook de animación guionada durante diálogo.
+   * entry.animation = { type:'movePlayerToTile', x, y, speed }
+   */
+  _updateDialogueAnimation(dt) {
+    const animation = this.dialogueController.currentEntry?.animation
+    if (animation?.type !== 'movePlayerToTile') return
+
+    const player = this.world.player
+    const target = positionFromTile(
+      animation.x,
+      animation.y,
+      this.world.tileSize,
+      player.size,
+    )
+    const dx = target.posX - player.posX
+    const dy = target.posY - player.posY
+    const distance = Math.hypot(dx, dy)
+    if (distance <= 0.01) return
+
+    const amount = Math.min(distance, (animation.speed ?? player.speed) * dt)
+    player.posX += (dx / distance) * amount
+    player.posY += (dy / distance) * amount
+    syncTileFromPosition(player, this.world.tileSize)
   }
 
   _updateChestPrompt() {
@@ -192,6 +257,9 @@ export class GameScene extends Phaser.Scene {
     this.fogOfWarView?.destroy()
     this.minimapView?.destroy()
     this.hudView?.destroy()
+    this.dialogueView?.destroy()
+    this.dialogueView = null
+    this.dialogueController = null
     this.chestPrompt?.destroy()
     this.chestPrompt = null
   }
