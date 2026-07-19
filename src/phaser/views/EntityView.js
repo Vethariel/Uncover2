@@ -1,8 +1,18 @@
-import { DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT } from '../../config/constants.js'
+import {
+  DIR_UP,
+  DIR_DOWN,
+  DIR_LEFT,
+  DIR_RIGHT,
+  PLAYER_SPEED,
+  TILE_SIZE,
+} from '../../config/constants.js'
+
+// Un ciclo completo de walk (~8 frames) cubre ~3 tiles a velocidad base.
+const WALK_FRAME_COUNT = 8
+const WALK_CYCLE_DISTANCE = TILE_SIZE * 3
+const WALK_FRAME_RATE = (PLAYER_SPEED / WALK_CYCLE_DISTANCE) * WALK_FRAME_COUNT
 
 const COLORS = {
-  player: 0x4ea5ff,
-  playerDirection: 0xd9efff,
   enemy: {
     golem_basic: 0x8d8a84,
     spirit: 0x7ec8ff,
@@ -13,11 +23,33 @@ const COLORS = {
   explosion: 0xff9f1c,
 }
 
+const PLAYER_WALK_ANIMATIONS = {
+  [DIR_DOWN]: { key: 'player-walk-down', start: 0, end: 7 },
+  [DIR_LEFT]: { key: 'player-walk-left', start: 8, end: 15 },
+  [DIR_RIGHT]: { key: 'player-walk-right', start: 16, end: 23 },
+  [DIR_UP]: { key: 'player-walk-up', start: 24, end: 31 },
+}
+
+const PLAYER_IDLE_ANIMATIONS = {
+  [DIR_DOWN]: { key: 'player-idle-down', start: 0, end: 5 },
+  [DIR_LEFT]: { key: 'player-idle-left', start: 6, end: 11 },
+  [DIR_RIGHT]: { key: 'player-idle-right', start: 12, end: 17 },
+  [DIR_UP]: { key: 'player-idle-up', start: 18, end: 23 },
+}
+
 export class EntityView {
   constructor(scene, world) {
     this.scene = scene
     this.world = world
     this.graphics = scene.add.graphics({ x: 0, y: 0 })
+    this._createPlayerAnimations()
+    this.playerSprite = scene.add.sprite(0, 0, 'playerIdle', 0)
+      // El dibujo toca el borde inferior de cada frame: los pies son el ancla.
+      // Sobre la niebla (950): el casco siempre ilumina el tile del jugador,
+      // y al medir 64px la cabeza invade el tile superior (muro sombreado).
+      .setOrigin(0.5, 1)
+      .setDepth(955)
+    this.lastPlayerPosition = null
   }
 
   update() {
@@ -27,13 +59,13 @@ export class EntityView {
       ...this.world.explosions.map((entity) => ({ entity, kind: 'explosion' })),
       ...this.world.bombs.map((entity) => ({ entity, kind: 'bomb' })),
       ...this.world.enemies.map((entity) => ({ entity, kind: 'enemy' })),
-      { entity: this.world.player, kind: 'player' },
     ]
 
     drawables
       .sort((a, b) => (a.entity.posY + a.entity.size) - (b.entity.posY + b.entity.size))
       .forEach(({ entity, kind }) => this._draw(kind, entity))
 
+    this._updatePlayerSprite()
     this._drawMiningProgress()
     this._drawFragmentProgress()
     this._drawPuzzleFlashes()
@@ -43,19 +75,16 @@ export class EntityView {
 
   destroy() {
     this.graphics.destroy()
+    this.playerSprite.destroy()
   }
 
   _draw(kind, entity) {
     if (
-      kind !== 'player'
-      && this.world.visibleTiles
+      this.world.visibleTiles
       && !this.world.visibleTiles.has(`${entity.tileX},${entity.tileY}`)
     ) return
 
     switch (kind) {
-      case 'player':
-        this._drawPlayer(entity)
-        break
       case 'enemy':
         this._drawEnemy(entity)
         break
@@ -68,17 +97,70 @@ export class EntityView {
     }
   }
 
-  _drawPlayer(player) {
-    if (player.invulnerableTimer > 0 && Math.floor(player.invulnerableTimer * 20) % 2 !== 0) return
+  _createPlayerAnimations() {
+    this._createAnimationSet(PLAYER_WALK_ANIMATIONS, 'playerWalk', WALK_FRAME_RATE)
+    this._createAnimationSet(PLAYER_IDLE_ANIMATIONS, 'playerIdle', 4)
+  }
 
-    const cx = player.posX + player.size / 2
-    const cy = player.posY + player.size / 2
-    const color = player.alive ? COLORS.player : 0x68717d
-    this.graphics.fillStyle(color).fillCircle(cx, cy, player.size / 2)
+  _createAnimationSet(animationSet, texture, frameRate) {
+    for (const animation of Object.values(animationSet)) {
+      if (this.scene.anims.exists(animation.key)) continue
+      this.scene.anims.create({
+        key: animation.key,
+        frames: this.scene.anims.generateFrameNumbers(texture, {
+          start: animation.start,
+          end: animation.end,
+        }),
+        frameRate,
+        repeat: -1,
+      })
+    }
+  }
 
-    const direction = this._directionVector(player.facing)
-    this.graphics.lineStyle(2, COLORS.playerDirection)
-    this.graphics.lineBetween(cx, cy, cx + direction.x * 6, cy + direction.y * 6)
+  _updatePlayerSprite() {
+    const player = this.world.player
+    if (!player) {
+      this.playerSprite.setVisible(false)
+      return
+    }
+
+    const feetX = player.posX + player.size / 2
+    const feetY = player.posY + player.size
+    const moved = Boolean(
+      this.lastPlayerPosition
+      && (
+        Math.abs(player.posX - this.lastPlayerPosition.x) > 0.01
+        || Math.abs(player.posY - this.lastPlayerPosition.y) > 0.01
+      )
+    )
+    this.lastPlayerPosition = { x: player.posX, y: player.posY }
+
+    const flickerHidden = player.invulnerableTimer > 0
+      && Math.floor(player.invulnerableTimer * 20) % 2 !== 0
+    this.playerSprite
+      .setPosition(feetX, feetY)
+      .setVisible(!flickerHidden)
+
+    const walkAnimation = PLAYER_WALK_ANIMATIONS[player.facing]
+      ?? PLAYER_WALK_ANIMATIONS[DIR_DOWN]
+    const idleAnimation = PLAYER_IDLE_ANIMATIONS[player.facing]
+      ?? PLAYER_IDLE_ANIMATIONS[DIR_DOWN]
+    if (player.alive && moved) {
+      this.playerSprite.clearTint()
+      this.playerSprite.anims.timeScale = player.speed / PLAYER_SPEED
+      this.playerSprite.play(walkAnimation.key, true)
+      return
+    }
+
+    if (player.alive) {
+      this.playerSprite.clearTint()
+      this.playerSprite.anims.timeScale = 1
+      this.playerSprite.play(idleAnimation.key, true)
+    } else {
+      this.playerSprite.stop()
+      this.playerSprite.setTexture('playerIdle', idleAnimation.start)
+      this.playerSprite.setTint(0x68717d)
+    }
   }
 
   _drawEnemy(enemy) {

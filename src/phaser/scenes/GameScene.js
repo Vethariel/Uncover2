@@ -1,9 +1,16 @@
 import Phaser from 'phaser'
 import { session } from '../../core/session.js'
-import { TILE_SIZE } from '../../config/constants.js'
+import {
+  DIR_DOWN,
+  DIR_LEFT,
+  DIR_RIGHT,
+  DIR_UP,
+  TILE_SIZE,
+} from '../../config/constants.js'
 import { LEVELS } from '../../config/levels.js'
 import { levelStartDialogue } from '../../config/dialogues.js'
 import { DialogueController } from '../../core/DialogueController.js'
+import { createLevelResult } from '../../core/LevelResult.js'
 import { GameController } from '../../game/GameController.js'
 import { positionFromTile, syncTileFromPosition } from '../../game/entityTiles.js'
 import { InputAdapter } from '../input/InputAdapter.js'
@@ -15,6 +22,7 @@ import { FogOfWarView } from '../views/FogOfWarView.js'
 import { MinimapView } from '../views/MinimapView.js'
 import { HudView } from '../views/HudView.js'
 import { DialogueView } from '../views/DialogueView.js'
+import { LevelCompleteView } from '../views/LevelCompleteView.js'
 import { isNearOpenableChest } from '../../game/systems/PuzzleSystem.js'
 
 export class GameScene extends Phaser.Scene {
@@ -40,6 +48,11 @@ export class GameScene extends Phaser.Scene {
 
     if (this.dialogueController?.active) {
       this._updateDialogue(dt)
+      return
+    }
+
+    if (this.levelResult) {
+      this._updateLevelComplete()
       return
     }
 
@@ -72,7 +85,11 @@ export class GameScene extends Phaser.Scene {
       this.gameState.syncRunResourcesFromWorld(this.world)
       const completedIndex = this.gameState.currentLevelIndex
       this.world.gameWon = false
-      this._routeAfterVictory(completedIndex)
+      if (completedIndex === 0) {
+        this._routeAfterVictory(completedIndex)
+      } else {
+        this._showLevelComplete(completedIndex)
+      }
       return
     }
 
@@ -133,6 +150,8 @@ export class GameScene extends Phaser.Scene {
     this.hudView = new HudView(this, this.world)
     this.dialogueController = new DialogueController()
     this.dialogueView = new DialogueView(this, this.dialogueController)
+    this.levelCompleteView = new LevelCompleteView(this)
+    this.levelResult = null
     this.chestPrompt = this.add.text(0, 0, 'E — ABRIR COFRE', {
       fontSize: '10px',
       fontFamily: 'monospace',
@@ -181,6 +200,29 @@ export class GameScene extends Phaser.Scene {
     this.inputAdapter.flush()
   }
 
+  _showLevelComplete(completedIndex) {
+    const level = LEVELS[completedIndex] ?? LEVELS[0]
+    this.levelResult = createLevelResult(
+      this.world,
+      completedIndex,
+      level.name,
+    )
+    this.levelCompleteView.show(this.levelResult)
+    this.chestPrompt?.setVisible(false)
+    this.inputAdapter.flush()
+  }
+
+  _updateLevelComplete() {
+    // El resultado conserva el mundo congelado hasta confirmación explícita.
+    if (!Phaser.Input.Keyboard.JustDown(this.inputAdapter.keys.bomb)) return
+
+    const completedIndex = this.levelResult.levelIndex
+    this.levelCompleteView.hide()
+    this.levelResult = null
+    this.inputAdapter.flush()
+    this._routeAfterVictory(completedIndex)
+  }
+
   _updateDialogue(dt) {
     // El GameLoop no avanza: enemigos, timer, bombas y control quedan congelados.
     // Solo se actualizan el tipeo y animaciones explícitas del guion.
@@ -217,6 +259,12 @@ export class GameScene extends Phaser.Scene {
     const dy = target.posY - player.posY
     const distance = Math.hypot(dx, dy)
     if (distance <= 0.01) return
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      player.facing = dx > 0 ? DIR_RIGHT : DIR_LEFT
+    } else {
+      player.facing = dy > 0 ? DIR_DOWN : DIR_UP
+    }
 
     const amount = Math.min(distance, (animation.speed ?? player.speed) * dt)
     player.posX += (dx / distance) * amount
@@ -260,6 +308,9 @@ export class GameScene extends Phaser.Scene {
     this.dialogueView?.destroy()
     this.dialogueView = null
     this.dialogueController = null
+    this.levelCompleteView?.destroy()
+    this.levelCompleteView = null
+    this.levelResult = null
     this.chestPrompt?.destroy()
     this.chestPrompt = null
   }

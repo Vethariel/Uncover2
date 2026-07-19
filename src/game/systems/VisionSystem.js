@@ -1,4 +1,8 @@
 import {
+  DIR_DOWN,
+  DIR_LEFT,
+  DIR_RIGHT,
+  DIR_UP,
   PLAYER_VISION_RADIUS,
   TILE_DESTRUCTIBLE,
   TILE_EMPTY,
@@ -14,6 +18,11 @@ export const ENRAGED_SPIRIT_LIGHT = 5
 export const EXPLOSION_LIGHT = 5
 export const WALL_LIGHT = 10
 export const MAX_LIGHT = 10
+export const FLASHLIGHT_CONE_DEGREES = 100
+
+const FLASHLIGHT_HALF_ANGLE_COS = Math.cos(
+  (FLASHLIGHT_CONE_DEGREES / 2) * Math.PI / 180,
+)
 
 function tileKey(x, y) {
   return `${x},${y}`
@@ -26,6 +35,24 @@ function isOpaque(tile) {
 function addLight(levels, x, y, amount) {
   const key = tileKey(x, y)
   levels.set(key, Math.min(MAX_LIGHT, (levels.get(key) ?? 0) + amount))
+}
+
+function facingVector(facing) {
+  switch (facing) {
+    case DIR_UP: return { x: 0, y: -1 }
+    case DIR_DOWN: return { x: 0, y: 1 }
+    case DIR_LEFT: return { x: -1, y: 0 }
+    case DIR_RIGHT: return { x: 1, y: 0 }
+    default: return { x: 0, y: 1 }
+  }
+}
+
+function isInsideFlashlightCone(facing, dx, dy) {
+  if (dx === 0 && dy === 0) return true
+  const forward = facingVector(facing)
+  const distance = Math.hypot(dx, dy)
+  const normalizedDot = (dx * forward.x + dy * forward.y) / distance
+  return normalizedDot >= FLASHLIGHT_HALF_ANGLE_COS
 }
 
 function sourceCanAffectViewport(sourceX, sourceY, strength, viewport) {
@@ -83,7 +110,15 @@ function hasLineOfSight(grid, startX, startY, targetX, targetY) {
   return true
 }
 
-function propagateSource(world, levels, startX, startY, strength, viewport) {
+function propagateSource(
+  world,
+  levels,
+  startX,
+  startY,
+  strength,
+  viewport,
+  targetFilter = null,
+) {
   const { grid, player } = world
   if (!grid.inBounds(startX, startY)) return
   if (!shouldStartSource(player, startX, startY, strength, viewport)) return
@@ -101,6 +136,7 @@ function propagateSource(world, levels, startX, startY, strength, viewport) {
       const sourceDistance = Math.round(Math.hypot(x - startX, y - startY))
       const intensity = strength - sourceDistance
       if (intensity <= 0) continue
+      if (targetFilter && !targetFilter(x - startX, y - startY)) continue
 
       const playerDistance = Math.hypot(x - player.tileX, y - player.tileY)
       if (playerDistance > PLAYER_VISION_RADIUS) continue
@@ -170,12 +206,20 @@ export class VisionSystem {
     const helmet = player.lightEmission ?? HELMET_LIGHT
     const emptyTileLight = world.levelVisualConfig?.emptyTileLight ?? 0
     const sourceSignature = collectSourceSignature(world)
-    const frameSignature = `${player.tileX},${player.tileY}|${helmet}|${emptyTileLight}|${sourceSignature}`
+    const frameSignature = `${player.tileX},${player.tileY}:${player.facing}|${helmet}|${emptyTileLight}|${sourceSignature}`
     if (frameSignature === world.visionSourceSignature) return
 
     const lightLevels = new Map()
 
-    propagateSource(world, lightLevels, player.tileX, player.tileY, helmet, viewport)
+    propagateSource(
+      world,
+      lightLevels,
+      player.tileX,
+      player.tileY,
+      helmet,
+      viewport,
+      (dx, dy) => isInsideFlashlightCone(player.facing, dx, dy),
+    )
 
     for (const bomb of world.bombs ?? []) {
       propagateSource(
