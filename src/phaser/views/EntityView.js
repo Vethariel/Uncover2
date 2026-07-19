@@ -3,6 +3,8 @@ import {
   DIR_DOWN,
   DIR_LEFT,
   DIR_RIGHT,
+  PLAYER_ESCAPE_DURATION,
+  PLAYER_HURT_DURATION,
   PLAYER_SPEED,
   TILE_SIZE,
 } from '../../config/constants.js'
@@ -35,6 +37,20 @@ const PLAYER_IDLE_ANIMATIONS = {
   [DIR_LEFT]: { key: 'player-idle-left', start: 6, end: 11 },
   [DIR_RIGHT]: { key: 'player-idle-right', start: 12, end: 17 },
   [DIR_UP]: { key: 'player-idle-up', start: 18, end: 23 },
+}
+
+const PLAYER_HURT_ANIMATIONS = {
+  [DIR_DOWN]: { key: 'player-hurt-down', start: 0, end: 6 },
+  [DIR_LEFT]: { key: 'player-hurt-left', start: 7, end: 13 },
+  [DIR_RIGHT]: { key: 'player-hurt-right', start: 14, end: 20 },
+  [DIR_UP]: { key: 'player-hurt-up', start: 21, end: 27 },
+}
+
+const PLAYER_ESCAPE_ANIMATIONS = {
+  [DIR_DOWN]: { key: 'player-escape-down', start: 0, end: 12 },
+  [DIR_LEFT]: { key: 'player-escape-left', start: 13, end: 25 },
+  [DIR_RIGHT]: { key: 'player-escape-right', start: 26, end: 38 },
+  [DIR_UP]: { key: 'player-escape-up', start: 39, end: 51 },
 }
 
 export class EntityView {
@@ -98,22 +114,40 @@ export class EntityView {
   }
 
   _createPlayerAnimations() {
-    this._createAnimationSet(PLAYER_WALK_ANIMATIONS, 'playerWalk', WALK_FRAME_RATE)
-    this._createAnimationSet(PLAYER_IDLE_ANIMATIONS, 'playerIdle', 4)
+    this._createAnimationSet(PLAYER_WALK_ANIMATIONS, 'playerWalk', {
+      frameRate: WALK_FRAME_RATE,
+    })
+    this._createAnimationSet(PLAYER_IDLE_ANIMATIONS, 'playerIdle', {
+      frameRate: 4,
+    })
+    this._createAnimationSet(PLAYER_HURT_ANIMATIONS, 'playerHurt', {
+      duration: PLAYER_HURT_DURATION * 1000,
+      repeat: 0,
+    })
+    this._createAnimationSet(PLAYER_ESCAPE_ANIMATIONS, 'playerDeath', {
+      duration: PLAYER_ESCAPE_DURATION * 1000,
+      repeat: 0,
+    })
   }
 
-  _createAnimationSet(animationSet, texture, frameRate) {
+  _createAnimationSet(animationSet, texture, {
+    frameRate,
+    duration,
+    repeat = -1,
+  }) {
     for (const animation of Object.values(animationSet)) {
       if (this.scene.anims.exists(animation.key)) continue
-      this.scene.anims.create({
+      const config = {
         key: animation.key,
         frames: this.scene.anims.generateFrameNumbers(texture, {
           start: animation.start,
           end: animation.end,
         }),
-        frameRate,
-        repeat: -1,
-      })
+        repeat,
+      }
+      if (duration !== undefined) config.duration = duration
+      else config.frameRate = frameRate
+      this.scene.anims.create(config)
     }
   }
 
@@ -135,16 +169,25 @@ export class EntityView {
     )
     this.lastPlayerPosition = { x: player.posX, y: player.posY }
 
-    const flickerHidden = player.invulnerableTimer > 0
-      && Math.floor(player.invulnerableTimer * 20) % 2 !== 0
     this.playerSprite
       .setPosition(feetX, feetY)
-      .setVisible(!flickerHidden)
+      .setVisible(true)
 
     const walkAnimation = PLAYER_WALK_ANIMATIONS[player.facing]
       ?? PLAYER_WALK_ANIMATIONS[DIR_DOWN]
     const idleAnimation = PLAYER_IDLE_ANIMATIONS[player.facing]
       ?? PLAYER_IDLE_ANIMATIONS[DIR_DOWN]
+    const hurtAnimation = PLAYER_HURT_ANIMATIONS[player.facing]
+      ?? PLAYER_HURT_ANIMATIONS[DIR_DOWN]
+    const escapeAnimation = PLAYER_ESCAPE_ANIMATIONS[player.facing]
+      ?? PLAYER_ESCAPE_ANIMATIONS[DIR_DOWN]
+    if (player.alive && player.invulnerableTimer > 0) {
+      this.playerSprite.clearTint()
+      this.playerSprite.anims.timeScale = 1
+      this.playerSprite.play(hurtAnimation.key, true)
+      return
+    }
+
     if (player.alive && moved) {
       this.playerSprite.clearTint()
       this.playerSprite.anims.timeScale = player.speed / PLAYER_SPEED
@@ -157,9 +200,9 @@ export class EntityView {
       this.playerSprite.anims.timeScale = 1
       this.playerSprite.play(idleAnimation.key, true)
     } else {
-      this.playerSprite.stop()
-      this.playerSprite.setTexture('playerIdle', idleAnimation.start)
-      this.playerSprite.setTint(0x68717d)
+      this.playerSprite.clearTint()
+      this.playerSprite.anims.timeScale = 1
+      this.playerSprite.play(escapeAnimation.key, true)
     }
   }
 

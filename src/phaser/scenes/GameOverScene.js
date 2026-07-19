@@ -15,16 +15,26 @@ export class GameOverScene extends Phaser.Scene {
     audio.stopAll()
     audio.playOverlayMusic('gameOver', false)
 
-    this.add.text(this.scale.width / 2, this.scale.height / 2 - 20, 'GAME OVER', {
+    this.add.text(this.scale.width / 2, this.scale.height / 2 - 35, 'HAS ESCAPADO', {
       fontSize: '20px',
-      color: '#dc3c3c',
+      color: '#ffc857',
     }).setOrigin(0.5)
+
+    this.add.text(
+      this.scale.width / 2,
+      this.scale.height / 2,
+      'PERO HAS PERDIDO TODOS TUS OBJETOS',
+      {
+        fontSize: '9px',
+        color: '#ffffff',
+      },
+    ).setOrigin(0.5)
 
     const hint = this.route === 'workshop'
       ? 'PRESS ENTER TO RETURN TO WORKSHOP'
       : 'PRESS ENTER TO RETURN TO MENU'
 
-    this.add.text(this.scale.width / 2, this.scale.height / 2 + 15, hint, {
+    this.add.text(this.scale.width / 2, this.scale.height / 2 + 28, hint, {
       fontSize: '8px',
       color: '#c8c8c8',
     }).setOrigin(0.5)

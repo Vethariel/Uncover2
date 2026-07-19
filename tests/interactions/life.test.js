@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { Explosion } from '../../src/game/entities/Explosion.js'
-import { TILE_SIZE } from '../../src/config/constants.js'
+import {
+  PLAYER_ESCAPE_DURATION,
+  PLAYER_HURT_DURATION,
+  TILE_SIZE,
+} from '../../src/config/constants.js'
 import { createTestWorld } from '../helpers/worldFactory.js'
 import { stepLife } from '../helpers/systems.js'
 import { LifeSystem } from '../../src/game/systems/LifeSystem.js'
@@ -30,7 +34,7 @@ describe('LifeSystem — ciclo de vida', () => {
     expect(world.player.lives).toBe(2)
     expect(world.player.alive).toBe(true)
     expect(world.player).toMatchObject(initialPosition)
-    expect(world.player.invulnerableTimer).toBeGreaterThan(1.9)
+    expect(world.player.invulnerableTimer).toBe(PLAYER_HURT_DURATION)
     expect(world.events).toContain('playerDamaged')
     expect(world.events).not.toContain('playerDeath')
   })
@@ -64,9 +68,10 @@ describe('LifeSystem — ciclo de vida', () => {
     expect(world.player.lives).toBe(0)
     expect(world.player.alive).toBe(false)
     expect(world.gameOver).toBe(false)
+    expect(world.playerDeathTimer).toBe(PLAYER_ESCAPE_DURATION)
     expect(world.events).toContain('playerDeath')
 
-    stepLife(world, 2.1)
+    stepLife(world, PLAYER_ESCAPE_DURATION + 0.1)
     expect(world.gameOver).toBe(true)
   })
 

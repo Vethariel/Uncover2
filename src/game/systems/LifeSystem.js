@@ -1,4 +1,8 @@
-import { DIR_NONE } from '../../config/constants.js'
+import {
+  DIR_NONE,
+  PLAYER_ESCAPE_DURATION,
+  PLAYER_HURT_DURATION,
+} from '../../config/constants.js'
 import { GridQuery } from '../GridQuery.js'
 import { positionFromTile } from '../entityTiles.js'
 import { GOLEM_BASIC_ALERT_RADIUS } from '../../config/enemyTypes.js'
@@ -81,13 +85,13 @@ export class LifeSystem {
 
     player.lives = Math.max(0, player.lives - 1)
     if (player.lives > 0) {
-      player.invulnerableTimer = 2
+      player.invulnerableTimer = PLAYER_HURT_DURATION
       world.events.push('playerDamaged')
       return
     }
 
     player.alive = false
-    world.playerDeathTimer = 2
+    world.playerDeathTimer = PLAYER_ESCAPE_DURATION
     world.events.push('playerDeath')
   }
 

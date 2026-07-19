@@ -16,6 +16,16 @@ export class PreloadScene extends Phaser.Scene {
       'assets/sprites/player_idle.png',
       { frameWidth: 64, frameHeight: 64 },
     )
+    this.load.spritesheet(
+      'playerHurt',
+      'assets/sprites/player_hurt.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
+      'playerDeath',
+      'assets/sprites/player_death.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
     this.load.audio('walk', 'assets/sounds/walk.wav')
     this.load.audio('bombPlace', 'assets/sounds/bomb_place.wav')
     this.load.audio('explosion', 'assets/sounds/explosion.wav')
