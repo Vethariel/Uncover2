@@ -25,7 +25,8 @@ describe('GameLoop — humo end-to-end', () => {
     )
 
     stepGameLoop(world, 0.016, { justDown: ['bomb'] })
-    expect(world.bombs).toHaveLength(1)
+    expect(world.bombs).toHaveLength(0)
+    expect(world.player.bombPlacement).not.toBeNull()
 
     let hadExplosion = false
     for (let i = 0; i < 200; i++) {

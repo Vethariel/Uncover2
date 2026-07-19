@@ -7,7 +7,6 @@ import {
   TILE_DESTRUCTIBLE,
   TILE_PASS,
 } from '../../config/constants.js'
-import { Bomb } from '../entities/Bomb.js'
 import { isExtractingFragment } from './FragmentExtractSystem.js'
 
 function facingVector(facing) {
@@ -42,6 +41,11 @@ export class InputSystem {
   }
 
   handlePlayerInput(world, player, input) {
+    if (player.hurtAnimationTimer > 0 || player.bombPlacement) {
+      player.desiredFacing = DIR_NONE
+      return
+    }
+
     const mining = input.isDown('mine') && isMiningDestructible(world, player)
     const extracting = isExtractingFragment(world, player, input)
 
@@ -72,9 +76,13 @@ export class InputSystem {
     if (world.grid.get(tileX, tileY) === TILE_PASS) return
     if (this.bombExists(world, tileX, tileY)) return
 
-    world.bombs.push(new Bomb(tileX, tileY, world.tileSize, player, player.bombRange))
-    player.activeBombs++
-    world.events.push('bombPlace')
+    player.desiredFacing = DIR_NONE
+    player.bombPlacement = {
+      elapsed: 0,
+      tileX,
+      tileY,
+      spawned: false,
+    }
   }
 
   bombExists(world, tileX, tileY) {

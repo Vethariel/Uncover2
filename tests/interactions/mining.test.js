@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   DIR_RIGHT,
+  PLAYER_BOMB_APPEAR_DELAY,
   TILE_DESTRUCTIBLE,
   TILE_EMPTY,
 } from '../../src/config/constants.js'
 import { createTestWorld } from '../helpers/worldFactory.js'
 import {
   explodeBomb,
+  stepBomb,
   stepInput,
   stepMining,
   stepGameLoop,
@@ -92,14 +94,10 @@ describe('MiningSystem', () => {
 
   it('la bomba destruye mena sin entregar material', () => {
     const world = oreWorld('bronze', 1)
-    world.player.tileX = 1
-    world.bombs = []
-    stepInput(world, { justDown: ['bomb'] })
     // Colocar bomba en (2,1) y explotar hacia la mena.
     world.player.tileX = 2
-    world.player.activeBombs = 0
-    world.bombs = []
     stepInput(world, { justDown: ['bomb'] })
+    stepBomb(world, PLAYER_BOMB_APPEAR_DELAY)
     expect(world.bombs).toHaveLength(1)
     world.bombs[0].range = 1
     explodeBomb(world, 0)

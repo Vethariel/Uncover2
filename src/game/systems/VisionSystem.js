@@ -206,7 +206,7 @@ export class VisionSystem {
     const helmet = player.lightEmission ?? HELMET_LIGHT
     const emptyTileLight = world.levelVisualConfig?.emptyTileLight ?? 0
     const sourceSignature = collectSourceSignature(world)
-    const frameSignature = `${player.tileX},${player.tileY}:${player.facing}|${helmet}|${emptyTileLight}|${sourceSignature}`
+    const frameSignature = `${player.tileX},${player.tileY}:${player.facing}|${helmet}|${emptyTileLight}|${grid.revision ?? 0}|${sourceSignature}`
     if (frameSignature === world.visionSourceSignature) return
 
     const lightLevels = new Map()

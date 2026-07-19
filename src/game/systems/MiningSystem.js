@@ -52,7 +52,7 @@ export function destroyDestructibleWithoutYield(world, x, y) {
 export class MiningSystem {
   update(world, dt, input) {
     const player = world.player
-    if (!player?.alive) {
+    if (!player?.alive || player.hurtAnimationTimer > 0) {
       world.activeMiningTarget = null
       return
     }

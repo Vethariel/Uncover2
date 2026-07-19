@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { createTestWorld } from '../helpers/worldFactory.js'
 import { stepInput, stepBomb } from '../helpers/systems.js'
 import { GridQuery } from '../../src/game/GridQuery.js'
-import { TILE_PASS } from '../../src/config/constants.js'
+import {
+  PLAYER_BOMB_APPEAR_DELAY,
+  TILE_PASS,
+} from '../../src/config/constants.js'
 
 describe('bombas', () => {
   it('no se coloca bomba en TILE_PASS', () => {
@@ -25,6 +28,8 @@ describe('bombas', () => {
     )
 
     stepInput(world, { justDown: ['bomb'] })
+    expect(world.bombs).toHaveLength(0)
+    stepBomb(world, PLAYER_BOMB_APPEAR_DELAY)
 
     expect(world.bombs).toHaveLength(1)
     expect(world.bombs[0].tileX).toBe(2)
@@ -60,6 +65,7 @@ describe('bombas', () => {
 
     stepInput(world, { justDown: ['bomb'] })
     stepInput(world, { justDown: ['bomb'] })
+    stepBomb(world, PLAYER_BOMB_APPEAR_DELAY)
 
     expect(world.bombs).toHaveLength(1)
   })

@@ -38,7 +38,11 @@ function findFragment(world, x, y) {
 }
 
 export function isExtractingFragment(world, player, input) {
-  if (!player?.alive || !input?.isDown('interact')) return false
+  if (
+    !player?.alive
+    || player.hurtAnimationTimer > 0
+    || !input?.isDown('interact')
+  ) return false
   const vec = facingVector(player.facing)
   const x = player.tileX + vec.x
   const y = player.tileY + vec.y
@@ -50,7 +54,11 @@ export function isExtractingFragment(world, player, input) {
 export class FragmentExtractSystem {
   update(world, dt, input) {
     const player = world.player
-    if (!player?.alive || !input?.isDown('interact')) {
+    if (
+      !player?.alive
+      || player.hurtAnimationTimer > 0
+      || !input?.isDown('interact')
+    ) {
       world.activeFragmentTarget = null
       return
     }

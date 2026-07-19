@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { Explosion } from '../../src/game/entities/Explosion.js'
 import {
   PLAYER_ESCAPE_DURATION,
-  PLAYER_HURT_DURATION,
+  PLAYER_HURT_ANIMATION_DURATION,
+  PLAYER_INVULNERABLE_DURATION,
   TILE_SIZE,
 } from '../../src/config/constants.js'
 import { createTestWorld } from '../helpers/worldFactory.js'
@@ -34,7 +35,8 @@ describe('LifeSystem — ciclo de vida', () => {
     expect(world.player.lives).toBe(2)
     expect(world.player.alive).toBe(true)
     expect(world.player).toMatchObject(initialPosition)
-    expect(world.player.invulnerableTimer).toBe(PLAYER_HURT_DURATION)
+    expect(world.player.hurtAnimationTimer).toBe(PLAYER_HURT_ANIMATION_DURATION)
+    expect(world.player.invulnerableTimer).toBe(PLAYER_INVULNERABLE_DURATION)
     expect(world.events).toContain('playerDamaged')
     expect(world.events).not.toContain('playerDeath')
   })
@@ -54,6 +56,10 @@ describe('LifeSystem — ciclo de vida', () => {
     stepLife(world, 0.5)
     expect(world.player.lives).toBe(2)
     expect(world.player.alive).toBe(true)
+
+    stepLife(world, 0.1)
+    expect(world.player.hurtAnimationTimer).toBe(0)
+    expect(world.player.invulnerableTimer).toBeCloseTo(1.4)
   })
 
   it('el golpe en la última vida produce muerte y después game over', () => {

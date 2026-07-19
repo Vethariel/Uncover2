@@ -4,7 +4,10 @@ import {
   TILE_EMPTY,
   TILE_EXPLOSION,
   TILE_PASS,
+  PLAYER_BOMB_ANIMATION_DURATION,
+  PLAYER_BOMB_APPEAR_DELAY,
 } from '../../config/constants.js'
+import { Bomb } from '../entities/Bomb.js'
 import { Explosion } from '../entities/Explosion.js'
 import { destroyDestructibleWithoutYield } from './MiningSystem.js'
 import { disableTrapAt } from './TrapSystem.js'
@@ -44,6 +47,45 @@ export class BombSystem {
     }
 
     world.explosions = world.explosions.filter((explosion) => explosion.timer > 0)
+    this.updateBombPlacement(world, dt)
+  }
+
+  updateBombPlacement(world, dt) {
+    const player = world.player
+    const placement = player?.bombPlacement
+    if (!placement) return
+    if (!player.alive) {
+      player.bombPlacement = null
+      return
+    }
+
+    placement.elapsed += dt
+    if (!placement.spawned && placement.elapsed >= PLAYER_BOMB_APPEAR_DELAY) {
+      const bombExists = world.bombs.some((bomb) => (
+        bomb.tileX === placement.tileX && bomb.tileY === placement.tileY
+      ))
+      const canSpawn = (
+        player.activeBombs < player.maxBombs
+        && world.grid.get(placement.tileX, placement.tileY) !== TILE_PASS
+        && !bombExists
+      )
+      if (canSpawn) {
+        world.bombs.push(new Bomb(
+          placement.tileX,
+          placement.tileY,
+          world.tileSize,
+          player,
+          player.bombRange,
+        ))
+        player.activeBombs++
+        world.events.push('bombPlace')
+      }
+      placement.spawned = true
+    }
+
+    if (placement.elapsed >= PLAYER_BOMB_ANIMATION_DURATION) {
+      player.bombPlacement = null
+    }
   }
 
   explode(world, bomb) {

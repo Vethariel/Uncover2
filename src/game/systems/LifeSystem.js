@@ -1,7 +1,8 @@
 import {
   DIR_NONE,
   PLAYER_ESCAPE_DURATION,
-  PLAYER_HURT_DURATION,
+  PLAYER_HURT_ANIMATION_DURATION,
+  PLAYER_INVULNERABLE_DURATION,
 } from '../../config/constants.js'
 import { GridQuery } from '../GridQuery.js'
 import { positionFromTile } from '../entityTiles.js'
@@ -28,6 +29,10 @@ export class LifeSystem {
     }
 
     this.updateDeadEnemies(world, dt)
+
+    if (player.hurtAnimationTimer > 0) {
+      player.hurtAnimationTimer = Math.max(0, player.hurtAnimationTimer - dt)
+    }
 
     for (const entity of [world.player, ...world.enemies]) {
       if (entity.invulnerableTimer > 0) {
@@ -83,13 +88,16 @@ export class LifeSystem {
     const player = world.player
     if (!player.alive || player.invulnerableTimer > 0) return
 
+    player.bombPlacement = null
     player.lives = Math.max(0, player.lives - 1)
     if (player.lives > 0) {
-      player.invulnerableTimer = PLAYER_HURT_DURATION
+      player.hurtAnimationTimer = PLAYER_HURT_ANIMATION_DURATION
+      player.invulnerableTimer = PLAYER_INVULNERABLE_DURATION
       world.events.push('playerDamaged')
       return
     }
 
+    player.hurtAnimationTimer = 0
     player.alive = false
     world.playerDeathTimer = PLAYER_ESCAPE_DURATION
     world.events.push('playerDeath')

@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { DIR_LEFT, DIR_RIGHT, DIR_NONE } from '../../src/config/constants.js'
+import {
+  DIR_LEFT,
+  DIR_RIGHT,
+  DIR_NONE,
+  PLAYER_BOMB_APPEAR_DELAY,
+} from '../../src/config/constants.js'
 import { createTestWorld } from '../helpers/worldFactory.js'
-import { stepInput } from '../helpers/systems.js'
+import { stepBomb, stepInput } from '../helpers/systems.js'
 
 describe('InputSystem', () => {
   it('respeta maxBombs — no coloca más de las permitidas', () => {
@@ -12,6 +17,7 @@ describe('InputSystem', () => {
 
     stepInput(world, { justDown: ['bomb'] })
     stepInput(world, { justDown: ['bomb'] })
+    stepBomb(world, PLAYER_BOMB_APPEAR_DELAY)
 
     expect(world.bombs).toHaveLength(1)
     expect(world.player.activeBombs).toBe(1)
@@ -30,6 +36,33 @@ describe('InputSystem', () => {
 
     expect(world.player.desiredFacing).toBe(DIR_NONE)
     expect(world.bombs).toHaveLength(0)
+  })
+
+  it('inmoviliza al jugador durante la animación de daño', () => {
+    const world = createTestWorld(
+      ['#####', '#...#', '#####'],
+      { playerSpawn: { x: 2, y: 1 } },
+    )
+    world.player.hurtAnimationTimer = 0.5
+    world.player.invulnerableTimer = 1.9
+
+    stepInput(world, { held: ['right'], justDown: ['bomb'] })
+
+    expect(world.player.desiredFacing).toBe(DIR_NONE)
+    expect(world.player.bombPlacement).toBeNull()
+  })
+
+  it('permite moverse durante el parpadeo restante', () => {
+    const world = createTestWorld(
+      ['#####', '#...#', '#####'],
+      { playerSpawn: { x: 2, y: 1 } },
+    )
+    world.player.hurtAnimationTimer = 0
+    world.player.invulnerableTimer = 1
+
+    stepInput(world, { held: ['right'] })
+
+    expect(world.player.desiredFacing).toBe(DIR_RIGHT)
   })
 
   it('prioridad de dirección: left > right > up > down', () => {

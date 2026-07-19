@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DIR_RIGHT,
+  PLAYER_BOMB_APPEAR_DELAY,
   PLAYER_LIVES,
   PLAYER_SIZE,
   TILE_DESTRUCTIBLE,
@@ -11,6 +12,7 @@ import { createTrap } from '../../src/config/trapTypes.js'
 import { createTestWorld } from '../helpers/worldFactory.js'
 import {
   explodeBomb,
+  stepBomb,
   stepInput,
   stepLife,
   stepTrap,
@@ -115,6 +117,7 @@ describe('TrapSystem', () => {
     world.player.tileY = 1
     world.player.facing = DIR_RIGHT
     stepInput(world, { justDown: ['bomb'] })
+    stepBomb(world, PLAYER_BOMB_APPEAR_DELAY)
     expect(world.bombs).toHaveLength(1)
     world.bombs[0].range = 2
     explodeBomb(world, 0)

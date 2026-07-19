@@ -3,6 +3,8 @@ export class Grid {
     this.cols = cols
     this.rows = rows
     this.tiles = Array.from({ length: rows }, () => new Array(cols).fill(0))
+    // Incrementa con cada cambio de tile: permite invalidar cachés (p.ej. visión).
+    this.revision = 0
   }
 
   inBounds(x, y) {
@@ -16,6 +18,7 @@ export class Grid {
 
   set(x, y, value) {
     if (!this.inBounds(x, y)) return
+    if (this.tiles[y][x] !== value) this.revision++
     this.tiles[y][x] = value
   }
 }

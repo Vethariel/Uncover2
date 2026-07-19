@@ -23,5 +23,7 @@ export class Player {
     this.fortune = 0
     this.alive = true
     this.invulnerableTimer = 0
+    this.hurtAnimationTimer = 0
+    this.bombPlacement = null
   }
 }

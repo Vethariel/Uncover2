@@ -3,16 +3,19 @@ import {
   DIR_DOWN,
   DIR_LEFT,
   DIR_RIGHT,
+  PLAYER_BOMB_ANIMATION_DURATION,
   PLAYER_ESCAPE_DURATION,
-  PLAYER_HURT_DURATION,
+  PLAYER_HURT_ANIMATION_DURATION,
   PLAYER_SPEED,
   TILE_SIZE,
 } from '../../config/constants.js'
+import { miningDurationFactor } from '../../config/crafting.js'
 
 // Un ciclo completo de walk (~8 frames) cubre ~3 tiles a velocidad base.
 const WALK_FRAME_COUNT = 8
 const WALK_CYCLE_DISTANCE = TILE_SIZE * 3
 const WALK_FRAME_RATE = (PLAYER_SPEED / WALK_CYCLE_DISTANCE) * WALK_FRAME_COUNT
+const MINE_FRAME_RATE = 8
 
 const COLORS = {
   enemy: {
@@ -44,6 +47,20 @@ const PLAYER_HURT_ANIMATIONS = {
   [DIR_LEFT]: { key: 'player-hurt-left', start: 7, end: 13 },
   [DIR_RIGHT]: { key: 'player-hurt-right', start: 14, end: 20 },
   [DIR_UP]: { key: 'player-hurt-up', start: 21, end: 27 },
+}
+
+const PLAYER_BOMB_ANIMATIONS = {
+  [DIR_DOWN]: { key: 'player-bomb-down', start: 0, end: 6 },
+  [DIR_LEFT]: { key: 'player-bomb-left', start: 7, end: 13 },
+  [DIR_RIGHT]: { key: 'player-bomb-right', start: 14, end: 20 },
+  [DIR_UP]: { key: 'player-bomb-up', start: 21, end: 27 },
+}
+
+const PLAYER_MINE_ANIMATIONS = {
+  [DIR_DOWN]: { key: 'player-mine-down', start: 0, end: 5 },
+  [DIR_LEFT]: { key: 'player-mine-left', start: 6, end: 11 },
+  [DIR_RIGHT]: { key: 'player-mine-right', start: 12, end: 17 },
+  [DIR_UP]: { key: 'player-mine-up', start: 18, end: 23 },
 }
 
 const PLAYER_ESCAPE_ANIMATIONS = {
@@ -121,8 +138,15 @@ export class EntityView {
       frameRate: 4,
     })
     this._createAnimationSet(PLAYER_HURT_ANIMATIONS, 'playerHurt', {
-      duration: PLAYER_HURT_DURATION * 1000,
+      duration: PLAYER_HURT_ANIMATION_DURATION * 1000,
       repeat: 0,
+    })
+    this._createAnimationSet(PLAYER_BOMB_ANIMATIONS, 'playerBomb', {
+      duration: PLAYER_BOMB_ANIMATION_DURATION * 1000,
+      repeat: 0,
+    })
+    this._createAnimationSet(PLAYER_MINE_ANIMATIONS, 'playerMine', {
+      frameRate: MINE_FRAME_RATE,
     })
     this._createAnimationSet(PLAYER_ESCAPE_ANIMATIONS, 'playerDeath', {
       duration: PLAYER_ESCAPE_DURATION * 1000,
@@ -169,9 +193,16 @@ export class EntityView {
     )
     this.lastPlayerPosition = { x: player.posX, y: player.posY }
 
+    const hurtActive = player.alive && player.hurtAnimationTimer > 0
+    const flickerHidden = (
+      player.alive
+      && !hurtActive
+      && player.invulnerableTimer > 0
+      && Math.floor(player.invulnerableTimer * 20) % 2 !== 0
+    )
     this.playerSprite
       .setPosition(feetX, feetY)
-      .setVisible(true)
+      .setVisible(!flickerHidden)
 
     const walkAnimation = PLAYER_WALK_ANIMATIONS[player.facing]
       ?? PLAYER_WALK_ANIMATIONS[DIR_DOWN]
@@ -179,12 +210,30 @@ export class EntityView {
       ?? PLAYER_IDLE_ANIMATIONS[DIR_DOWN]
     const hurtAnimation = PLAYER_HURT_ANIMATIONS[player.facing]
       ?? PLAYER_HURT_ANIMATIONS[DIR_DOWN]
+    const bombAnimation = PLAYER_BOMB_ANIMATIONS[player.facing]
+      ?? PLAYER_BOMB_ANIMATIONS[DIR_DOWN]
+    const mineAnimation = PLAYER_MINE_ANIMATIONS[player.facing]
+      ?? PLAYER_MINE_ANIMATIONS[DIR_DOWN]
     const escapeAnimation = PLAYER_ESCAPE_ANIMATIONS[player.facing]
       ?? PLAYER_ESCAPE_ANIMATIONS[DIR_DOWN]
-    if (player.alive && player.invulnerableTimer > 0) {
+    if (hurtActive) {
       this.playerSprite.clearTint()
       this.playerSprite.anims.timeScale = 1
       this.playerSprite.play(hurtAnimation.key, true)
+      return
+    }
+
+    if (player.alive && player.bombPlacement) {
+      this.playerSprite.clearTint()
+      this.playerSprite.anims.timeScale = 1
+      this.playerSprite.play(bombAnimation.key, true)
+      return
+    }
+
+    if (player.alive && this.world.activeMiningTarget) {
+      this.playerSprite.clearTint()
+      this.playerSprite.anims.timeScale = 1 / miningDurationFactor(player.pickSpeed ?? 0)
+      this.playerSprite.play(mineAnimation.key, true)
       return
     }
 
