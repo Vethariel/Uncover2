@@ -87,6 +87,25 @@ export class GridQuery {
       }
     }
 
+    for (const wave of this.world.pendingBlastWaves ?? []) {
+      const bx = wave.originX
+      const by = wave.originY
+      for (let step = wave.nextStep; step <= wave.range; step++) {
+        const dirs = [
+          { x: 1, y: 0, key: 'e' },
+          { x: -1, y: 0, key: 'w' },
+          { x: 0, y: 1, key: 's' },
+          { x: 0, y: -1, key: 'n' },
+        ]
+        for (const dir of dirs) {
+          if (wave.blocked?.[dir.key]) continue
+          const tx = bx + dir.x * step
+          const ty = by + dir.y * step
+          if (tx === x && ty === y && this.lineOfSight(bx, by, x, y)) return true
+        }
+      }
+    }
+
     return false
   }
 

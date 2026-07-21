@@ -8,12 +8,28 @@ import {
   PLAYER_BOMB_APPEAR_DELAY,
 } from '../../config/constants.js'
 import { Bomb } from '../entities/Bomb.js'
-import { Explosion } from '../entities/Explosion.js'
+import {
+  Explosion,
+  EXPLOSION_DURATION,
+  EXPLOSION_ADJACENT_DURATION,
+} from '../entities/Explosion.js'
 import { destroyDestructibleWithoutYield } from './MiningSystem.js'
 import { disableTrapAt } from './TrapSystem.js'
 
+/** Retraso entre el centro y cada anillo / dirección de la cadena. */
+export const BLAST_EXPAND_DELAY = 0.1
+
+const BLAST_DIRECTIONS = [
+  { x: 1, y: 0, key: 'e' },
+  { x: -1, y: 0, key: 'w' },
+  { x: 0, y: 1, key: 's' },
+  { x: 0, y: -1, key: 'n' },
+]
+
 export class BombSystem {
   update(world, dt) {
+    if (!world.pendingBlastWaves) world.pendingBlastWaves = []
+
     for (const bomb of world.bombs) {
       bomb.timer -= dt
 
@@ -30,6 +46,8 @@ export class BombSystem {
         bomb.passThrough = false
       }
     }
+
+    this.updatePendingBlastWaves(world, dt)
 
     for (const explosion of world.explosions) {
       if (explosion.type !== 'explosion') continue
@@ -48,6 +66,74 @@ export class BombSystem {
 
     world.explosions = world.explosions.filter((explosion) => explosion.timer > 0)
     this.updateBombPlacement(world, dt)
+  }
+
+  updatePendingBlastWaves(world, dt) {
+    const survivors = []
+    for (const wave of world.pendingBlastWaves) {
+      wave.timer -= dt
+      if (wave.timer > 0) {
+        survivors.push(wave)
+        continue
+      }
+
+      this.expandBlastRing(world, wave)
+      wave.nextStep += 1
+      if (wave.nextStep <= wave.range && !this._waveFullyBlocked(wave)) {
+        wave.timer = BLAST_EXPAND_DELAY
+        survivors.push(wave)
+      }
+    }
+    world.pendingBlastWaves = survivors
+  }
+
+  _waveFullyBlocked(wave) {
+    return BLAST_DIRECTIONS.every((dir) => wave.blocked[dir.key])
+  }
+
+  expandBlastRing(world, wave) {
+    const grid = world.grid
+    const step = wave.nextStep
+    const level = wave.level
+
+    for (const dir of BLAST_DIRECTIONS) {
+      if (wave.blocked[dir.key]) continue
+
+      const tx = wave.originX + dir.x * step
+      const ty = wave.originY + dir.y * step
+      if (!grid.inBounds(tx, ty)) {
+        wave.blocked[dir.key] = true
+        continue
+      }
+
+      const tile = grid.get(tx, ty)
+      if (tile === TILE_WALL || tile === TILE_EXPLOSION || tile === TILE_PASS) {
+        wave.blocked[dir.key] = true
+        continue
+      }
+
+      const isLast = step === wave.range
+      const isDestructible = tile === TILE_DESTRUCTIBLE
+      const kind = this.explosionKind(dir, isLast, isDestructible, level)
+
+      const existing = this.getExplosion(world, tx, ty)
+      if (existing) {
+        existing.kind = this.mergeKind(existing.kind, kind)
+      } else {
+        this.spawnExplosion(world, tx, ty, kind)
+      }
+
+      disableTrapAt(world, tx, ty)
+
+      if (isDestructible) {
+        destroyDestructibleWithoutYield(world, tx, ty)
+        grid.set(tx, ty, TILE_EXPLOSION)
+        wave.blocked[dir.key] = true
+        continue
+      }
+
+      this.triggerBomb(world, tx, ty)
+    }
   }
 
   updateBombPlacement(world, dt) {
@@ -89,55 +175,25 @@ export class BombSystem {
   }
 
   explode(world, bomb) {
-    const grid = world.grid
+    if (!world.pendingBlastWaves) world.pendingBlastWaves = []
+
     const tileX = bomb.tileX
     const tileY = bomb.tileY
+    const range = bomb.range || 1
 
-    this.spawnExplosion(world, tileX, tileY)
+    this.spawnExplosion(world, tileX, tileY, 'center')
     disableTrapAt(world, tileX, tileY)
 
-    const range = bomb.range || 1
-    const directions = [
-      { x: 1, y: 0 },
-      { x: -1, y: 0 },
-      { x: 0, y: 1 },
-      { x: 0, y: -1 },
-    ]
-
-    for (const dir of directions) {
-      for (let i = 1; i <= range; i++) {
-        const tx = tileX + dir.x * i
-        const ty = tileY + dir.y * i
-        const tile = grid.get(tx, ty)
-
-        if (tile === TILE_WALL || tile === TILE_EXPLOSION || tile === TILE_PASS) break
-
-        const isLast = i === range
-        const isDestructible = tile === TILE_DESTRUCTIBLE
-        const kind = this.explosionKind(
-          dir,
-          isLast,
-          isDestructible,
-          world.currentLevelIndex + 1,
-        )
-
-        const existing = this.getExplosion(world, tx, ty)
-        if (existing) {
-          existing.kind = this.mergeKind(existing.kind, kind)
-        } else {
-          this.spawnExplosion(world, tx, ty, kind)
-        }
-
-        disableTrapAt(world, tx, ty)
-
-        if (isDestructible) {
-          destroyDestructibleWithoutYield(world, tx, ty)
-          grid.set(tx, ty, TILE_EXPLOSION)
-          break
-        }
-
-        this.triggerBomb(world, tx, ty)
-      }
+    if (range >= 1) {
+      world.pendingBlastWaves.push({
+        originX: tileX,
+        originY: tileY,
+        range,
+        level: world.currentLevelIndex + 1,
+        nextStep: 1,
+        timer: BLAST_EXPAND_DELAY,
+        blocked: { n: false, e: false, s: false, w: false },
+      })
     }
 
     bomb.owner.activeBombs--
@@ -166,7 +222,10 @@ export class BombSystem {
   }
 
   spawnExplosion(world, tx, ty, kind = 'center') {
-    world.explosions.push(new Explosion(tx, ty, world.tileSize, kind))
+    const duration = kind === 'center'
+      ? EXPLOSION_DURATION
+      : EXPLOSION_ADJACENT_DURATION
+    world.explosions.push(new Explosion(tx, ty, world.tileSize, kind, duration))
   }
 
   triggerBomb(world, tx, ty) {

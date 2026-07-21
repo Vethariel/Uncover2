@@ -22,6 +22,7 @@ export class World {
     this.enemies = []
     this.bombs = []
     this.explosions = []
+    this.pendingBlastWaves = []
     this.playerSpawn = null
     this.entryDoor = null
     this.exitDoor = null
@@ -65,6 +66,7 @@ export class World {
     this.player = null
     this.enemies = []
     this.explosions = []
+    this.pendingBlastWaves = []
     this.playerSpawn = null
     this.entryDoor = null
     this.exitDoor = null

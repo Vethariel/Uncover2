@@ -36,6 +36,21 @@ export class PreloadScene extends Phaser.Scene {
       'assets/sprites/player_mine.png',
       { frameWidth: 64, frameHeight: 64 },
     )
+    this.load.spritesheet(
+      'chest',
+      'assets/sprites/chest.png',
+      { frameWidth: 32, frameHeight: 32 },
+    )
+    this.load.spritesheet(
+      'bomb',
+      'assets/sprites/bomb.png',
+      { frameWidth: 32, frameHeight: 32 },
+    )
+    this.load.spritesheet(
+      'explosion',
+      'assets/sprites/explosion.png',
+      { frameWidth: 32, frameHeight: 32 },
+    )
     this.load.audio('walk', 'assets/sounds/walk.mp3')
     this.load.audio('mine', 'assets/sounds/mine.mp3')
     this.load.audio('bombPlace', 'assets/sounds/bomb_place.mp3')

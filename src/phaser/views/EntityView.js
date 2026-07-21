@@ -31,10 +31,15 @@ const COLORS = {
     spirit: 0x7ec8ff,
     golem_advanced: 0xc45c26,
   },
-  bomb: 0x20242b,
-  fuse: 0xffc857,
-  explosion: 0xff9f1c,
 }
+
+const BOMB_FRAME_COUNT = 18
+const BOMB_FRAME_LAST = BOMB_FRAME_COUNT - 1
+
+/** Centro: frames 1→9 (índices 0–8). */
+const EXPLOSION_CENTER_FRAMES = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+/** Aledaños: 7→8→9 y luego 1→9 (índices). */
+const EXPLOSION_ADJACENT_FRAMES = [6, 7, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8]
 
 const PLAYER_WALK_ANIMATIONS = {
   [DIR_DOWN]: { key: 'player-walk-down', start: 0, end: 7 },
@@ -92,6 +97,10 @@ export class EntityView {
       .setOrigin(0.5, 1)
       .setDepth(955)
     this.lastPlayerPosition = null
+    /** @type {Map<object, Phaser.GameObjects.Sprite>} */
+    this.bombSprites = new Map()
+    /** @type {Map<object, Phaser.GameObjects.Sprite>} */
+    this.explosionSprites = new Map()
     this.playerSprite.on(
       Phaser.Animations.Events.ANIMATION_UPDATE,
       this._onPlayerAnimationUpdate,
@@ -103,8 +112,6 @@ export class EntityView {
     this.graphics.clear()
 
     const drawables = [
-      ...this.world.explosions.map((entity) => ({ entity, kind: 'explosion' })),
-      ...this.world.bombs.map((entity) => ({ entity, kind: 'bomb' })),
       ...this.world.enemies.map((entity) => ({ entity, kind: 'enemy' })),
     ]
 
@@ -112,6 +119,8 @@ export class EntityView {
       .sort((a, b) => (a.entity.posY + a.entity.size) - (b.entity.posY + b.entity.size))
       .forEach(({ entity, kind }) => this._draw(kind, entity))
 
+    this._syncBombSprites()
+    this._syncExplosionSprites()
     this._updatePlayerSprite()
     this._drawMiningProgress()
     this._drawFragmentProgress()
@@ -126,6 +135,10 @@ export class EntityView {
       this._onPlayerAnimationUpdate,
       this,
     )
+    for (const sprite of this.bombSprites.values()) sprite.destroy()
+    this.bombSprites.clear()
+    for (const sprite of this.explosionSprites.values()) sprite.destroy()
+    this.explosionSprites.clear()
     this.graphics.destroy()
     this.playerSprite.destroy()
   }
@@ -158,12 +171,6 @@ export class EntityView {
     switch (kind) {
       case 'enemy':
         this._drawEnemy(entity)
-        break
-      case 'bomb':
-        this._drawBomb(entity)
-        break
-      case 'explosion':
-        this._drawExplosion(entity)
         break
     }
   }
@@ -311,23 +318,83 @@ export class EntityView {
     this.graphics.strokeRect(enemy.posX + 0.5, enemy.posY + 0.5, enemy.size - 1, enemy.size - 1)
   }
 
-  _drawBomb(bomb) {
-    const cx = bomb.posX + bomb.size / 2
-    const cy = bomb.posY + bomb.size / 2
-    const pulse = 0.75 + 0.15 * Math.sin(bomb.timer * 12)
-    this.graphics.fillStyle(COLORS.bomb).fillCircle(cx, cy + 1, bomb.size * pulse / 2)
-    this.graphics.lineStyle(2, COLORS.fuse).lineBetween(cx, cy - 6, cx + 3, cy - 9)
+  _syncBombSprites() {
+    const active = new Set()
+    const visible = this.world.visibleTiles
+
+    for (const bomb of this.world.bombs ?? []) {
+      active.add(bomb)
+      let sprite = this.bombSprites.get(bomb)
+      if (!sprite) {
+        sprite = this.scene.add.sprite(0, 0, 'bomb', 0)
+          .setOrigin(0.5, 0.5)
+          .setDepth(10)
+        this.bombSprites.set(bomb, sprite)
+      }
+
+      const hidden = Boolean(
+        visible && !visible.has(`${bomb.tileX},${bomb.tileY}`),
+      )
+      sprite.setVisible(!hidden)
+      sprite.setPosition(
+        bomb.posX + bomb.size / 2,
+        bomb.posY + bomb.size / 2,
+      )
+
+      const duration = Math.max(0.001, bomb.fuseDuration ?? 2.5)
+      const burned = 1 - Math.max(0, bomb.timer) / duration
+      const frame = Math.min(BOMB_FRAME_LAST, Math.floor(burned * BOMB_FRAME_COUNT))
+      sprite.setFrame(frame)
+    }
+
+    for (const [bomb, sprite] of this.bombSprites) {
+      if (active.has(bomb)) continue
+      sprite.destroy()
+      this.bombSprites.delete(bomb)
+    }
   }
 
-  _drawExplosion(explosion) {
-    const inset = explosion.kind === 'center' ? 1 : 3
-    this.graphics.fillStyle(COLORS.explosion, 0.85)
-    this.graphics.fillRect(
-      explosion.posX + inset,
-      explosion.posY + inset,
-      explosion.size - inset * 2,
-      explosion.size - inset * 2,
-    )
+  _syncExplosionSprites() {
+    const active = new Set()
+    const visible = this.world.visibleTiles
+
+    for (const explosion of this.world.explosions ?? []) {
+      active.add(explosion)
+      let sprite = this.explosionSprites.get(explosion)
+      if (!sprite) {
+        sprite = this.scene.add.sprite(0, 0, 'explosion', 0)
+          .setOrigin(0.5, 0.5)
+          .setDepth(20)
+        this.explosionSprites.set(explosion, sprite)
+      }
+
+      const hidden = Boolean(
+        visible && !visible.has(`${explosion.tileX},${explosion.tileY}`),
+      )
+      sprite.setVisible(!hidden)
+      sprite.setPosition(
+        explosion.posX + explosion.size / 2,
+        explosion.posY + explosion.size / 2,
+      )
+      sprite.setFrame(this._explosionFrame(explosion))
+    }
+
+    for (const [explosion, sprite] of this.explosionSprites) {
+      if (active.has(explosion)) continue
+      sprite.destroy()
+      this.explosionSprites.delete(explosion)
+    }
+  }
+
+  _explosionFrame(explosion) {
+    const sequence = explosion.kind === 'center'
+      ? EXPLOSION_CENTER_FRAMES
+      : EXPLOSION_ADJACENT_FRAMES
+    const duration = Math.max(0.001, explosion.animDuration ?? 0.3)
+    const elapsed = duration - Math.max(0, explosion.timer)
+    const t = Math.min(0.999, Math.max(0, elapsed / duration))
+    const index = Math.min(sequence.length - 1, Math.floor(t * sequence.length))
+    return sequence[index]
   }
 
   _drawMiningProgress() {

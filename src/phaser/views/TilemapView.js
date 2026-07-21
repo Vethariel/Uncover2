@@ -34,6 +34,10 @@ const TERRAIN_TILE_COLORS = {
 // Destello de menas/fragmentos visibles: pulso breve cada SPARKLE_PERIOD.
 const SPARKLE_PERIOD = 5.0
 const SPARKLE_DURATION = 0.45
+const CHEST_OPEN_ANIM = 'chest-open'
+const CHEST_OPEN_DURATION_MS = 700
+const CHEST_FRAME_CLOSED = 0
+const CHEST_FRAME_OPEN = 6
 
 export class TilemapView {
   constructor(scene, world) {
@@ -44,7 +48,23 @@ export class TilemapView {
     this.sparkleGraphics = scene.add.graphics({ x: 0, y: 0 }).setDepth(960)
     this.sparkleTimer = 0
     this.lastGridState = ''
+    this.chestSprite = null
+    this.chestOpenKey = null
+    this._createChestAnimation()
     this.build()
+  }
+
+  _createChestAnimation() {
+    if (this.scene.anims.exists(CHEST_OPEN_ANIM)) return
+    this.scene.anims.create({
+      key: CHEST_OPEN_ANIM,
+      frames: this.scene.anims.generateFrameNumbers('chest', {
+        start: CHEST_FRAME_CLOSED,
+        end: CHEST_FRAME_OPEN,
+      }),
+      duration: CHEST_OPEN_DURATION_MS,
+      repeat: 0,
+    })
   }
 
   build() {
@@ -70,11 +90,14 @@ export class TilemapView {
     ].join('|')
     if (state !== this.lastGridState) this._drawGrid(state)
 
+    this._syncChestSprite()
     this.sparkleTimer += dt
     this._drawSparkles()
   }
 
   destroy() {
+    this.chestSprite?.destroy()
+    this.chestSprite = null
     this.graphics.destroy()
     this.sparkleGraphics.destroy()
   }
@@ -160,20 +183,6 @@ export class TilemapView {
       graphics.fillCircle(px + tileSize / 2, py + tileSize / 2, 2 + tablet.order * 0.6)
     }
 
-    const chest = this.world.chest
-    if (chest) {
-      const px = chest.x * tileSize
-      const py = chest.y * tileSize
-      graphics.fillStyle(chest.opened ? 0x5a4630 : 0xc4a35a, 0.95)
-      graphics.fillRect(px + 6, py + 8, tileSize - 12, tileSize - 12)
-      graphics.lineStyle(2, 0x8a6b3f, 0.95)
-      graphics.strokeRect(px + 6, py + 8, tileSize - 12, tileSize - 12)
-      if (!chest.opened) {
-        graphics.fillStyle(0xffc857, 0.9)
-        graphics.fillRect(px + tileSize / 2 - 2, py + 12, 4, 6)
-      }
-    }
-
     for (const trap of this.world.traps ?? []) {
       if (trap.state === 'disabled') continue
       const platePx = trap.plate.x * tileSize
@@ -221,6 +230,40 @@ export class TilemapView {
 
     this._drawDoor(graphics, this.world.entryDoor, tileSize, 0x3c8991)
     this._drawDoor(graphics, this.world.exitDoor, tileSize, 0xffc857)
+  }
+
+  _syncChestSprite() {
+    const chest = this.world.chest
+    if (!chest) {
+      this.chestSprite?.destroy()
+      this.chestSprite = null
+      this.chestOpenKey = null
+      return
+    }
+
+    const tileSize = this.world.tileSize
+    const key = `${chest.x},${chest.y}`
+    if (!this.chestSprite) {
+      this.chestSprite = this.scene.add.sprite(0, 0, 'chest', CHEST_FRAME_CLOSED)
+        .setOrigin(0.5, 0.5)
+        .setDepth(5)
+    }
+
+    this.chestSprite.setPosition(
+      chest.x * tileSize + tileSize / 2,
+      chest.y * tileSize + tileSize / 2,
+    )
+
+    if (!chest.opened) {
+      this.chestOpenKey = null
+      if (this.chestSprite.anims.isPlaying) this.chestSprite.anims.stop()
+      this.chestSprite.setTexture('chest', CHEST_FRAME_CLOSED)
+      return
+    }
+
+    if (this.chestOpenKey === key) return
+    this.chestOpenKey = key
+    this.chestSprite.play(CHEST_OPEN_ANIM)
   }
 
   _drawSparkles() {

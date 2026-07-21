@@ -7,6 +7,7 @@ export class Bomb {
     this.size = size
     this.posX = this.tileX * this.size
     this.posY = this.tileY * this.size
+    this.fuseDuration = timer
     this.timer = timer
     this.owner = owner
     this.range = range
