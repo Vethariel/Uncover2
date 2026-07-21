@@ -20,8 +20,9 @@ describe('ciclo e IA de enemigos', () => {
     expect(ENEMY_TYPES.spirit.speed).toBe(75)
     expect(ENEMY_TYPES.spirit.aggressiveSpeed).toBe(110)
     expect(ENEMY_TYPES.spirit.maxHp).toBe(1)
-    expect(ENEMY_TYPES.golem_advanced.speed).toBe(80)
-    expect(ENEMY_TYPES.golem_advanced.maxHp).toBe(4)
+    expect(ENEMY_TYPES.golem_advanced.speed).toBe(72)
+    expect(ENEMY_TYPES.golem_advanced.maxHp).toBe(3)
+    expect(ENEMY_TYPES.golem_advanced.respawnDelay).toBe(35)
   })
 
   it('alerta golems básicos cercanos al recibir daño', () => {
@@ -149,10 +150,74 @@ describe('ciclo e IA de enemigos', () => {
 
     const enemy = world.enemies[0]
     expect(enemy.aggressive).toBe(true)
-    expect(enemy.maxHp).toBe(4)
+    expect(enemy.maxHp).toBe(3)
     expect(enemy.canDamagePlayer()).toBe(true)
 
     life.update(world, 0.016)
     expect(world.player.lives).toBe(2)
+  })
+
+  it('el golem avanzado deja de perseguir si el jugador se aleja', () => {
+    const world = createTestWorld(
+      ['#################', '#...............#', '#################'],
+      {
+        playerSpawn: { x: 1, y: 1 },
+        enemies: [{ x: 2, y: 1, kind: 'golem_advanced' }],
+      },
+    )
+
+    const enemy = world.enemies[0]
+    world.player.tileX = 15
+    world.player.tileY = 1
+
+    ai.update(world, 0.016)
+    expect(enemy.aggressive).toBe(false)
+  })
+
+  it('el golem avanzado reanuda la persecución al reentrar en rango', () => {
+    const world = createTestWorld(
+      ['#########', '#.......#', '#########'],
+      {
+        playerSpawn: { x: 1, y: 1 },
+        enemies: [{ x: 2, y: 1, kind: 'golem_advanced' }],
+      },
+    )
+
+    const enemy = world.enemies[0]
+    enemy.setAggressive(false)
+    enemy.aggressionTimer = 0
+    world.player.tileX = 9
+    world.player.tileY = 1
+
+    ai.update(world, 0.016)
+    expect(enemy.aggressive).toBe(true)
+  })
+
+  it('el golem avanzado reaparece tras 35s', () => {
+    const world = createTestWorld(
+      ['#####', '#...#', '#####'],
+      {
+        playerSpawn: { x: 1, y: 1 },
+        enemies: [{ x: 3, y: 1, kind: 'golem_advanced' }],
+      },
+    )
+
+    const enemy = world.enemies[0]
+    for (let hit = 0; hit < 3; hit++) {
+      enemy.invulnerableTimer = 0
+      world.explosions.push(new Explosion(3, 1, TILE_SIZE))
+      stepLife(world, 0.016)
+    }
+
+    expect(enemy.alive).toBe(false)
+    expect(enemy.respawnTimer).toBe(35)
+
+    world.explosions = []
+    world.player.tileX = 1
+    world.player.tileY = 1
+    stepLife(world, 35)
+    expect(enemy.alive).toBe(true)
+    expect(enemy.hp).toBe(3)
+    expect(enemy.aggressive).toBe(true)
   })
 })

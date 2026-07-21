@@ -23,6 +23,7 @@ export class Enemy {
     this.maxHp = config.maxHp ?? 1
     this.hp = this.maxHp
     this.alwaysAggressive = Boolean(config.alwaysAggressive)
+    this.initialAggressive = config.startsAggressive ?? this.alwaysAggressive
     this.contactWhenAggressiveOnly = Boolean(config.contactWhenAggressiveOnly)
     this.canPassDestructibles = Boolean(config.canPassDestructibles)
     this.alertRadius = config.alertRadius ?? 0
@@ -39,11 +40,14 @@ export class Enemy {
     this.currentDirection = DIR_DOWN
     this.passiveTree = config.tree()
     this.aggressiveTree = (config.aggressiveTree ?? config.tree)()
-    this.behaviorTree = this.alwaysAggressive ? this.aggressiveTree : this.passiveTree
+    this.aggressive = config.startsAggressive ?? this.alwaysAggressive
+    this.behaviorTree = this.aggressive ? this.aggressiveTree : this.passiveTree
+    if (this.aggressive && this.aggressiveSpeed !== this.baseSpeed) {
+      this.speed = this.aggressiveSpeed
+    }
     this.blackboard = new Blackboard()
     this.type = 'enemy'
     this.alive = true
-    this.aggressive = this.alwaysAggressive
     this.aggressionTimer = 0
     this.invulnerableTimer = 0
     this.thinkTimer = 0

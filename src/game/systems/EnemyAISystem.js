@@ -1,4 +1,8 @@
 import { DIR_NONE } from '../../config/constants.js'
+import {
+  GOLEM_ADVANCED_ALERT_RADIUS,
+  GOLEM_ADVANCED_CHASE_MAX_DISTANCE,
+} from '../../config/enemyTypes.js'
 
 function tileDistance(a, b) {
   return Math.abs(a.tileX - b.tileX) + Math.abs(a.tileY - b.tileY)
@@ -31,6 +35,34 @@ function updateGolemBasicAggression(enemy, world, dt) {
 
   if (enemy.aggressionTimer <= 0 || tooFar) {
     enemy.setAggressive(false)
+  }
+}
+
+function updateGolemAdvancedLeash(enemy, world, dt) {
+  const player = world.player
+  if (!player?.alive) {
+    if (enemy.aggressive) enemy.setAggressive(false)
+    return
+  }
+
+  const dist = tileDistance(enemy, player)
+  const alertRadius = enemy.alertRadius || GOLEM_ADVANCED_ALERT_RADIUS
+  const maxDistance = enemy.chaseMaxDistance ?? GOLEM_ADVANCED_CHASE_MAX_DISTANCE
+
+  if (!enemy.aggressive) {
+    if (enemy.aggressionTimer > 0) {
+      enemy.aggressionTimer = Math.max(0, enemy.aggressionTimer - dt)
+      return
+    }
+    if (dist <= alertRadius) {
+      enemy.setAggressive(true, enemy.chaseTimeout)
+    }
+    return
+  }
+
+  if (dist > maxDistance) {
+    enemy.setAggressive(false)
+    enemy.aggressionTimer = enemy.chaseTimeout
   }
 }
 
@@ -69,6 +101,10 @@ function updateAggression(enemy, world, dt) {
   }
   if (enemy.kind === 'spirit') {
     updateSpiritRage(enemy, world, dt)
+    return
+  }
+  if (enemy.kind === 'golem_advanced') {
+    updateGolemAdvancedLeash(enemy, world, dt)
   }
 }
 

@@ -12,6 +12,11 @@ export const GOLEM_BASIC_CHASE_MAX_DISTANCE = 10
 export const SPIRIT_RAGE_RADIUS = 6
 export const SPIRIT_CHASE_TIMEOUT = 8
 
+export const GOLEM_ADVANCED_ALERT_RADIUS = 8
+export const GOLEM_ADVANCED_CHASE_TIMEOUT = 10
+export const GOLEM_ADVANCED_CHASE_MAX_DISTANCE = 12
+export const GOLEM_ADVANCED_RESPAWN_DELAY = 35
+
 // Roster Mov. I — ver docs/PROCEDURAL_LEVELS.md.
 export const ENEMY_TYPES = {
   // Más rápido que el jugador; patrulla pasiva; daña solo si está agresivo.
@@ -50,17 +55,22 @@ export const ENEMY_TYPES = {
     aggressiveTree: () => createChaseFleeTree(),
   },
 
-  // Más lento que el jugador; siempre agresivo; 4 vidas.
+  // Guardián persistente: persigue dentro de leash; 3 vidas; respawn lento.
   golem_advanced: {
-    speed: 80,
-    size: 28,
-    thinkInterval: 0.25,
+    speed: 72,
+    size: 24,
+    thinkInterval: 0.35,
     colorRole: 'golem_advanced',
-    maxHp: 4,
-    alwaysAggressive: true,
+    maxHp: 3,
+    alwaysAggressive: false,
+    startsAggressive: true,
     contactWhenAggressiveOnly: false,
     canPassDestructibles: false,
-    tree: () => createChaseFleeTree(),
+    alertRadius: GOLEM_ADVANCED_ALERT_RADIUS,
+    chaseTimeout: GOLEM_ADVANCED_CHASE_TIMEOUT,
+    chaseMaxDistance: GOLEM_ADVANCED_CHASE_MAX_DISTANCE,
+    respawnDelay: GOLEM_ADVANCED_RESPAWN_DELAY,
+    tree: () => createPatrolFleeTree(4, 1.5, 3),
     aggressiveTree: () => createChaseFleeTree(),
   },
 }

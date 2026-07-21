@@ -232,6 +232,7 @@ describe('LevelGenerator', () => {
     const {
       enemySpawns,
       resourceSpawns,
+      levelGraph,
     } = gen(spec)
     expect(enemySpawns).toHaveLength(spec.enemies)
     expect(resourceSpawns).toHaveLength(spec.resourceCap)
@@ -241,6 +242,14 @@ describe('LevelGenerator', () => {
     expect(corridorResources.length).toBeLessThan(resourceSpawns.length / 4)
     expect(corridorEnemies.length).toBeGreaterThan(0)
     expect(corridorEnemies.length).toBeLessThan(enemySpawns.length / 2)
+
+    const nodeById = new Map(levelGraph.nodes.map((node) => [node.id, node]))
+    const advancedSpawns = enemySpawns.filter((spawn) => spawn.kind === 'golem_advanced')
+    expect(advancedSpawns.length).toBeLessThanOrEqual(spec.advancedGolemCap ?? 0)
+    for (const spawn of advancedSpawns) {
+      const node = nodeById.get(spawn.nodeId)
+      expect(node?.size === 'large' || node?.role === 'den').toBe(true)
+    }
 
     const seen = new Set()
     for (const spawn of [...enemySpawns, ...resourceSpawns]) {

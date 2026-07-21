@@ -83,7 +83,7 @@ describe('contacto continuo (excepciones documentadas)', () => {
     expect(world.gameWon).toBe(true)
   })
 
-  it('golem_advanced (28×28) contacta antes que el overlap tile-only sugeriría', () => {
+  it('golem_advanced usa la misma hitbox que el resto del roster', () => {
     const world = createTestWorld(
       ['#####', '#...#', '#####'],
       {
@@ -94,7 +94,7 @@ describe('contacto continuo (excepciones documentadas)', () => {
 
     const player = world.player
     const enemy = world.enemies[0]
-    expect(enemy.size).toBe(28)
+    expect(enemy.size).toBe(24)
 
     const e = positionFromTile(3, 1, TILE_SIZE, enemy.size)
     enemy.posX = e.posX
@@ -107,9 +107,8 @@ describe('contacto continuo (excepciones documentadas)', () => {
     life.update(world, 0.016)
     expect(player.alive).toBe(true)
 
-    // Acercar hasta overlap por hitbox grande del golem avanzado
-    player.posX = e.posX - player.size + 1
-    player.posY = e.posY + 1
+    player.posX = e.posX - player.size + 2
+    player.posY = e.posY
     life.update(world, 0.016)
     expect(player.alive).toBe(true)
     expect(player.lives).toBe(2)

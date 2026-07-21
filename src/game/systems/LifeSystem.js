@@ -175,7 +175,7 @@ export class LifeSystem {
     enemy.respawnTimer = 0
     enemy.invulnerableTimer = 0
     enemy.desiredFacing = DIR_NONE
-    enemy.setAggressive(enemy.alwaysAggressive)
+    enemy.setAggressive(enemy.initialAggressive, enemy.chaseTimeout)
     world.events.push('enemyRespawn')
   }
 

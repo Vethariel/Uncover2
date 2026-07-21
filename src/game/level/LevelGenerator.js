@@ -41,6 +41,12 @@ const WALL_LIGHT_SPACING = 6
 const WALL_LIGHT_TILE_BUDGET = 80
 const CORRIDOR_LIGHT_TILE_BUDGET = 40
 
+const ENEMY_KIND_WEIGHTS = {
+  golem_basic: 0.50,
+  spirit: 0.35,
+  golem_advanced: 0.15,
+}
+
 const DIRECTIONS = [
   { x: 1, y: 0 },
   { x: 0, y: 1 },
@@ -73,6 +79,49 @@ function shuffle(values, rand) {
 
 function key(x, y) {
   return `${x},${y}`
+}
+
+function pickWeightedEnemyKind(kinds, rand) {
+  const pool = kinds.map((kind) => ({
+    kind,
+    weight: ENEMY_KIND_WEIGHTS[kind] ?? 0.1,
+  }))
+  const total = pool.reduce((sum, entry) => sum + entry.weight, 0)
+  let roll = rand() * total
+  for (const entry of pool) {
+    roll -= entry.weight
+    if (roll <= 0) return entry.kind
+  }
+  return pool[pool.length - 1].kind
+}
+
+function isAdvancedGolemNode(node) {
+  return Boolean(node && (node.size === 'large' || node.role === 'den'))
+}
+
+function assignNodeEnemyKinds(nodeCells, kinds, graph, spec, rand) {
+  if (!nodeCells.length || !kinds.length) return []
+
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]))
+  const nonAdvancedKinds = kinds.filter((kind) => kind !== 'golem_advanced')
+  const advancedCap = kinds.includes('golem_advanced')
+    ? (spec.advancedGolemCap ?? 2)
+    : 0
+
+  const advancedEligible = shuffle(
+    nodeCells.filter((cell) => isAdvancedGolemNode(nodeById.get(cell.nodeId))),
+    rand,
+  )
+  const advancedKeys = new Set(
+    advancedEligible.slice(0, advancedCap).map((cell) => key(cell.x, cell.y)),
+  )
+
+  return nodeCells.map((cell) => ({
+    ...cell,
+    kind: advancedKeys.has(key(cell.x, cell.y))
+      ? 'golem_advanced'
+      : pickWeightedEnemyKind(nonAdvancedKinds.length ? nonAdvancedKinds : kinds, rand),
+  }))
 }
 
 function parseKey(cellKey) {
@@ -1230,6 +1279,7 @@ function populate(world, spec, graph, roomCells, corridorCells, rand, layout = {
   }
 
   const nodeEnemyTarget = (spec.enemies ?? 0) - world.enemySpawns.length
+  const nodeEnemyCells = []
   for (let index = 0; index < nodeEnemyTarget && enemyCandidates.length && kinds.length; index++) {
     const cell = enemyCandidates.shift()
     const cellKey = key(cell.x, cell.y)
@@ -1238,10 +1288,16 @@ function populate(world, spec, graph, roomCells, corridorCells, rand, layout = {
       continue
     }
     excluded.add(cellKey)
+    nodeEnemyCells.push(cell)
+  }
+
+  for (const spawn of assignNodeEnemyKinds(nodeEnemyCells, kinds, graph, spec, rand)) {
     world.enemySpawns.push({
-      ...cell,
+      x: spawn.x,
+      y: spawn.y,
+      nodeId: spawn.nodeId,
       location: 'node',
-      kind: kinds[index % kinds.length],
+      kind: spawn.kind,
     })
   }
 

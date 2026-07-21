@@ -79,6 +79,7 @@ export const LEVELS = [
     },
     enemies: 10,
     enemyKinds: ['golem_basic', 'spirit', 'golem_advanced'],
+    advancedGolemCap: 2,
     bgMusic: 'mov1_n6',
   },
   {
@@ -93,6 +94,7 @@ export const LEVELS = [
     trapCap: 4,
     enemies: 12,
     enemyKinds: ['golem_basic', 'spirit', 'golem_advanced'],
+    advancedGolemCap: 3,
     /** 6 min — ventana de oficio, no sprint a la puerta. */
     timeLimit: 360,
     /** Score: B×1 + H×2 + C×3 + frag; ver n7Trial.js */

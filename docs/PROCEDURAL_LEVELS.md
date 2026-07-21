@@ -184,7 +184,7 @@ Contrato económico global (techos de craft, smelting, recetas): [`CRAFTING.md`]
 |----|--------|-----------|----|----------------|
 | `golem_basic` | Golem básico | `110` (> jugador) | 2 | Patrulla pasiva; **no daña** por contacto. **Huye** de bombas. Si recibe daño se vuelve agresivo, persigue y alerta a otros básicos a ≤5 tiles. Vuelve a pasivo tras 8 s o a >10 tiles del jugador. En agresivo sí daña por contacto. |
 | `spirit` | Espíritu | `75` pasivo / `110` agresivo | 1 | Patrulla pasiva. Si una explosión ocurre a ≤6 tiles se enfurece 8 s, acelera y persigue. **Atraviesa destructibles** (no muros ni bombas). Daña por contacto siempre. |
-| `golem_advanced` | Golem avanzado | `80` (< jugador) | 4 | **Siempre agresivo**; persigue al jugador; daña por contacto. |
+| `golem_advanced` | Golem avanzado | `72` (< jugador) | 3 | **Guardián con leash**: persigue si el jugador está ≤8 tiles; deja de perseguir a >12 tiles; patrulla y reanuda tras cooldown. Daña por contacto siempre. Respawn **35 s**. Solo en nodos `large` / `den`; tope por nivel (N6: 2, N7: 3). |
 
 Compartido por todos:
 

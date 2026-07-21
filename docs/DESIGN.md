@@ -19,7 +19,7 @@ La posición continua existe para que caminar se sienta bien. Las reglas de jueg
 ## Hitbox vs sprite
 
 - **Tile:** 32×32 px (`TILE_SIZE`).
-- **Hitbox lógica:** 24×24 px dentro del tile (`PLAYER_SIZE` / `ENEMY_SIZE`; `golem_advanced` 28).
+- **Hitbox lógica:** 24×24 px dentro del tile (`PLAYER_SIZE` / `ENEMY_SIZE`).
 - **Sprite visual:** puede superar la altura del tile (p. ej. ~32×40–48); solo presentación, desacoplado de las reglas.
 
 El margen interior hace que el contacto con enemigos sea justo: el arte parece más grande, pero el juego solo cuenta el núcleo central.
@@ -138,7 +138,7 @@ No hay una sola función “¿qué es este tile?”. Cada sistema hace una pregu
 | `InputSystem` | ¿Puedo plantar bomba en mi tile? | Tile ≠ `TILE_PASS`, sin bomba duplicada, `activeBombs < maxBombs` |
 | `BombSystem` | ¿Hacia dónde llega el blast? | Rayos en cruz; para en `WALL`, `TILE_PASS`, `TILE_EXPLOSION`; rompe `DESTRUCTIBLE` |
 | `LifeSystem` (explosión) | ¿Mismo tile entidad–explosión? | `tileX` / `tileY` iguales |
-| `LifeSystem` (enemigo) | ¿Solapan las hitboxes? | AABB 24×24 (`golem_advanced`: 28×28) — **no** solo tile |
+| `LifeSystem` (enemigo) | ¿Solapan las hitboxes? | AABB 24×24 — **no** solo tile |
 | `LifeSystem` (salida) | ¿Gano el nivel? | `player.tileX/Y` coincide con el único tile de `exitDoor.triggerTiles`; no exige eliminar enemigos |
 | `GridQuery.isWalkable` | ¿Puede pisar la IA? | En bounds, no sólido, sin bomba |
 | `GridQuery.isDangerous` | ¿Hay daño inminente? | Explosión en tile o zona de bomba a punto de detonar |
@@ -155,7 +155,7 @@ Estas reglas **rompen** el “todo por tile” de forma intencional:
 |------|----------|---------|
 | Contacto jugador–enemigo | AABB (`LifeSystem.overlaps`) | Margen justo: figura visual independiente, hitbox 24×24 |
 | Victoria en puerta | Coincidencia de tile (`LifeSystem.checkExitDoor`) | Solo el centro `T` completa el nivel; los laterales son indestructibles |
-| Enemigo `golem_advanced` | Hitbox 28×28 | Contacto más amplio que golem básico / espíritu |
+| Enemigo `golem_advanced` | Leash 8/12 tiles, HP 3, respawn 35 s | Guardián de nodos grandes; deja de perseguir lejos |
 
 ### Notas de diseño (descubiertas en tests)
 
@@ -163,7 +163,7 @@ Estas reglas **rompen** el “todo por tile” de forma intencional:
 2. **`TILE_PASS`:** transitable y transparente a visión (`lineOfSight`, `IsPlayerInLine`), pero **opaco** al blast — útil para puentes y ventilación en Uncover.
 3. **`passThrough`:** el dueño ignora su bomba en movimiento (`bombBlocksEntity`), pero el tile sigue siendo `!isWalkable` para la IA.
 4. **Daño y vidas (jugador):** un golpe no letal resta una vida, conserva la posición y concede 2 s de invulnerabilidad. Con una sola vida restante, el golpe produce `playerDeath`; tras 2 s comienza `gameOver`. No hay respawn del jugador.
-5. **Daño y vidas (enemigos):** mismo patrón de HP + 2 s de invulnerabilidad. Al morir: cadáver 1 s y respawn a los 20 s en el spawn original si el tile está libre. Contacto: `golem_basic` solo en agresivo; `spirit` y `golem_advanced` siempre.
+5. **Daño y vidas (enemigos):** mismo patrón de HP + 2 s de invulnerabilidad. Al morir: cadáver 1 s y respawn en el spawn original si el tile está libre (20 s por defecto; golem avanzado 35 s). Contacto: `golem_basic` solo en agresivo; `spirit` y `golem_advanced` siempre.
 6. **Nuevas mecánicas** (luz, gas, trampas): añadir columna a estas tablas y un test en `tests/interactions/coherence.test.js` antes de implementar en producción.
 
 ## API de grid (`GridQuery`)
@@ -265,7 +265,7 @@ Casos cubiertos:
 - `activeBombs--` al detonar
 
 **Vida y victoria**
-- Daño por tile; contacto AABB (jugador; `golem_basic` solo agresivo; `spirit`/`golem_advanced` siempre; hitbox avanzada 28×28)
+- Daño por tile; contacto AABB (jugador; `golem_basic` solo agresivo; `spirit`/`golem_advanced` siempre)
 - Jugador: daño no letal + invulnerabilidad 2 s; muerte en la última vida; N7: timeout evalúa cuota (éxito/fallo), no game over automático
 - Enemigos: HP por tipo + invulnerabilidad 2 s; respawn 20 s en spawn original
 - Puerta: victoria al pisar el trigger central, incluso con enemigos vivos
