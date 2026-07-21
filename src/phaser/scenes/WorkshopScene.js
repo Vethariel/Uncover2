@@ -55,7 +55,7 @@ export class WorkshopScene extends Phaser.Scene {
       this.world.player.posY + this.world.player.size / 2,
     )
 
-    this.audio.playMusic('world1')
+    this.audio.playMusic('workshop')
   }
 
   update(_time, delta) {

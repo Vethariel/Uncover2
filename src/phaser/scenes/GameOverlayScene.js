@@ -20,7 +20,7 @@ export class GameOverlayScene extends Phaser.Scene {
       enter: Phaser.Input.Keyboard.KeyCodes.ENTER,
     })
 
-    this.audio.pauseMusic()
+    this.audio.duckMusic(0.22)
 
     const cx = this.scale.width / 2
     const cy = this.scale.height / 2
@@ -46,6 +46,7 @@ export class GameOverlayScene extends Phaser.Scene {
     this.scene.stop('GameOverlay')
 
     if (result === 'quit') {
+      this.audio.unduckMusic()
       gameScene._cleanupLevel()
       this.scene.start('Menu')
       return
@@ -54,6 +55,6 @@ export class GameOverlayScene extends Phaser.Scene {
     if (this.scene.isPaused('Game')) {
       this.scene.resume('Game')
     }
-    this.audio.resumeMusic()
+    this.audio.unduckMusic()
   }
 }

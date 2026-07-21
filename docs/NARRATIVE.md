@@ -1,6 +1,6 @@
 # Uncover — Narrative Design v1.6
 
-> Contrato narrativo del juego. Fundamentos culturales en [`CULTURAL_FOUNDATION.md`](./CULTURAL_FOUNDATION.md). Dirección visual en [`VISUAL_STYLE.md`](./VISUAL_STYLE.md). Especificaciones por movimiento: [`MOVEMENT_I.md`](./MOVEMENT_I.md) · [`MOVEMENT_II.md`](./MOVEMENT_II.md) · [`MOVEMENT_III.md`](./MOVEMENT_III.md) · [`MOVEMENT_IV.md`](./MOVEMENT_IV.md) · [`MOVEMENT_V.md`](./MOVEMENT_V.md). Las reglas de gameplay y la matriz tile-based viven en [`DESIGN.md`](./DESIGN.md).
+> Contrato narrativo del juego. Fundamentos culturales en [`CULTURAL_FOUNDATION.md`](./CULTURAL_FOUNDATION.md). Dirección visual en [`VISUAL_STYLE.md`](./VISUAL_STYLE.md). Dirección sonora en [`AUDIO.md`](./AUDIO.md). Especificaciones por movimiento: [`MOVEMENT_I.md`](./MOVEMENT_I.md) · [`MOVEMENT_II.md`](./MOVEMENT_II.md) · [`MOVEMENT_III.md`](./MOVEMENT_III.md) · [`MOVEMENT_IV.md`](./MOVEMENT_IV.md) · [`MOVEMENT_V.md`](./MOVEMENT_V.md). Las reglas de gameplay y la matriz tile-based viven en [`DESIGN.md`](./DESIGN.md).
 
 ## Filosofía
 

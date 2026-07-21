@@ -9,7 +9,7 @@ export const LEVELS = [
     enemies: 0,
     enemyKinds: [],
     emptyTileLight: 10,
-    bgMusic: 'world1',
+    bgMusic: 'mov1_n1',
   },
   {
     name: 'Las Herramientas',
@@ -19,7 +19,7 @@ export const LEVELS = [
     enemies: 0,
     enemyKinds: [],
     emptyTileLight: 10,
-    bgMusic: 'world1',
+    bgMusic: 'mov1_n2',
   },
   {
     name: 'La Profundidad',
@@ -32,7 +32,7 @@ export const LEVELS = [
     fragmentSlots: [{ rank: 2, kind: 'generic' }],
     enemies: 4,
     enemyKinds: ['golem_basic'],
-    bgMusic: 'world1',
+    bgMusic: 'mov1_n3',
   },
   {
     name: 'Los Habitantes',
@@ -44,7 +44,7 @@ export const LEVELS = [
     fragmentSlots: [{ rank: 2, kind: 'generic' }],
     enemies: 6,
     enemyKinds: ['golem_basic', 'spirit'],
-    bgMusic: 'world1',
+    bgMusic: 'mov1_n4',
   },
   {
     name: 'La Recolección',
@@ -61,7 +61,7 @@ export const LEVELS = [
     },
     enemies: 8,
     enemyKinds: ['golem_basic', 'spirit'],
-    bgMusic: 'world1',
+    bgMusic: 'mov1_n5',
   },
   {
     name: 'La Cámara Antigua',
@@ -79,7 +79,7 @@ export const LEVELS = [
     },
     enemies: 10,
     enemyKinds: ['golem_basic', 'spirit', 'golem_advanced'],
-    bgMusic: 'world1',
+    bgMusic: 'mov1_n6',
   },
   {
     name: 'El Primer Excavador',
@@ -94,6 +94,6 @@ export const LEVELS = [
     enemies: 12,
     enemyKinds: ['golem_basic', 'spirit', 'golem_advanced'],
     timeLimit: 180,
-    bgMusic: 'world1',
+    bgMusic: 'mov1_n7',
   },
 ]

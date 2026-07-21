@@ -1,6 +1,6 @@
 # Uncover — Dirección visual
 
-> Contrato de arte. Narrativa: [`NARRATIVE.md`](./NARRATIVE.md). Cultura: [`CULTURAL_FOUNDATION.md`](./CULTURAL_FOUNDATION.md). Gameplay: [`DESIGN.md`](./DESIGN.md). Mov. I: [`MOVEMENT_I.md`](./MOVEMENT_I.md).
+> Contrato de arte. Narrativa: [`NARRATIVE.md`](./NARRATIVE.md). Cultura: [`CULTURAL_FOUNDATION.md`](./CULTURAL_FOUNDATION.md). Sonido: [`AUDIO.md`](./AUDIO.md). Gameplay: [`DESIGN.md`](./DESIGN.md). Mov. I: [`MOVEMENT_I.md`](./MOVEMENT_I.md).
 
 ## Principio
 

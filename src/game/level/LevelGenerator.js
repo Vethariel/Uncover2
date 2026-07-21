@@ -1689,7 +1689,7 @@ export class LevelGenerator {
     world.levelTimer = spec.timeLimit ?? null
     world.levelVisualConfig = {
       name: spec.name ?? 'Mina',
-      bgMusic: spec.bgMusic ?? 'world1',
+      bgMusic: spec.bgMusic ?? 'mov1_n1',
       seed,
       cols,
       rows,

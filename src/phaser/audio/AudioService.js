@@ -5,6 +5,7 @@ export class AudioService {
     this.overlay = null
     this.sfxVolume = 0.8
     this.musicVolume = 0.5
+    this.musicDuckScale = 1
   }
 
   static get(game) {
@@ -20,7 +21,16 @@ export class AudioService {
     sound.destroy()
   }
 
+  _musicTargetVolume() {
+    return this.musicVolume * this.musicDuckScale
+  }
+
+  _applyMusicVolume() {
+    if (this.music) this.music.setVolume(this._musicTargetVolume())
+  }
+
   stopAll() {
+    this.musicDuckScale = 1
     this._destroy(this.music)
     this.music = null
     this._destroy(this.overlay)
@@ -33,12 +43,18 @@ export class AudioService {
   }
 
   playMusic(key, loop = true) {
-    if (this.music?.key === key && this.music.isPlaying) return
+    if (this.music?.key === key && this.music.isPlaying) {
+      this._applyMusicVolume()
+      return
+    }
 
     this.stopOverlay()
     this._destroy(this.music)
 
-    this.music = this.game.sound.add(key, { loop, volume: this.musicVolume })
+    this.music = this.game.sound.add(key, {
+      loop,
+      volume: this._musicTargetVolume(),
+    })
     this.music.play()
   }
 
@@ -65,6 +81,17 @@ export class AudioService {
     this.overlay = null
   }
 
+  /** Baja el volumen de la BGM (p. ej. pausa) sin detenerla. */
+  duckMusic(scale = 0.25) {
+    this.musicDuckScale = Math.max(0, Math.min(1, scale))
+    this._applyMusicVolume()
+  }
+
+  unduckMusic() {
+    this.musicDuckScale = 1
+    this._applyMusicVolume()
+  }
+
   pauseMusic() {
     this.music?.pause()
   }
@@ -73,6 +100,7 @@ export class AudioService {
     if (this.music?.isPaused) {
       this.music.resume()
     }
+    this._applyMusicVolume()
   }
 
   stopMusic() {

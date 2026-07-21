@@ -162,12 +162,15 @@ export class GameScene extends Phaser.Scene {
     this._syncViews()
     this._setupCamera()
 
-    const musicKey = this.world.levelVisualConfig?.bgMusic ?? 'world1'
-    this.audio.playMusic(musicKey)
+    this.pendingMusicKey = this.world.levelVisualConfig?.bgMusic ?? 'mov1_n1'
+    this.audio.stopMusic()
     this._startDialogue(levelStartDialogue(
       this.gameState.currentLevelIndex,
       levelSpec.name,
     ))
+    if (!this.dialogueController.active) {
+      this._startLevelMusic()
+    }
   }
 
   _setupCamera() {
@@ -200,6 +203,13 @@ export class GameScene extends Phaser.Scene {
     this.inputAdapter.flush()
   }
 
+  _startLevelMusic() {
+    const key = this.pendingMusicKey
+    if (!key) return
+    this.audio.playMusic(key)
+    this.pendingMusicKey = null
+  }
+
   _showLevelComplete(completedIndex) {
     const level = LEVELS[completedIndex] ?? LEVELS[0]
     this.levelResult = createLevelResult(
@@ -208,6 +218,7 @@ export class GameScene extends Phaser.Scene {
       level.name,
     )
     this.levelCompleteView.show(this.levelResult)
+    this.audio.playOverlayMusic('victory', true)
     this.chestPrompt?.setVisible(false)
     this.inputAdapter.flush()
   }
@@ -219,6 +230,7 @@ export class GameScene extends Phaser.Scene {
     const completedIndex = this.levelResult.levelIndex
     this.levelCompleteView.hide()
     this.levelResult = null
+    this.audio.stopOverlay()
     this.inputAdapter.flush()
     this._routeAfterVictory(completedIndex)
   }
@@ -231,7 +243,10 @@ export class GameScene extends Phaser.Scene {
 
     if (Phaser.Input.Keyboard.JustDown(this.inputAdapter.keys.bomb)) {
       const result = this.dialogueController.advance()
-      if (result.type === 'finished') this.dialogueView.hide()
+      if (result.type === 'finished') {
+        this.dialogueView.hide()
+        this._startLevelMusic()
+      }
     }
 
     this.dialogueView.sync()
@@ -313,6 +328,7 @@ export class GameScene extends Phaser.Scene {
     this.levelResult = null
     this.chestPrompt?.destroy()
     this.chestPrompt = null
+    this.pendingMusicKey = null
   }
 
   shutdown() {

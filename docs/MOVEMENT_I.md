@@ -1,6 +1,6 @@
 # Uncover — Movement I — Las Minas
 
-> Especificación del Movimiento I. Arquitectura general en [`NARRATIVE.md`](./NARRATIVE.md). Fundamentos culturales en [`CULTURAL_FOUNDATION.md`](./CULTURAL_FOUNDATION.md). Reglas de gameplay en [`DESIGN.md`](./DESIGN.md).
+> Especificación del Movimiento I. Arquitectura general en [`NARRATIVE.md`](./NARRATIVE.md). Fundamentos culturales en [`CULTURAL_FOUNDATION.md`](./CULTURAL_FOUNDATION.md). Reglas de gameplay en [`DESIGN.md`](./DESIGN.md). Dirección sonora en [`AUDIO.md`](./AUDIO.md).
 
 ## Índice
 
@@ -395,25 +395,106 @@ Cuando entren en uso, la elección del Primer Eje será irreversible y parametri
 
 ## Música del Movimiento I
 
-Debe sentirse como la introducción de una obra.
+> Contrato técnico global: [`AUDIO.md`](./AUDIO.md) (arco N1→N7).  
+> Prompts Lyria: `creation/prompts/music/mov1_n1_entrada.txt` … `mov1_n7_excavador.txt`.
 
-No tiene todavía las identidades del Movimiento II.
+### Dirección emocional
+
+Introducción de una obra: **chispa de aventura** al entrar, **peso narrativo** al descender.
+
+No tiene identidades doctrinales del Movimiento II.
 
 Debe combinar:
 
-- misterio;
-- aventura;
-- descubrimiento.
-
-**Elementos:**
-
-- percusión profunda;
-- sonidos metálicos;
-- melodías simples.
+- aventura animada (sobre todo N1);
+- oficio (pico, metal, lámpara);
+- misterio que **crece** con la profundidad;
+- descubrimiento sin horror.
 
 Debe transmitir:
 
-> Hay algo enorme debajo de la superficie.
+> Empiezo con permiso y ganas — y cuanto más bajo, más grande se siente la montaña.
+
+**Brief de arco:**
+
+> Nordic dwarf mine: N1–N2 = lively tutorial adventure; N3–N6 slow and thicken; N7 = urgent time-race stakes — translate every game noun into timbre (spirits = glassy pads + sparse wordless choir).
+
+### Specs técnicos (familia Mov. I)
+
+| Parámetro | Valor canónico |
+|-----------|----------------|
+| **BPM** | N1–N2 altos (~95–98); N3–N6 descienden; **N7 ~108** (urgencia de carrera) |
+| **Meter** | 4/4; 6/8 opcional solo N6–N7 |
+| **Modo / centro** | **Dórico** / eolio cálido (p. ej. D o A); Mixolidio suave en taller |
+| **Forma** | Loop-friendly; A–A'–B–A o drone + motivo |
+| **Densidad** | Sube N1→N7 |
+| **Tessitura** | N1 más brillante; graves ganan peso hacia N7 |
+| **Dinámica** | mp–mf temprano; pp–mf profundo; f solo stingers / clímax breve N7 |
+| **Reverb** | Corta en N1–N2; cola creciente N4+ |
+| **Loudness** | ≈ −14 a −16 LUFS; headroom para SFX |
+
+### Instrumentación (familias)
+
+| Stem / capa | Timbre | Función |
+|-------------|--------|---------|
+| **drone** | Sub + pad de piedra | Masa (más presente desde N3) |
+| **pulse** | Percusión profunda amortiguada / metal rítmico | Paso / oficio — **no** tribal world percussion |
+| **melody** | Flauta, cello, bowed metal, lead limpio | Motivo viajero / linterna |
+| **lamp** | Chispas metálicas, shimmer ámbar | Vida de N1–N2; acentos de luz |
+| **forge** | Anvil / bowls filtrados | Taller y N2 trabajo |
+| **tension** | Air, scraped stone, clusters suaves | N3+ |
+| **spirit** | Pads vítreos + **coro wordless etéreo** (puntual) | N4 alusión a espíritus |
+| **ritual** | 4ª/5ª abiertas; percusión suave no étnica | N6 |
+| **urgency** | Pulse insistente, ticks, rising tension | N7 carrera |
+
+### Motivo Mov. I
+
+Célula 5–7 notas del motivo raíz ([`AUDIO.md`](./AUDIO.md#motivo-raíz-del-viaje)).
+
+En N1: más rítmica / brillante. Hacia N7: más lenta, más abierta, sobre pedal grave.
+
+### Taller (hub)
+
+Calor de forja (martillo, yunque, chispas, fuelle) — no tribal.  
+Runtime: `assets/sounds/music_workshop.mp3` (`workshop`).
+
+| Parámetro | Valor |
+|-----------|-------|
+| BPM | 70–80 |
+| Emoción | Oficioso, calor de fragua |
+| Prompt | `creation/prompts/music/mov1_workshop.txt` |
+
+### Arco por nivel (N1–N7)
+
+| Nivel | Nombre | Emoción | BPM | Complejidad |
+| ----- | ------ | ------- | --- | ----------- |
+| 1 | La Entrada | Chispas de nueva aventura; permiso animado | **98** | Clara, brillante, poco peso |
+| 2 | Las Herramientas | Tutorial de oficio; aún cercano a N1 | **95** | N1 + pico/metal ligero — no contemplativo |
+| 3 | La Profundidad | Habitada; ya no estás solo | **86** | + tension suave |
+| 4 | Los Habitantes | Oscuridad parcial; espíritus | **80** | + reverb / aire; coro etéreo puntual |
+| 5 | La Recolección | Inteligencia / ritual ligero | **76** | Ostinato geométrico (puzzle) |
+| 6 | La Cámara Antigua | Preámbulo del umbral | **72** | Germen ritual / Excavador |
+| 7 | El Primer Excavador | Carrera; stakes altos | **108** | Urgencia, countdown, tensión alta |
+
+Runtime por nivel: `assets/sounds/music_mov1_n1.mp3` … `music_mov1_n7.mp3` (`bgMusic` en [`levels.js`](../src/config/levels.js)).
+
+### Stingers alineados al Mov. I
+
+| Evento | Característica |
+|--------|----------------|
+| Daño / hurt | Hit metálico corto + duck 200–400 ms |
+| Escape (muerte → hub) | Motivo descendente / disolución a drone; sin coral |
+| Victoria de nivel | Resolución consonante breve (ámbar); no fanfarria |
+| Puzzle OK / cofre | Chime bronce |
+
+### Qué no hacer en Mov. I
+
+- N1–N2 contemplativo / ambient vacío.
+- N7 lento/solemne cuando es **carrera a contrarreloj**.
+- Percusión tribal/world como identidad.
+- Identidad clara de Piedra / Eco / Llama.
+- Horror industrial o orquesta tutti que tape SFX.
+- Describir lore visual (“espíritu teal”) sin traducirlo a timbre musical.
 
 ---
 
