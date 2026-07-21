@@ -192,7 +192,14 @@ function collectSourceSignature(world) {
     .map((explosion) => `${explosion.tileX},${explosion.tileY}:${explosion.lightEmission ?? EXPLOSION_LIGHT}`)
     .sort()
     .join(';')
-  return `${bombs}|${enemies}|${explosions}`
+  const npcs = (world.npcs ?? [])
+    .filter((npc) => (npc.lightEmission ?? 0) > 0)
+    .map((npc) => (
+      `${npc.tile.x},${npc.tile.y}:${npc.lightEmission}:${npc.facing ?? ''}`
+    ))
+    .sort()
+    .join(';')
+  return `${bombs}|${enemies}|${explosions}|${npcs}`
 }
 
 export class VisionSystem {
@@ -220,6 +227,24 @@ export class VisionSystem {
       viewport,
       (dx, dy) => isInsideFlashlightCone(player.facing, dx, dy),
     )
+
+    for (const npc of world.npcs ?? []) {
+      const strength = npc.lightEmission ?? 0
+      if (strength <= 0 || !npc.tile) continue
+      const facing = npc.facing
+      const cone = facing != null
+        ? (dx, dy) => isInsideFlashlightCone(facing, dx, dy)
+        : null
+      propagateSource(
+        world,
+        lightLevels,
+        npc.tile.x,
+        npc.tile.y,
+        strength,
+        viewport,
+        cone,
+      )
+    }
 
     for (const bomb of world.bombs ?? []) {
       propagateSource(

@@ -47,6 +47,7 @@ function clearResourceSpawn(world, x, y) {
 
 export function destroyDestructibleWithoutYield(world, x, y) {
   clearResourceSpawn(world, x, y)
+  world.events?.push('destructibleCleared')
 }
 
 export class MiningSystem {

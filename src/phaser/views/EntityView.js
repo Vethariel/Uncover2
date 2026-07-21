@@ -95,10 +95,19 @@ export class EntityView {
 
     const drawables = [
       ...this.world.enemies.map((entity) => ({ entity, kind: 'enemy' })),
+      ...(this.world.npcs ?? []).map((npc) => ({ entity: npc, kind: 'npc' })),
     ]
 
     drawables
-      .sort((a, b) => (a.entity.posY + a.entity.size) - (b.entity.posY + b.entity.size))
+      .sort((a, b) => {
+        const ay = a.kind === 'npc'
+          ? a.entity.tile.y * this.world.tileSize
+          : a.entity.posY + a.entity.size
+        const by = b.kind === 'npc'
+          ? b.entity.tile.y * this.world.tileSize
+          : b.entity.posY + b.entity.size
+        return ay - by
+      })
       .forEach(({ entity, kind }) => this._draw(kind, entity))
 
     this._syncBombSprites()
@@ -153,6 +162,11 @@ export class EntityView {
   }
 
   _draw(kind, entity) {
+    if (kind === 'npc') {
+      this._drawNpc(entity)
+      return
+    }
+
     if (
       this.world.visibleTiles
       && !this.world.visibleTiles.has(`${entity.tileX},${entity.tileY}`)
@@ -163,6 +177,20 @@ export class EntityView {
         this._drawEnemy(entity)
         break
     }
+  }
+
+  _drawNpc(npc) {
+    const { tileSize } = this.world
+    const key = `${npc.tile.x},${npc.tile.y}`
+    if (this.world.visibleTiles && !this.world.visibleTiles.has(key)) return
+
+    const cx = npc.tile.x * tileSize + tileSize / 2
+    const cy = npc.tile.y * tileSize + tileSize / 2
+    const g = this.graphics
+    g.fillStyle(npc.color ?? 0x6b7a88, 1)
+    g.fillCircle(cx, cy, tileSize * 0.32)
+    g.lineStyle(2, 0x1a1f18, 0.9)
+    g.strokeCircle(cx, cy, tileSize * 0.32)
   }
 
   _createPlayerAnimations() {

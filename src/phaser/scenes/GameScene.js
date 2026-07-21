@@ -5,11 +5,14 @@ import {
   DIR_LEFT,
   DIR_RIGHT,
   DIR_UP,
+  TILE_DESTRUCTIBLE,
   TILE_SIZE,
+  TILE_WALL,
 } from '../../config/constants.js'
 import { LEVELS } from '../../config/levels.js'
-import { levelStartDialogue } from '../../config/dialogues.js'
 import { DialogueController } from '../../core/DialogueController.js'
+import { NarrativeDirector } from '../../core/NarrativeDirector.js'
+import { TutorialController } from '../../core/TutorialController.js'
 import { createLevelResult } from '../../core/LevelResult.js'
 import { GameController } from '../../game/GameController.js'
 import { positionFromTile, syncTileFromPosition } from '../../game/entityTiles.js'
@@ -22,8 +25,10 @@ import { FogOfWarView } from '../views/FogOfWarView.js'
 import { MinimapView } from '../views/MinimapView.js'
 import { HudView } from '../views/HudView.js'
 import { DialogueView } from '../views/DialogueView.js'
+import { TutorialView } from '../views/TutorialView.js'
 import { LevelCompleteView } from '../views/LevelCompleteView.js'
 import { isNearOpenableChest } from '../../game/systems/PuzzleSystem.js'
+import { entryWalkTarget } from '../../game/level/levelNpcs.js'
 import {
   BLACKOUT_DATA_KEY,
   maybeFadeInFromBlackout,
@@ -74,8 +79,8 @@ export class GameScene extends Phaser.Scene {
       return
     }
 
-    if (this.dialogueController?.active) {
-      this._updateDialogue(dt)
+    if (this.narrativeDirector?.active) {
+      this._updateNarrative(dt)
       return
     }
 
@@ -91,6 +96,7 @@ export class GameScene extends Phaser.Scene {
 
     const result = this.controller.update(this.world, dt, this.inputAdapter)
     this.soundBridge.handleEvents(result.events, dt, this.world)
+    this._scanFacingDiscoveries()
 
     this.tilemapView.update(dt)
     this.entityView.update()
@@ -99,6 +105,11 @@ export class GameScene extends Phaser.Scene {
     this.hudView.update()
     this._updateChestPrompt()
     this._syncCamera()
+
+    if (this.narrativeDirector?.active) {
+      this.inputAdapter.flush()
+      return
+    }
 
     if (result.gameOver) {
       this.gameState.syncFromPlayer(this.world.player)
@@ -186,6 +197,15 @@ export class GameScene extends Phaser.Scene {
     this.hudView = new HudView(this, this.world)
     this.dialogueController = new DialogueController()
     this.dialogueView = new DialogueView(this, this.dialogueController)
+    this.tutorialController = new TutorialController()
+    this.tutorialView = new TutorialView(this, this.tutorialController)
+    this.narrativeDirector = new NarrativeDirector({
+      dialogueController: this.dialogueController,
+      dialogueView: this.dialogueView,
+      tutorialController: this.tutorialController,
+      tutorialView: this.tutorialView,
+      onIdle: () => this._startLevelMusic(),
+    })
     this.levelCompleteView = new LevelCompleteView(this)
     this.levelResult = null
     this.chestPrompt = this.add.text(0, 0, 'E — ABRIR COFRE', {
@@ -214,7 +234,7 @@ export class GameScene extends Phaser.Scene {
     const player = this.world?.player
     const target = entryWalkTarget(door)
     if (!player || !target) {
-      this._startLevelDialogue()
+      this._startLevelNarrative()
       return
     }
 
@@ -232,7 +252,7 @@ export class GameScene extends Phaser.Scene {
     const player = this.world.player
     if (!intro || !player) {
       this.levelIntro = null
-      this._startLevelDialogue()
+      this._startLevelNarrative()
       return
     }
 
@@ -261,18 +281,83 @@ export class GameScene extends Phaser.Scene {
 
     if (distance <= 0.01) {
       this.levelIntro = null
-      this._startLevelDialogue()
+      this._startLevelNarrative()
     }
   }
 
-  _startLevelDialogue() {
-    const levelSpec = LEVELS[this.gameState.currentLevelIndex] ?? LEVELS[0]
-    this._startDialogue(levelStartDialogue(
-      this.gameState.currentLevelIndex,
-      levelSpec.name,
-    ))
-    if (!this.dialogueController.active) {
+  _startLevelNarrative() {
+    const index = this.gameState.currentLevelIndex
+    const fired = this.narrativeDirector.tryFire(`level.start.${index}`, this.gameState)
+    if (!fired) {
       this._startLevelMusic()
+    }
+    this.chestPrompt?.setVisible(false)
+    this.inputAdapter.flush()
+  }
+
+  /**
+   * Descubrimientos / tutoriales: al mirar por primera vez el tile de delante
+   * (mismo criterio que pico / fragmento / interact). Excepción: tut_move_bomb
+   * sigue en level.start.0 tras el diálogo inicial.
+   */
+  _scanFacingDiscoveries() {
+    const world = this.world
+    const player = world?.player
+    if (!player?.alive || !this.narrativeDirector) return
+
+    const facing = facingTile(player)
+    if (!facing || !world.grid.inBounds(facing.x, facing.y)) return
+
+    const { x, y } = facing
+    const tile = world.grid.get(x, y)
+
+    if (tile === TILE_DESTRUCTIBLE) {
+      const spawn = (world.resourceSpawns ?? []).find((s) => s.x === x && s.y === y)
+      if (spawn?.material) {
+        this.narrativeDirector.tryFire('discovery.destructible', this.gameState)
+        if (spawn.material === 'crystal') {
+          this.narrativeDirector.tryFire('discovery.crystal', this.gameState)
+        }
+      }
+    }
+
+    if (tile === TILE_WALL) {
+      const fragment = (world.recipeFragmentSpawns ?? []).find(
+        (s) => s.x === x && s.y === y,
+      )
+      if (fragment) {
+        this.narrativeDirector.tryFire('discovery.fragment', this.gameState)
+      }
+    }
+
+    const tablet = (world.puzzleTablets ?? []).find((t) => t.x === x && t.y === y)
+    if (tablet) {
+      this.narrativeDirector.tryFire('discovery.marks', this.gameState)
+    }
+
+    const chest = world.chest
+    if (chest && !chest.opened && chest.x === x && chest.y === y) {
+      this.narrativeDirector.tryFire('discovery.chest', this.gameState)
+    }
+
+    const trap = (world.traps ?? []).find(
+      (t) => t.state !== 'disabled'
+        && ((t.plate.x === x && t.plate.y === y)
+          || (t.launcher.x === x && t.launcher.y === y)),
+    )
+    if (trap) {
+      this.narrativeDirector.tryFire('discovery.trap', this.gameState)
+    }
+
+    const enemy = (world.enemies ?? []).find(
+      (e) => e.alive && e.tileX === x && e.tileY === y,
+    )
+    if (enemy?.kind === 'golem_basic') {
+      this.narrativeDirector.tryFire('discovery.golem', this.gameState)
+    } else if (enemy?.kind === 'spirit') {
+      this.narrativeDirector.tryFire('discovery.spirit', this.gameState)
+    } else if (enemy?.kind === 'golem_advanced') {
+      this.narrativeDirector.tryFire('discovery.golemAdvanced', this.gameState)
     }
   }
 
@@ -297,13 +382,6 @@ export class GameScene extends Phaser.Scene {
     const player = this.world?.player
     if (!player || !this.cameraTarget) return
     this.cameraTarget.setPosition(player.posX + player.size / 2, player.posY + player.size / 2)
-  }
-
-  _startDialogue(entries) {
-    this.dialogueController.start(entries)
-    this.dialogueView.show()
-    this.chestPrompt?.setVisible(false)
-    this.inputAdapter.flush()
   }
 
   _startLevelMusic() {
@@ -338,21 +416,14 @@ export class GameScene extends Phaser.Scene {
     this._routeAfterVictory(completedIndex)
   }
 
-  _updateDialogue(dt) {
-    // El GameLoop no avanza: enemigos, timer, bombas y control quedan congelados.
-    // Solo se actualizan el tipeo y animaciones explícitas del guion.
-    this.dialogueController.update(dt)
+  _updateNarrative(dt) {
+    this.narrativeDirector.update(dt)
     this._updateDialogueAnimation(dt)
 
     if (Phaser.Input.Keyboard.JustDown(this.inputAdapter.keys.bomb)) {
-      const result = this.dialogueController.advance()
-      if (result.type === 'finished') {
-        this.dialogueView.hide()
-        this._startLevelMusic()
-      }
+      this.narrativeDirector.advance()
     }
 
-    this.dialogueView.sync()
     this.entityView.update()
     this._syncCamera()
     this.inputAdapter.flush()
@@ -363,6 +434,7 @@ export class GameScene extends Phaser.Scene {
    * entry.animation = { type:'movePlayerToTile', x, y, speed }
    */
   _updateDialogueAnimation(dt) {
+    if (this.narrativeDirector?.mode !== 'dialogue') return
     const animation = this.dialogueController.currentEntry?.animation
     if (animation?.type !== 'movePlayerToTile') return
 
@@ -423,9 +495,14 @@ export class GameScene extends Phaser.Scene {
     this.fogOfWarView?.destroy()
     this.minimapView?.destroy()
     this.hudView?.destroy()
+    this.narrativeDirector?.destroy()
+    this.narrativeDirector = null
     this.dialogueView?.destroy()
     this.dialogueView = null
     this.dialogueController = null
+    this.tutorialView?.destroy()
+    this.tutorialView = null
+    this.tutorialController = null
     this.levelCompleteView?.destroy()
     this.levelCompleteView = null
     this.levelResult = null
@@ -445,21 +522,6 @@ export class GameScene extends Phaser.Scene {
 }
 
 /** Tile frontal central: un paso hacia dentro, opuesto al backing indestructible. */
-function entryWalkTarget(entryDoor) {
-  if (!entryDoor) return null
-  const front = entryDoor.frontTiles
-  if (front?.length) return front[Math.floor(front.length / 2)]
-  const trigger = entryDoor.trigger ?? entryDoor.triggerTiles?.[0]
-  if (!trigger) return null
-  switch (entryDoor.orientation) {
-    case 'north': return { x: trigger.x, y: trigger.y + 1 }
-    case 'south': return { x: trigger.x, y: trigger.y - 1 }
-    case 'west': return { x: trigger.x + 1, y: trigger.y }
-    case 'east': return { x: trigger.x - 1, y: trigger.y }
-    default: return null
-  }
-}
-
 function facingIntoRoom(orientation) {
   switch (orientation) {
     case 'north': return DIR_DOWN
@@ -468,4 +530,17 @@ function facingIntoRoom(orientation) {
     case 'east': return DIR_LEFT
     default: return DIR_DOWN
   }
+}
+
+function facingTile(player) {
+  let dx = 0
+  let dy = 0
+  switch (player.facing) {
+    case DIR_UP: dy = -1; break
+    case DIR_DOWN: dy = 1; break
+    case DIR_LEFT: dx = -1; break
+    case DIR_RIGHT: dx = 1; break
+    default: return null
+  }
+  return { x: player.tileX + dx, y: player.tileY + dy }
 }

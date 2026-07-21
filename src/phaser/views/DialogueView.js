@@ -6,6 +6,8 @@ const DEPTH = 1200
 const PORTRAIT_COLORS = {
   player: 0x4ea5ff,
   narrator: 0x8d8a84,
+  smith: 0xc77b3f,
+  excavator: 0x6b7a88,
 }
 
 export class DialogueView {

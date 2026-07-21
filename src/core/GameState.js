@@ -32,7 +32,7 @@ import {
 } from '../config/crafting.js'
 
 const SAVE_KEY = 'uncover_save'
-const SAVE_VERSION = 3
+const SAVE_VERSION = 4
 const MOVE_SPEED_PER_RANK = 18
 
 export class GameState {
@@ -61,6 +61,18 @@ export class GameState {
     this.hubUnlocked = false
     this.hubEntry = null
     this.pendingFragmentPlan = null
+    this.narrativeFlags = {}
+  }
+
+  hasSeen(id) {
+    return Boolean(this.narrativeFlags?.[id])
+  }
+
+  /** Idempotente. Persiste en el próximo save explícito del caller. */
+  markSeen(id) {
+    if (!id || this.hasSeen(id)) return false
+    this.narrativeFlags[id] = true
+    return true
   }
 
   /** Compat: menú "nueva partida" / wipe. */
@@ -199,6 +211,8 @@ export class GameState {
   routeAfterVictory(completedIndex) {
     this.depositRunToWorkshop()
     if (completedIndex >= 1) this.hubUnlocked = true
+    // N7 (índice 6): Excavador pasa al hub.
+    if (completedIndex === 6) this.markSeen('excavatorInHub')
     this.nextLevel()
     this.hubEntry = null
     this.save()
@@ -249,6 +263,7 @@ export class GameState {
       unlockedLevels: this.unlockedLevels,
       hubUnlocked: this.hubUnlocked,
       hubEntry: this.hubEntry,
+      narrativeFlags: { ...this.narrativeFlags },
       runResources: { ...this.runResources },
       workshopCrude: { ...this.workshopCrude },
       workshopRefined: { ...this.workshopRefined },
@@ -288,6 +303,7 @@ export class GameState {
         ? Boolean(data.hubUnlocked)
         : ((data.currentLevelIndex ?? 0) >= 2 || (data.unlockedLevels ?? 0) > 2)
       this.hubEntry = data.hubEntry ?? null
+      this.narrativeFlags = { ...(data.narrativeFlags ?? {}) }
       this.runResources = {
         ...createEmptyResources(),
         ...(data.runResources ?? {}),

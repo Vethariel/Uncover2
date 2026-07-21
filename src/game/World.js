@@ -12,6 +12,7 @@ import { createEmptyResources } from '../config/miningTypes.js'
 import { createEmptyFragmentBag } from '../config/crafting.js'
 import { createPuzzleState, clonePuzzleReward } from '../config/puzzleTypes.js'
 import { positionFromTile } from './entityTiles.js'
+import { placeLevelNpcs } from './level/levelNpcs.js'
 
 export class World {
   constructor(tileSize) {
@@ -58,6 +59,7 @@ export class World {
     this.activeMiningTarget = null
     this.activeFragmentTarget = null
     this.pendingLevelSpec = null
+    this.npcs = []
   }
 
   reset() {
@@ -98,6 +100,7 @@ export class World {
     this.fragmentProgress = new Map()
     this.activeMiningTarget = null
     this.activeFragmentTarget = null
+    this.npcs = []
 
     const level = this.pendingLevelSpec
       ?? LEVELS[this.currentLevelIndex]
@@ -108,6 +111,8 @@ export class World {
     if (level.puzzle?.reward) {
       this.puzzleReward = clonePuzzleReward(level.puzzle.reward)
     }
+
+    placeLevelNpcs(this, this.currentLevelIndex)
 
     const spawn = this.playerSpawn
     const playerPos = positionFromTile(spawn.x, spawn.y, this.tileSize, PLAYER_SIZE)

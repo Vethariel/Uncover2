@@ -17,7 +17,7 @@ const ROWS = 11
  * Habitación rectangular del taller.
  * Horno y yunque 2×3 juntos al norte; puerta de salida al sur.
  */
-export function createWorkshopWorld(tileSize = TILE_SIZE) {
+export function createWorkshopWorld(tileSize = TILE_SIZE, options = {}) {
   const grid = new Grid(COLS, ROWS)
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
@@ -75,11 +75,31 @@ export function createWorkshopWorld(tileSize = TILE_SIZE) {
     DIR_DOWN,
   )
 
+  const npcs = [
+    {
+      id: 'brun',
+      label: 'BRUN',
+      kind: 'smith',
+      tile: { x: 5, y: 5 },
+      color: 0xc77b3f,
+    },
+  ]
+  if (options.excavatorInHub) {
+    npcs.push({
+      id: 'excavator',
+      label: 'EXCAVADOR',
+      kind: 'excavator',
+      tile: { x: 15, y: 5 },
+      color: 0x6b7a88,
+    })
+  }
+
   return {
     tileSize,
     grid,
     player,
     stations: [furnace, anvil],
+    npcs,
     exitDoor,
     playerSpawn: spawn,
     bombs: [],
@@ -105,6 +125,10 @@ export function stationAt(world, x, y) {
   )) ?? null
 }
 
+export function npcAt(world, x, y) {
+  return (world.npcs ?? []).find((npc) => npc.tile.x === x && npc.tile.y === y) ?? null
+}
+
 export function interactTarget(world) {
   const player = world.player
   const dirs = [
@@ -118,6 +142,8 @@ export function interactTarget(world) {
     const y = player.tileY + dir.y
     const station = stationAt(world, x, y)
     if (station) return { type: 'station', station }
+    const npc = npcAt(world, x, y)
+    if (npc) return { type: 'npc', npc }
   }
 
   const onDoor = world.exitDoor.triggerTiles.some(

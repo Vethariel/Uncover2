@@ -31,7 +31,10 @@ export class WorkshopLoop {
     let interact = null
     if (focus?.type === 'door') {
       interact = focus
-    } else if (input.isJustDown('interact') && focus?.type === 'station') {
+    } else if (
+      input.isJustDown('interact')
+      && (focus?.type === 'station' || focus?.type === 'npc')
+    ) {
       interact = focus
     }
 

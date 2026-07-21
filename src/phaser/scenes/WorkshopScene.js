@@ -12,9 +12,14 @@ import {
   nextCraftCost,
   sumSpecializedFragments,
 } from '../../config/crafting.js'
+import { DialogueController } from '../../core/DialogueController.js'
+import { NarrativeDirector } from '../../core/NarrativeDirector.js'
+import { TutorialController } from '../../core/TutorialController.js'
 import { InputAdapter } from '../input/InputAdapter.js'
 import { getAudio } from '../audio/AudioService.js'
 import { WorkshopView } from '../views/WorkshopView.js'
+import { DialogueView } from '../views/DialogueView.js'
+import { TutorialView } from '../views/TutorialView.js'
 import { createWorkshopWorld } from '../../game/workshop/WorkshopWorld.js'
 import { WorkshopLoop } from '../../game/workshop/WorkshopLoop.js'
 import {
@@ -36,6 +41,8 @@ export class WorkshopScene extends Phaser.Scene {
   create() {
     // Phaser reutiliza la instancia: un blackout previo hacia Game deja el flag.
     this._blackoutRunning = false
+    this._cleanupHubUi()
+
     this.gameState = session.gameState
     this.gameState.recomputeStatsFromUpgrades()
     this.gameState.hubUnlocked = true
@@ -44,10 +51,23 @@ export class WorkshopScene extends Phaser.Scene {
     this.inputAdapter = new InputAdapter(this)
     this.audio = getAudio(this)
     this.loop = new WorkshopLoop()
-    this.world = createWorkshopWorld(TILE_SIZE)
+    this.world = createWorkshopWorld(TILE_SIZE, {
+      excavatorInHub: this.gameState.hasSeen('excavatorInHub'),
+    })
     this.gameState.applyToPlayer(this.world.player)
 
     this.view = new WorkshopView(this, this.world)
+    this.dialogueController = new DialogueController()
+    this.dialogueView = new DialogueView(this, this.dialogueController)
+    this.tutorialController = new TutorialController()
+    this.tutorialView = new TutorialView(this, this.tutorialController)
+    this.narrativeDirector = new NarrativeDirector({
+      dialogueController: this.dialogueController,
+      dialogueView: this.dialogueView,
+      tutorialController: this.tutorialController,
+      tutorialView: this.tutorialView,
+    })
+
     this.menu = null
     this.menuIndex = 0
     this.promptText = this.add.text(0, 0, '', {
@@ -69,9 +89,12 @@ export class WorkshopScene extends Phaser.Scene {
 
     this.audio.playMusic('workshop')
 
+    const startNarrative = () => this._startHubNarrative()
     if (this._pendingBlackoutFadeIn) {
       this._pendingBlackoutFadeIn = false
-      maybeFadeInFromBlackout(this)
+      maybeFadeInFromBlackout(this, startNarrative)
+    } else {
+      startNarrative()
     }
   }
 
@@ -79,6 +102,11 @@ export class WorkshopScene extends Phaser.Scene {
     if (this._blackoutRunning) return
 
     const dt = Math.min(delta / 1000, 0.05)
+
+    if (this.narrativeDirector?.active) {
+      this._updateNarrative(dt)
+      return
+    }
 
     if (this.menu) {
       this._updateMenu()
@@ -97,10 +125,51 @@ export class WorkshopScene extends Phaser.Scene {
 
     if (result.interact?.type === 'station') {
       this._openStationMenu(result.interact.station)
+    } else if (result.interact?.type === 'npc') {
+      this._talkToNpc(result.interact.npc)
     } else if (result.interact?.type === 'door') {
       this._leaveHub()
     }
 
+    this.inputAdapter.flush()
+  }
+
+  _startHubNarrative() {
+    if (!this.gameState.hasSeen('hub.intro')) {
+      this.narrativeDirector.tryFire('hub.intro', this.gameState)
+      return
+    }
+
+    const entry = this.gameState.hubEntry
+    if (entry === 'advance') {
+      const completedIndex = this.gameState.currentLevelIndex - 1
+      if (completedIndex >= 2) {
+        this.narrativeDirector.tryFire(`hub.advance.${completedIndex}`, this.gameState)
+      }
+      return
+    }
+    if (entry === 'retry') {
+      this.narrativeDirector.tryFire(
+        `hub.retry.${this.gameState.currentLevelIndex}`,
+        this.gameState,
+      )
+    }
+  }
+
+  _talkToNpc(npc) {
+    this.view?.freezePlayerIdle()
+    const eventId = npc.id === 'excavator' ? 'hub.idle.excavator' : 'hub.idle.brun'
+    this.narrativeDirector.forceFire(eventId)
+    this.promptText?.setVisible(false)
+    this.inputAdapter.flush()
+  }
+
+  _updateNarrative(dt) {
+    this.narrativeDirector.update(dt)
+    if (Phaser.Input.Keyboard.JustDown(this.inputAdapter.keys.bomb)) {
+      this.narrativeDirector.advance()
+    }
+    this.view?.freezePlayerIdle()
     this.inputAdapter.flush()
   }
 
@@ -159,7 +228,10 @@ export class WorkshopScene extends Phaser.Scene {
       this.promptText.setVisible(false)
       return
     }
-    this.promptText.setText(`E — ${focus.station.label}`)
+    const label = focus.type === 'npc'
+      ? focus.npc.label
+      : focus.station.label
+    this.promptText.setText(`E — ${label}`)
     this.promptText.setPosition(
       this.world.player.posX + this.world.player.size / 2,
       this.world.player.posY - 10,
@@ -330,8 +402,16 @@ export class WorkshopScene extends Phaser.Scene {
       if (result?.ok) {
         this.gameState.save()
         this._refreshHud()
+        if (this.menu.kind === 'furnace') {
+          this.narrativeDirector.tryFire('craft.firstSmelt', this.gameState)
+        }
         if (this.menu.kind === 'anvil') {
           this.menu.items = this._anvilItems()
+        }
+        // Si arrancó tutorial/diálogo, cerrar menú para no solapar.
+        if (this.narrativeDirector.active) {
+          this._closeMenu()
+          return
         }
       }
       this._drawMenu()
@@ -363,5 +443,22 @@ export class WorkshopScene extends Phaser.Scene {
         this.scene.start(nextScene, { [BLACKOUT_DATA_KEY]: true })
       },
     })
+  }
+
+  _cleanupHubUi() {
+    this.narrativeDirector?.destroy()
+    this.narrativeDirector = null
+    this.dialogueView?.destroy()
+    this.dialogueView = null
+    this.dialogueController = null
+    this.tutorialView?.destroy()
+    this.tutorialView = null
+    this.tutorialController = null
+    this.view?.destroy()
+    this.view = null
+    this.promptText?.destroy()
+    this.promptText = null
+    this._clearMenuGraphics()
+    this.menu = null
   }
 }

@@ -1,8 +1,8 @@
 # Uncover — Diálogos (Movimiento I)
 
-> Contrato de voz y batidas propuestas. Narrativa: [`NARRATIVE.md`](./NARRATIVE.md). Curriculum: [`MOVEMENT_I.md`](./MOVEMENT_I.md). Crafting / fragmentos: [`CRAFTING.md`](./CRAFTING.md). Runtime: [`src/config/dialogues.js`](../src/config/dialogues.js) (stubs).
+> Contrato de voz y batidas propuestas. Narrativa: [`NARRATIVE.md`](./NARRATIVE.md). Curriculum: [`MOVEMENT_I.md`](./MOVEMENT_I.md). Crafting / fragmentos: [`CRAFTING.md`](./CRAFTING.md). Runtime: [`src/config/dialogues.js`](../src/config/dialogues.js) · eventos [`src/config/narrativeEvents.js`](../src/config/narrativeEvents.js).
 
-**Estado:** fuente de verdad provisional. Aún no cableado a flags / triggers.
+**Estado:** fuente de verdad de textos. El bus de eventos y tutoriales ya están cableados; los textos de este doc se van volcando a `dialogues.js` por `id`.
 
 **Formato:** entradas del `DialogueController`. Space avanza. **3–6 alientos** por batida (cada `text` es un párrafo oral fluido, no un telegrama).
 
@@ -1905,22 +1905,30 @@ Tras la llegada y las batidas de lore one-shot. Pool seco; sin doctrinas; cooldo
 
 ---
 
-## Notas de implementación (futuro)
+## Notas de implementación
 
-| Batida | Hook probable |
-| ------ | ------------- |
-| Inicio de nivel (único) | `_startLevelDialogue` si `!seenLevelStart[index]` |
-| Inicio genérico retry | `_startLevelDialogue` si `seenLevelStart` + entró tras `hubEntry: 'retry'` / derrota |
-| Descubrimientos | Flags `seen*` (destructible, golem, espíritu, marcas, cofre, cristal, golemAvanzado, trampa) |
-| Fragmentos | Pool + `usedFragmentLines` |
-| Wipe N1–N2 | Al game over tutorial → menú; pool genérico |
-| N7 éxito (Excavador) | Una vez |
-| N7 fallo primera / reintento | Flag `n7FailSeen` → genérico si true |
-| Portales primera vista | Flag `seenPortals` tras N7 |
-| Taller advance / retry | `hubEntry` + flags de catarsis |
-| Idle Brun / Excavador | Interact NPC si `hubEntry == null`; cooldown |
-| Primera fundición / aleación | Flags `seenFirstSmelt` / `seenFirstAlloy` |
-| Craft primera vez / rango+ | Por `upgradeId` + genérico si rango ≥ 2 ya visto |
-| Excavador hub lore | Cola one-shot tras llegada; luego idle pool |
+**Runtime (cableado):**
 
-Hasta cablear, este documento manda el tono y la morfología oral. La capa isekai queda **fuera de diálogo** salvo indicios tardíos y sutiles (ver tabla de revelación lenta).
+| Pieza | Dónde |
+| ----- | ----- |
+| Flags one-shot | `GameState.narrativeFlags` + `hasSeen` / `markSeen` (save v4) |
+| Cola diálogo → tutorial | `NarrativeDirector` + registro [`narrativeEvents.js`](../src/config/narrativeEvents.js) |
+| Textos de diálogo | [`dialogues.js`](../src/config/dialogues.js) — **rellenar desde este doc** por el mismo `id` |
+| Tutoriales (teclas) | [`tutorials.js`](../src/config/tutorials.js) + `TutorialView` (panel centrado) |
+| NPCs hub | Brun siempre; Excavador si `excavatorInHub` (tras N7) |
+
+**Contrato:** para incorporar una batida, pegar entradas en `dialogues.js` con el `id` del evento. Si el diálogo es `[]`, el director salta al tutorial siguiente. No hace falta tocar escenas.
+
+| Evento / batida | id canónico |
+| --------------- | ----------- |
+| Inicio N1–N7 | `level.start.0` … `level.start.6` |
+| Descubrimientos | `discovery.destructible`, `.golem`, `.spirit`, `.marks`, `.chest`, `.crystal`, `.golemAdvanced`, `.trap`, `.fragment` — disparo al **mirar** (tile de delante) por primera vez; diálogo stub + tutorial si aplica |
+| Hub intro + tutorial taller | `hub.intro` (+ `tut_workshop`) |
+| Hub advance / retry | `hub.advance.2`…`6`, `hub.retry.2`…`6` (índice de nivel 0-based) |
+| Idle NPC | `hub.idle.brun`, `hub.idle.excavator` (repetible, `forceFire`) |
+| Primera fundición | `craft.firstSmelt` (+ `tut_smelt`) |
+| Tutoriales teclas | `tut_move_bomb`, `tut_pick`, `tut_fragment`, `tut_marks`, `tut_chest`, `tut_trap`, `tut_workshop`, `tut_smelt` |
+
+Aún no cableados (hooks vacíos / pendientes): wipe N1–N2, portales, retry genérico de inicio de nivel, corpus completo de este documento.
+
+La capa isekai queda **fuera de diálogo** salvo indicios tardíos y sutiles (ver tabla de revelación lenta).
