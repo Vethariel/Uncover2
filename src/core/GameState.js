@@ -60,6 +60,8 @@ export class GameState {
     this.recipesKnown = createDefaultRecipesKnown()
     this.hubUnlocked = false
     this.hubEntry = null
+    /** Número de nivel Mov. I (1-based) para diálogo hub.advance/retry al entrar. */
+    this.hubNarrativeLevel = null
     this.pendingFragmentPlan = null
     this.narrativeFlags = {}
     /** @type {null | { kind: string, title: string, detail: string, hint: string }} */
@@ -216,12 +218,24 @@ export class GameState {
     // N7 (índice 6): Excavador pasa al hub.
     if (completedIndex === 6) this.markSeen('excavatorInHub')
     this.nextLevel()
-    this.hubEntry = null
-    this.save()
 
-    if (this.currentLevelIndex >= LEVELS.length) return 'menu'
-    if (completedIndex === 0) return 'level'
+    if (this.currentLevelIndex >= LEVELS.length) {
+      this.hubEntry = null
+      this.hubNarrativeLevel = null
+      this.save()
+      return 'menu'
+    }
+    if (completedIndex === 0) {
+      this.hubEntry = null
+      this.hubNarrativeLevel = null
+      this.save()
+      return 'level'
+    }
+
     this.hubEntry = 'advance'
+    // hub.advance.N usa N de Mov. I (N3 → 3), no índice 0-based.
+    this.hubNarrativeLevel = completedIndex + 1
+    this.save()
     return 'workshop'
   }
 
@@ -246,8 +260,9 @@ export class GameState {
     if (failedIndex === 6) {
       this.clearRunResources()
       this.lives = this.maxLives
-      this.currentLevelIndex = 5
       this.hubEntry = 'retry'
+      this.hubNarrativeLevel = 7
+      this.currentLevelIndex = 5
       this.hubUnlocked = true
       this.markSeen('n7FailSeen')
       this.gameOverPresentation = {
@@ -263,6 +278,7 @@ export class GameState {
     this.clearRunResources()
     this.lives = this.maxLives
     this.hubEntry = 'retry'
+    this.hubNarrativeLevel = failedIndex + 1
     this.hubUnlocked = true
     this.gameOverPresentation = {
       kind: 'escape',
@@ -302,6 +318,7 @@ export class GameState {
       unlockedLevels: this.unlockedLevels,
       hubUnlocked: this.hubUnlocked,
       hubEntry: this.hubEntry,
+      hubNarrativeLevel: this.hubNarrativeLevel,
       narrativeFlags: { ...this.narrativeFlags },
       runResources: { ...this.runResources },
       workshopCrude: { ...this.workshopCrude },
@@ -342,6 +359,7 @@ export class GameState {
         ? Boolean(data.hubUnlocked)
         : ((data.currentLevelIndex ?? 0) >= 2 || (data.unlockedLevels ?? 0) > 2)
       this.hubEntry = data.hubEntry ?? null
+      this.hubNarrativeLevel = data.hubNarrativeLevel ?? null
       this.narrativeFlags = { ...(data.narrativeFlags ?? {}) }
       this.runResources = {
         ...createEmptyResources(),

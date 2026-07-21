@@ -82,6 +82,21 @@ describe('GameState resources and progression', () => {
     expect(state.currentLevelIndex).toBe(2)
     expect(state.hubUnlocked).toBe(true)
     expect(state.hubEntry).toBe('advance')
+    expect(state.hubNarrativeLevel).toBe(2)
+  })
+
+  it('victoria N3 prepara catarsis hub.advance.3', () => {
+    const state = new GameState()
+    expect(state.routeAfterVictory(2)).toBe('workshop')
+    expect(state.hubNarrativeLevel).toBe(3)
+    expect(state.hubEntry).toBe('advance')
+  })
+
+  it('fallo N3+ guarda hubNarrativeLevel para retry', () => {
+    const state = new GameState()
+    state.currentLevelIndex = 2
+    state.routeAfterGameOver()
+    expect(state.hubNarrativeLevel).toBe(3)
   })
 
   it('aplica mejoras al jugador incluyendo vida máxima', () => {

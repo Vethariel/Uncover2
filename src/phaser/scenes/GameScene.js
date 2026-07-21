@@ -50,6 +50,7 @@ export class GameScene extends Phaser.Scene {
   create() {
     // Phaser reutiliza la instancia: un blackout previo hacia Workshop deja el flag.
     this._blackoutRunning = false
+    this._n7SuccessShown = false
     this.gameState = session.gameState
     this.inputAdapter = new InputAdapter(this)
     this.audio = getAudio(this)
@@ -355,7 +356,14 @@ export class GameScene extends Phaser.Scene {
 
   _startLevelNarrative() {
     const index = this.gameState.currentLevelIndex
-    const fired = this.narrativeDirector.tryFire(`level.start.${index}`, this.gameState)
+    const startId = `level.start.${index}`
+    let fired = false
+    if (this.gameState.hasSeen(startId)) {
+      fired = this.narrativeDirector.forceFire(`level.retry.${index}`)
+        || this.narrativeDirector.forceFire('level.retry.generic')
+    } else {
+      fired = this.narrativeDirector.tryFire(startId, this.gameState)
+    }
     if (!fired) {
       this._startLevelMusic()
     }
@@ -460,6 +468,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   _showLevelComplete(completedIndex, trial = null) {
+    if (isN7Level(completedIndex) && !this._n7SuccessShown) {
+      this._n7SuccessShown = true
+      this.entityView?.freezePlayerForNarrative()
+      this.narrativeDirector.onIdle = () => {
+        this.narrativeDirector.onIdle = null
+        this._showLevelComplete(completedIndex, trial)
+      }
+      if (this.narrativeDirector.tryFire('n7.success', this.gameState)) {
+        this.chestPrompt?.setVisible(false)
+        this.inputAdapter.flush()
+        return
+      }
+      this.narrativeDirector.onIdle = null
+    }
+
     const level = LEVELS[completedIndex] ?? LEVELS[0]
     this.levelResult = createLevelResult(
       this.world,

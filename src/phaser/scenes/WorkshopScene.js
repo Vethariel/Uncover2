@@ -140,19 +140,22 @@ export class WorkshopScene extends Phaser.Scene {
       return
     }
 
-    const entry = this.gameState.hubEntry
-    if (entry === 'advance') {
-      const completedIndex = this.gameState.currentLevelIndex - 1
-      if (completedIndex >= 2) {
-        this.narrativeDirector.tryFire(`hub.advance.${completedIndex}`, this.gameState)
-      }
+    if (
+      this.gameState.hasSeen('excavatorInHub')
+      && !this.gameState.hasSeen('hub.excavator.arrival')
+    ) {
+      this.narrativeDirector.tryFire('hub.excavator.arrival', this.gameState)
       return
     }
-    if (entry === 'retry') {
-      this.narrativeDirector.tryFire(
-        `hub.retry.${this.gameState.currentLevelIndex}`,
-        this.gameState,
-      )
+
+    const entry = this.gameState.hubEntry
+    const levelN = this.gameState.hubNarrativeLevel
+    if (entry === 'advance' && levelN != null && levelN >= 3) {
+      this.narrativeDirector.tryFire(`hub.advance.${levelN}`, this.gameState)
+      return
+    }
+    if (entry === 'retry' && levelN != null && levelN >= 3) {
+      this.narrativeDirector.forceFire(`hub.retry.${levelN}`)
     }
   }
 
@@ -329,7 +332,7 @@ export class WorkshopScene extends Phaser.Scene {
           break
       }
 
-      return { id, status, text, action }
+      return { id, status, text, action, forge: status === 'craftable' }
     })
   }
 
@@ -405,6 +408,9 @@ export class WorkshopScene extends Phaser.Scene {
         if (this.menu.kind === 'furnace') {
           this.narrativeDirector.tryFire('craft.firstSmelt', this.gameState)
         }
+        if (this.menu.kind === 'anvil' && item.forge) {
+          this.narrativeDirector.tryFire('craft.firstAlloy', this.gameState)
+        }
         if (this.menu.kind === 'anvil') {
           this.menu.items = this._anvilItems()
         }
@@ -438,6 +444,7 @@ export class WorkshopScene extends Phaser.Scene {
       onBlack: () => {
         if (nextScene === 'Game') {
           this.gameState.hubEntry = null
+          this.gameState.hubNarrativeLevel = null
           this.gameState.save()
         }
         this.scene.start(nextScene, { [BLACKOUT_DATA_KEY]: true })

@@ -1913,22 +1913,26 @@ Tras la llegada y las batidas de lore one-shot. Pool seco; sin doctrinas; cooldo
 | ----- | ----- |
 | Flags one-shot | `GameState.narrativeFlags` + `hasSeen` / `markSeen` (save v4) |
 | Cola diálogo → tutorial | `NarrativeDirector` + registro [`narrativeEvents.js`](../src/config/narrativeEvents.js) |
-| Textos de diálogo | [`dialogues.js`](../src/config/dialogues.js) — **rellenar desde este doc** por el mismo `id` |
+| Textos de diálogo | [`dialogues.js`](../src/config/dialogues.js) — **editar aquí** por el mismo `id` |
 | Tutoriales (teclas) | [`tutorials.js`](../src/config/tutorials.js) + `TutorialView` (panel centrado) |
 | NPCs hub | Brun siempre; Excavador si `excavatorInHub` (tras N7) |
 
-**Contrato:** para incorporar una batida, pegar entradas en `dialogues.js` con el `id` del evento. Si el diálogo es `[]`, el director salta al tutorial siguiente. No hace falta tocar escenas.
+**Contrato:** para incorporar una batida, añadir entradas en `dialogues.js` con el `id` del evento. Si el diálogo es `[]`, el director salta al tutorial siguiente. No hace falta tocar escenas. `docs/DIALOGUES.md` es referencia de diseño y tono.
 
 | Evento / batida | id canónico |
 | --------------- | ----------- |
 | Inicio N1–N7 | `level.start.0` … `level.start.6` |
 | Descubrimientos | `discovery.destructible`, `.golem`, `.spirit`, `.marks`, `.chest`, `.crystal`, `.golemAdvanced`, `.trap`, `.fragment` — disparo al **mirar** (tile de delante) por primera vez; diálogo stub + tutorial si aplica |
 | Hub intro + tutorial taller | `hub.intro` (+ `tut_workshop`) |
-| Hub advance / retry | `hub.advance.2`…`6`, `hub.retry.2`…`6` (índice de nivel 0-based) |
+| Hub advance / retry | `hub.advance.3`…`7`, `hub.retry.3`…`7` — **N de Mov. I** (N3→3); ver `GameState.hubNarrativeLevel` |
 | Idle NPC | `hub.idle.brun`, `hub.idle.excavator` (repetible, `forceFire`) |
 | Primera fundición | `craft.firstSmelt` (+ `tut_smelt`) |
 | Tutoriales teclas | `tut_move_bomb`, `tut_pick`, `tut_fragment`, `tut_marks`, `tut_chest`, `tut_trap`, `tut_workshop`, `tut_smelt` |
+| Retry inicio nivel | `level.retry.0`…`6`, pool `level.retry.generic` — `forceFire` si ya se oyó `level.start.*` |
+| Wipe N1–N2 | `wipe.tutorial` — pool en `GameOverScene` antes del menú |
+| N7 éxito / fallo | `n7.success` (one-shot), `n7.fail.first` / `n7.fail.retry` |
+| Excavador en hub | `hub.excavator.arrival` (one-shot tras `excavatorInHub`) |
 
-Aún no cableados (hooks vacíos / pendientes): wipe N1–N2, portales, retry genérico de inicio de nivel, corpus completo de este documento.
+Aún no cableados: fragmentos genéricos A–E por extracción, pools del Excavador en N7, portales, batidas de forja por mejora (R1→R2), lore one-shot del Excavador en hub.
 
 La capa isekai queda **fuera de diálogo** salvo indicios tardíos y sutiles (ver tabla de revelación lenta).
