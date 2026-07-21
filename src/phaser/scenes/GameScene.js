@@ -14,6 +14,7 @@ import { DialogueController } from '../../core/DialogueController.js'
 import { NarrativeDirector } from '../../core/NarrativeDirector.js'
 import { TutorialController } from '../../core/TutorialController.js'
 import { createLevelResult } from '../../core/LevelResult.js'
+import { evaluateN7Trial, isN7Level } from '../../config/n7Trial.js'
 import { GameController } from '../../game/GameController.js'
 import { positionFromTile, syncTileFromPosition } from '../../game/entityTiles.js'
 import { InputAdapter } from '../input/InputAdapter.js'
@@ -89,6 +90,17 @@ export class GameScene extends Phaser.Scene {
       return
     }
 
+    if (this._n7FailPending) {
+      // Diálogo activo: lo maneja _updateNarrative. Si aún no, solo posar.
+      if (!this.narrativeDirector?.active) {
+        this.entityView?.freezePlayerForNarrative()
+        this.entityView?.update()
+        this._syncCamera()
+      }
+      this.inputAdapter.flush()
+      return
+    }
+
     if (Phaser.Input.Keyboard.JustDown(this.inputAdapter.keys.escape)) {
       this._openOverlay('pause')
       return
@@ -111,11 +123,22 @@ export class GameScene extends Phaser.Scene {
       return
     }
 
+    if (result.trialTimeUp && !this._trialResolved) {
+      this._trialResolved = true
+      this._resolveN7TimeUp()
+      this.inputAdapter.flush()
+      return
+    }
+
     if (result.gameOver) {
       this.gameState.syncFromPlayer(this.world.player)
       this.gameState.syncRunResourcesFromWorld(this.world)
-      this._cleanupLevel()
-      this.scene.start('GameOver')
+      if (isN7Level(this.gameState.currentLevelIndex)) {
+        this._beginN7FailSequence()
+      } else {
+        this._cleanupLevel()
+        this.scene.start('GameOver')
+      }
       return
     }
 
@@ -133,6 +156,49 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.inputAdapter.flush()
+  }
+
+  _resolveN7TimeUp() {
+    this.entityView?.freezePlayerIdle()
+    const trial = evaluateN7Trial(this.world, this.world.levelVisualConfig ?? {})
+    this.gameState.syncFromPlayer(this.world.player)
+    this.gameState.syncRunResourcesFromWorld(this.world)
+
+    if (trial.passed) {
+      const completedIndex = this.gameState.currentLevelIndex
+      this._showLevelComplete(completedIndex, trial)
+      return
+    }
+
+    this._beginN7FailSequence()
+  }
+
+  _beginN7FailSequence() {
+    this._n7FailPending = true
+    this.entityView?.freezePlayerForNarrative()
+    this.chestPrompt?.setVisible(false)
+    this.narrativeDirector.onIdle = () => {
+      this._n7FailPending = false
+      this._goToGameOverAfterFail()
+    }
+    const first = !this.gameState.hasSeen('n7.fail.first')
+    if (first) {
+      this.narrativeDirector.tryFire('n7.fail.first', this.gameState)
+    } else {
+      this.narrativeDirector.forceFire('n7.fail.retry')
+    }
+    // Si no hay texto, ir directo al game over.
+    if (!this.narrativeDirector.active) {
+      this.narrativeDirector.onIdle = null
+      this._n7FailPending = false
+      this._goToGameOverAfterFail()
+    }
+  }
+
+  _goToGameOverAfterFail() {
+    this._cleanupLevel()
+    // Dejar que el frame actual termine antes de cambiar de escena.
+    this.scene.start('GameOver')
   }
 
   _routeAfterVictory(completedIndex) {
@@ -222,6 +288,8 @@ export class GameScene extends Phaser.Scene {
     this.audio.stopMusic()
     this.levelIntro = null
     this._pendingLevelIntro = true
+    this._trialResolved = false
+    this._n7FailPending = false
   }
 
   /**
@@ -391,13 +459,21 @@ export class GameScene extends Phaser.Scene {
     this.pendingMusicKey = null
   }
 
-  _showLevelComplete(completedIndex) {
+  _showLevelComplete(completedIndex, trial = null) {
     const level = LEVELS[completedIndex] ?? LEVELS[0]
     this.levelResult = createLevelResult(
       this.world,
       completedIndex,
       level.name,
     )
+    if (trial) {
+      this.levelResult.trial = trial
+    } else if (isN7Level(completedIndex)) {
+      this.levelResult.trial = evaluateN7Trial(
+        this.world,
+        this.world.levelVisualConfig ?? level,
+      )
+    }
     this.levelCompleteView.show(this.levelResult)
     this.audio.playOverlayMusic('victory', true)
     this.chestPrompt?.setVisible(false)
@@ -417,11 +493,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   _updateNarrative(dt) {
+    if (!this.narrativeDirector) return
+
     this.narrativeDirector.update(dt)
     this._updateDialogueAnimation(dt)
 
     if (Phaser.Input.Keyboard.JustDown(this.inputAdapter.keys.bomb)) {
       this.narrativeDirector.advance()
+    }
+
+    // advance() pudo cerrar el nivel (fail N7 → cleanup). No tocar vistas destruidas.
+    if (!this.entityView?.playerSprite?.active) {
+      this.inputAdapter.flush()
+      return
     }
 
     this.entityView.update()
@@ -491,10 +575,15 @@ export class GameScene extends Phaser.Scene {
     this.cameraTarget?.destroy()
     this.cameraTarget = null
     this.tilemapView?.destroy()
+    this.tilemapView = null
     this.entityView?.destroy()
+    this.entityView = null
     this.fogOfWarView?.destroy()
+    this.fogOfWarView = null
     this.minimapView?.destroy()
+    this.minimapView = null
     this.hudView?.destroy()
+    this.hudView = null
     this.narrativeDirector?.destroy()
     this.narrativeDirector = null
     this.dialogueView?.destroy()
@@ -511,6 +600,8 @@ export class GameScene extends Phaser.Scene {
     this.chestPrompt?.destroy()
     this.chestPrompt = null
     this.pendingMusicKey = null
+    this._trialResolved = false
+    this._n7FailPending = false
   }
 
   shutdown() {

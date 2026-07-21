@@ -43,6 +43,8 @@ export class World {
     this.currentLevelIndex = 0
     this.gameOver = false
     this.gameWon = false
+    this.trialTimeUp = false
+    this.trialWastedScore = 0
     this.playerDeathTimer = 0
     this.visibleTiles = new Set()
     this.discoveredTiles = new Set()
@@ -76,6 +78,8 @@ export class World {
     this.bombs = []
     this.gameOver = false
     this.gameWon = false
+    this.trialTimeUp = false
+    this.trialWastedScore = 0
     this.enemySpawns = []
     this.resourceSpawns = []
     this.recipeFragmentSpawns = []

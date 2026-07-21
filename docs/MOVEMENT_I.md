@@ -272,14 +272,17 @@ Encuentro con el **Primer Excavador**.
 
 #### Forma del encuentro
 
-- **Carrera de recursos:** encontrar pasadizos, recolectar, gestionar bombas vs pico.
+- **Carrera de oficio:** recolectar con juicio (pico vs bomba), pasadizos, trampas y amenazas.
 - Versión **avanzada** de golems descompuestos.
 - **Trampas de dardo:** pisar placa → aviso → dardo desde lanzador a ≥3 tiles;
   el proyectil muere en muro/destructible; se rearma al salir; bomba desactiva la trampa.
-- Termina cuando se acaba el **tiempo**; hay **recuento**.
-- Gana quien termine con **más recursos** según las reglas del encuentro *(definidas en [`DESIGN.md`](./DESIGN.md))*.
+- **Ventana de tiempo:** ~6 minutos (`timeLimit: 360`). No es sprint vacío: al acabar el reloj hay **recuento**.
+- **Score de oficio:** Bronce×1 + Hierro×2 + Cristal×3 + fragmentos; menas voladas a bomba **restan**. Cuota: `trialQuota` (14 por defecto).
+- **Salida anticipada:** solo si ya alcanzaste la cuota.
+- **Éxito:** score ≥ cuota (al salir o al acabar el tiempo) → reconocimiento del Excavador.
+- **Fallo:** score &lt; cuota al timeout, o muerte → diálogo del Excavador, se pierden recursos de la corrida N7, el Taller queda apuntando a **N6**.
 
-El Excavador **comenta durante** el encuentro y **al final**.
+Detalle de pesos: [`src/config/n7Trial.js`](../src/config/n7Trial.js).
 
 #### Tras superarlo
 

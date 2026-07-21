@@ -1,5 +1,6 @@
 import { HUD_HEIGHT } from '../../config/constants.js'
 import { sumSpecializedFragments } from '../../config/crafting.js'
+import { evaluateN7Trial, isN7Level } from '../../config/n7Trial.js'
 
 export class HudView {
   constructor(scene, world) {
@@ -27,7 +28,7 @@ export class HudView {
     }).setOrigin(0.5, 0.5)
 
     this.timerText = scene.add.text(width - 16, HUD_HEIGHT / 2, '', {
-      fontSize: '12px',
+      fontSize: '11px',
       fontFamily: 'monospace',
       color: '#ffc857',
     }).setOrigin(1, 0.5)
@@ -45,9 +46,21 @@ export class HudView {
     this.resourcesText.setText(
       `B ${resources.bronze}  H ${resources.iron}  C ${resources.crystal}  F ${fragments.generic}+${specialized}`,
     )
-    this.timerText.setText(
-      this.world.levelTimer === null ? '' : `TIEMPO ${Math.ceil(this.world.levelTimer)}`,
-    )
+
+    if (this.world.levelTimer === null) {
+      this.timerText.setText('')
+      return
+    }
+
+    const seconds = Math.ceil(this.world.levelTimer)
+    if (isN7Level(this.world.currentLevelIndex)) {
+      const trial = evaluateN7Trial(this.world, this.world.levelVisualConfig ?? {})
+      this.timerText.setText(`OFICIO ${trial.score}/${trial.quota}  ${seconds}s`)
+      this.timerText.setColor(trial.passed ? '#78d7e8' : '#ffc857')
+    } else {
+      this.timerText.setText(`TIEMPO ${seconds}`)
+      this.timerText.setColor('#ffc857')
+    }
   }
 
   destroy() {

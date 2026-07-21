@@ -83,6 +83,8 @@ export class EntityView {
     this.bombSprites = new Map()
     /** @type {Map<object, Phaser.GameObjects.Sprite>} */
     this.explosionSprites = new Map()
+    this._narrativeFrozen = false
+    this._destroyed = false
     this.playerSprite.on(
       Phaser.Animations.Events.ANIMATION_UPDATE,
       this._onPlayerAnimationUpdate,
@@ -123,23 +125,60 @@ export class EntityView {
   /** Fuerza idle (p. ej. al entrar en blackout; Phaser sigue animando sin update). */
   freezePlayerIdle() {
     const player = this.world.player
-    if (!player?.alive || !this.playerSprite) return
+    if (!player?.alive || !this.playerSprite?.anims) return
+    this._narrativeFrozen = false
     playPlayerIdle(this.playerSprite, player)
     this.lastPlayerPosition = { x: player.posX, y: player.posY }
   }
 
+  /**
+   * Congela el sprite durante diálogo (incluye escape tras muerte).
+   * Evita reiniciar la animación cada frame y dejarla “atorada” en loop.
+   */
+  freezePlayerForNarrative() {
+    const sprite = this.playerSprite
+    if (!sprite?.anims) return
+    this._narrativeFrozen = true
+    const player = this.world.player
+    if (!player) return
+
+    const feetX = player.posX + player.size / 2
+    const feetY = player.posY + player.size
+    sprite.setPosition(feetX, feetY).setVisible(true)
+
+    if (!player.alive) {
+      // Dejar el escape en el último frame visible, sin reiniciar.
+      if (sprite.anims.isPlaying) {
+        sprite.anims.pause()
+      }
+      return
+    }
+
+    playPlayerIdle(sprite, player)
+    this.lastPlayerPosition = { x: player.posX, y: player.posY }
+  }
+
   destroy() {
-    this.playerSprite.off(
-      Phaser.Animations.Events.ANIMATION_UPDATE,
-      this._onPlayerAnimationUpdate,
-      this,
-    )
+    if (this._destroyed) return
+    this._destroyed = true
+    this._narrativeFrozen = false
+
+    if (this.playerSprite) {
+      this.playerSprite.off(
+        Phaser.Animations.Events.ANIMATION_UPDATE,
+        this._onPlayerAnimationUpdate,
+        this,
+      )
+      this.playerSprite.destroy()
+      this.playerSprite = null
+    }
+
     for (const sprite of this.bombSprites.values()) sprite.destroy()
     this.bombSprites.clear()
     for (const sprite of this.explosionSprites.values()) sprite.destroy()
     this.explosionSprites.clear()
-    this.graphics.destroy()
-    this.playerSprite.destroy()
+    this.graphics?.destroy()
+    this.graphics = null
   }
 
   _onPlayerAnimationUpdate(animation, frame) {
@@ -214,8 +253,16 @@ export class EntityView {
 
   _updatePlayerSprite() {
     const player = this.world.player
-    if (!player) {
-      this.playerSprite.setVisible(false)
+    const sprite = this.playerSprite
+    if (!player || !sprite?.active || !sprite.anims) {
+      sprite?.setVisible(false)
+      return
+    }
+
+    if (this._narrativeFrozen) {
+      const feetX = player.posX + player.size / 2
+      const feetY = player.posY + player.size
+      sprite.setPosition(feetX, feetY).setVisible(true)
       return
     }
 
@@ -231,14 +278,14 @@ export class EntityView {
       const feetX = player.posX + player.size / 2
       const feetY = player.posY + player.size
       this.lastPlayerPosition = { x: player.posX, y: player.posY }
-      this.playerSprite
+      sprite
         .setPosition(feetX, feetY)
         .setVisible(true)
       const hurtAnimation = PLAYER_HURT_ANIMATIONS[player.facing]
         ?? PLAYER_HURT_ANIMATIONS[DIR_DOWN]
-      this.playerSprite.clearTint()
-      this.playerSprite.anims.timeScale = 1
-      this.playerSprite.play(hurtAnimation.key, true)
+      sprite.clearTint()
+      sprite.anims.timeScale = 1
+      sprite.play(hurtAnimation.key, true)
       return
     }
 
@@ -246,14 +293,14 @@ export class EntityView {
       const feetX = player.posX + player.size / 2
       const feetY = player.posY + player.size
       this.lastPlayerPosition = { x: player.posX, y: player.posY }
-      this.playerSprite
+      sprite
         .setPosition(feetX, feetY)
         .setVisible(!flickerHidden)
       const bombAnimation = PLAYER_BOMB_ANIMATIONS[player.facing]
         ?? PLAYER_BOMB_ANIMATIONS[DIR_DOWN]
-      this.playerSprite.clearTint()
-      this.playerSprite.anims.timeScale = 1
-      this.playerSprite.play(bombAnimation.key, true)
+      sprite.clearTint()
+      sprite.anims.timeScale = 1
+      sprite.play(bombAnimation.key, true)
       return
     }
 
@@ -261,14 +308,14 @@ export class EntityView {
       const feetX = player.posX + player.size / 2
       const feetY = player.posY + player.size
       this.lastPlayerPosition = { x: player.posX, y: player.posY }
-      this.playerSprite
+      sprite
         .setPosition(feetX, feetY)
         .setVisible(!flickerHidden)
       const mineAnimation = PLAYER_MINE_ANIMATIONS[player.facing]
         ?? PLAYER_MINE_ANIMATIONS[DIR_DOWN]
-      this.playerSprite.clearTint()
-      this.playerSprite.anims.timeScale = 1 / miningDurationFactor(player.pickSpeed ?? 0)
-      this.playerSprite.play(mineAnimation.key, true)
+      sprite.clearTint()
+      sprite.anims.timeScale = 1 / miningDurationFactor(player.pickSpeed ?? 0)
+      sprite.play(mineAnimation.key, true)
       return
     }
 
@@ -276,23 +323,26 @@ export class EntityView {
       const feetX = player.posX + player.size / 2
       const feetY = player.posY + player.size
       this.lastPlayerPosition = { x: player.posX, y: player.posY }
-      this.playerSprite
+      sprite
         .setPosition(feetX, feetY)
         .setVisible(true)
       const escapeAnimation = PLAYER_ESCAPE_ANIMATIONS[player.facing]
         ?? PLAYER_ESCAPE_ANIMATIONS[DIR_DOWN]
-      this.playerSprite.clearTint()
-      this.playerSprite.anims.timeScale = 1
-      this.playerSprite.play(escapeAnimation.key, true)
+      sprite.clearTint()
+      // Solo arrancar una vez; ignoreIfPlaying evita reinicios que “atascan” el escape.
+      if (sprite.anims.currentAnim?.key !== escapeAnimation.key) {
+        sprite.anims.timeScale = 1
+        sprite.play(escapeAnimation.key, false)
+      }
       return
     }
 
     this.lastPlayerPosition = syncPlayerLocomotion(
-      this.playerSprite,
+      sprite,
       player,
       this.lastPlayerPosition,
     )
-    if (flickerHidden) this.playerSprite.setVisible(false)
+    if (flickerHidden) sprite.setVisible(false)
   }
 
   _drawEnemy(enemy) {

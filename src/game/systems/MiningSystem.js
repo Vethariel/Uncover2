@@ -14,6 +14,7 @@ import {
   fortuneChance,
   miningDurationFactor,
 } from '../../config/crafting.js'
+import { isN7Level, materialScoreWeight } from '../../config/n7Trial.js'
 
 function tileKey(x, y) {
   return `${x},${y}`
@@ -46,6 +47,12 @@ function clearResourceSpawn(world, x, y) {
 }
 
 export function destroyDestructibleWithoutYield(world, x, y) {
+  const spawn = findResourceSpawn(world, x, y)
+  if (spawn?.material && isN7Level(world.currentLevelIndex)) {
+    const amount = spawn.amount ?? miningProfileFor(spawn.material).yield
+    world.trialWastedScore = (world.trialWastedScore ?? 0)
+      + materialScoreWeight(spawn.material) * amount
+  }
   clearResourceSpawn(world, x, y)
   world.events?.push('destructibleCleared')
 }

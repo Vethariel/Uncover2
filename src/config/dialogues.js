@@ -40,6 +40,16 @@ const DIALOGUES = {
     line('PRIMER EXCAVADOR', 'excavator', 'El carbón habla más que yo. Pregunta medida, no consuelo.'),
   ],
 
+  'n7.fail.first': [
+    line('PRIMER EXCAVADOR', 'excavator', 'Basta por hoy. El límite no se abre a fuerza de prisa.'),
+    line('PRIMER EXCAVADOR', 'excavator', 'Te devuelvo a la cámara antigua. Lee otra vez pico, tiempo e intención.'),
+    line('VIAJERO', 'player', '…Duele el orgullo más que las costillas. Está bien.'),
+  ],
+  'n7.fail.retry': [
+    line('PRIMER EXCAVADOR', 'excavator', 'Otra vez el límite te cerró el paso. Vuelve a la cámara antigua y ajusta el ritmo.'),
+    line('VIAJERO', 'player', 'Entendido. Preámbulo otra vez.'),
+  ],
+
   'craft.firstSmelt': [],
   'craft.firstAlloy': [],
 }

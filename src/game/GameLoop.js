@@ -48,6 +48,7 @@ export class GameLoop {
       events: world.events.splice(0),
       gameOver: world.gameOver,
       gameWon: world.gameWon,
+      trialTimeUp: Boolean(world.trialTimeUp),
     }
   }
 }

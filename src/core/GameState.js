@@ -62,6 +62,8 @@ export class GameState {
     this.hubEntry = null
     this.pendingFragmentPlan = null
     this.narrativeFlags = {}
+    /** @type {null | { kind: string, title: string, detail: string, hint: string }} */
+    this.gameOverPresentation = null
   }
 
   hasSeen(id) {
@@ -231,14 +233,51 @@ export class GameState {
     const failedIndex = this.currentLevelIndex
     if (failedIndex <= 1) {
       this.wipeProgress()
+      this.gameOverPresentation = {
+        kind: 'tutorial_wipe',
+        title: 'HAS ESCAPADO',
+        detail: 'PERO HAS PERDIDO TODO EL PROGRESO',
+        hint: 'PRESS ENTER TO RETURN TO MENU',
+      }
       return 'menu'
     }
+
+    // N7 (índice 6): fallo del umbral → pierde corrida y vuelve a N6.
+    if (failedIndex === 6) {
+      this.clearRunResources()
+      this.lives = this.maxLives
+      this.currentLevelIndex = 5
+      this.hubEntry = 'retry'
+      this.hubUnlocked = true
+      this.markSeen('n7FailSeen')
+      this.gameOverPresentation = {
+        kind: 'n7_fail',
+        title: 'EL UMBRAL NO SE ABRIÓ',
+        detail: 'Pierdes lo recogido en esta corrida.\nEl Taller te devuelve a la Cámara Antigua (N6).',
+        hint: 'PRESS ENTER TO RETURN TO WORKSHOP',
+      }
+      this.save()
+      return 'workshop'
+    }
+
     this.clearRunResources()
     this.lives = this.maxLives
     this.hubEntry = 'retry'
     this.hubUnlocked = true
+    this.gameOverPresentation = {
+      kind: 'escape',
+      title: 'HAS ESCAPADO',
+      detail: 'PERO HAS PERDIDO TODOS TUS OBJETOS',
+      hint: 'PRESS ENTER TO RETURN TO WORKSHOP',
+    }
     this.save()
     return 'workshop'
+  }
+
+  consumeGameOverPresentation() {
+    const info = this.gameOverPresentation
+    this.gameOverPresentation = null
+    return info
   }
 
   levelIndexForHubExit() {

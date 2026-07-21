@@ -143,7 +143,8 @@ describe('LifeSystem — ciclo de vida', () => {
     world.levelTimer = 0.1
     stepLife(world, 0.2)
     expect(world.levelTimer).toBe(0)
-    expect(world.gameOver).toBe(true)
+    expect(world.trialTimeUp).toBe(true)
+    expect(world.gameOver).toBe(false)
     expect(world.events).toContain('levelTimeExpired')
   })
 

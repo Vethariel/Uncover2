@@ -74,7 +74,7 @@ Contrato jugable detallado en [`MOVEMENT_I.md`](./MOVEMENT_I.md). Resumen de sis
 | **Golems / espíritus** | Perfiles de amenaza; no doctrinales |
 | **Puzzle** | Tabletas en orden (N5–N6); cofre con E al completar |
 | **Trampas** | Dardos con aviso (N7); bomba desactiva; `GridQuery.isDangerous` |
-| **Umbral (N7)** | Encontrar y pisar la salida antes de agotar el tiempo |
+| **Umbral (N7)** | Carrera de oficio: cuota de score en ventana de tiempo (6 min); salida solo si ya cumpliste; timeout → recuento (no muerte); fallo → diálogo + pierde corrida + Taller a N6 |
 | **Portales del Primer Eje** | Presentes tras el umbral; **aún no activos** |
 
 El Mov. I debe sentirse *Bomberman en minas*, no un menú de power-ups clásico.
@@ -266,7 +266,7 @@ Casos cubiertos:
 
 **Vida y victoria**
 - Daño por tile; contacto AABB (jugador; `golem_basic` solo agresivo; `spirit`/`golem_advanced` siempre; hitbox avanzada 28×28)
-- Jugador: daño no letal + invulnerabilidad 2 s; muerte en la última vida; timeout exclusivo de N7
+- Jugador: daño no letal + invulnerabilidad 2 s; muerte en la última vida; N7: timeout evalúa cuota (éxito/fallo), no game over automático
 - Enemigos: HP por tipo + invulnerabilidad 2 s; respawn 20 s en spawn original
 - Puerta: victoria al pisar el trigger central, incluso con enemigos vivos
 

@@ -4,6 +4,7 @@ import {
   PLAYER_HURT_ANIMATION_DURATION,
   PLAYER_INVULNERABLE_DURATION,
 } from '../../config/constants.js'
+import { evaluateN7Trial, isN7Level } from '../../config/n7Trial.js'
 import { GridQuery } from '../GridQuery.js'
 import { positionFromTile } from '../entityTiles.js'
 import { GOLEM_BASIC_ALERT_RADIUS } from '../../config/enemyTypes.js'
@@ -12,10 +13,10 @@ export class LifeSystem {
   update(world, dt) {
     const player = world.player
 
-    if (world.levelTimer !== null && !world.gameWon && !world.gameOver) {
+    if (world.levelTimer !== null && !world.gameWon && !world.gameOver && !world.trialTimeUp) {
       world.levelTimer = Math.max(0, world.levelTimer - dt)
       if (world.levelTimer === 0) {
-        world.gameOver = true
+        world.trialTimeUp = true
         world.events.push('levelTimeExpired')
         return
       }
@@ -204,12 +205,21 @@ export class LifeSystem {
   }
 
   checkExitDoor(world) {
-    if (!world.exitDoor || !world.player.alive || world.gameWon) return
+    if (!world.exitDoor || !world.player.alive || world.gameWon || world.trialTimeUp) return
     const triggerTiles = world.exitDoor.triggerTiles ?? world.exitDoor.tiles
     const onExit = triggerTiles.some((tile) => (
       tile.x === world.player.tileX && tile.y === world.player.tileY
     ))
     if (!onExit) return
+
+    // N7: la salida solo cierra si la cuota de oficio ya se cumplió.
+    if (isN7Level(world.currentLevelIndex)) {
+      const result = evaluateN7Trial(world, world.levelVisualConfig ?? {})
+      if (!result.passed) {
+        world.events.push('trialExitBlocked')
+        return
+      }
+    }
 
     world.gameWon = true
     world.events.push('levelExit')

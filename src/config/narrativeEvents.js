@@ -71,6 +71,9 @@ export const NARRATIVE_EVENTS = {
   'hub.idle.brun': [{ type: 'dialogue', id: 'hub.idle.brun' }],
   'hub.idle.excavator': [{ type: 'dialogue', id: 'hub.idle.excavator' }],
 
+  'n7.fail.first': [{ type: 'dialogue', id: 'n7.fail.first' }],
+  'n7.fail.retry': [{ type: 'dialogue', id: 'n7.fail.retry' }],
+
   'craft.firstSmelt': [
     { type: 'dialogue', id: 'craft.firstSmelt' },
     { type: 'tutorial', id: 'tut_smelt' },

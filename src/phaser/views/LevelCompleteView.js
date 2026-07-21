@@ -80,6 +80,12 @@ export class LevelCompleteView {
       color: '#ffc857',
     })
 
+    this.trialText = scene.add.text(cx, top + panelHeight - 58, '', {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#78d7e8',
+    }).setOrigin(0.5)
+
     this.continueText = scene.add.text(
       left + panelWidth - 24,
       top + panelHeight - 20,
@@ -98,6 +104,7 @@ export class LevelCompleteView {
       this.levelText,
       this.collectedText,
       ...this.rowNodes.flatMap(({ icon, label, value }) => [icon, label, value]),
+      this.trialText,
       this.totalText,
       this.continueText,
     ])
@@ -109,6 +116,14 @@ export class LevelCompleteView {
       value.setText(`x${valueAt(result, row.path)}`)
     }
     this.totalText.setText(`TOTAL: ${result.totalCollected}`)
+    if (result.trial) {
+      const { score, quota, passed } = result.trial
+      this.titleText.setText(passed ? 'UMBRAL SUPERADO' : 'NIVEL COMPLETADO')
+      this.trialText.setText(`OFICIO ${score} / ${quota}`)
+    } else {
+      this.titleText.setText('NIVEL COMPLETADO')
+      this.trialText.setText('')
+    }
     this.container.setVisible(true)
   }
 

@@ -1694,8 +1694,11 @@ export class LevelGenerator {
       cols,
       rows,
       resourceCap: spec.resourceCap ?? 0,
+      trialQuota: spec.trialQuota ?? null,
       timeLimit: spec.timeLimit ?? null,
       emptyTileLight: spec.emptyTileLight ?? 0,
     }
+    world.trialTimeUp = false
+    world.trialWastedScore = 0
   }
 }
