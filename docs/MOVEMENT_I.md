@@ -1,6 +1,6 @@
 # Uncover — Movement I — Las Minas
 
-> Especificación del Movimiento I. Arquitectura general en [`NARRATIVE.md`](./NARRATIVE.md). Fundamentos culturales en [`CULTURAL_FOUNDATION.md`](./CULTURAL_FOUNDATION.md). Reglas de gameplay en [`DESIGN.md`](./DESIGN.md). Dirección sonora en [`AUDIO.md`](./AUDIO.md).
+> Especificación del Movimiento I. Arquitectura general en [`NARRATIVE.md`](./NARRATIVE.md). Fundamentos culturales en [`CULTURAL_FOUNDATION.md`](./CULTURAL_FOUNDATION.md). Diálogos y voz del viajero: [`DIALOGUES.md`](./DIALOGUES.md). Reglas de gameplay en [`DESIGN.md`](./DESIGN.md). Dirección sonora en [`AUDIO.md`](./AUDIO.md).
 
 ## Índice
 
@@ -12,6 +12,7 @@
 | [Herramientas del viajero](#herramientas-del-viajero) | Bombas mágicas vs pico |
 | [El Taller](#el-taller) | Hub post-nivel, NPCs |
 | [El Primer Excavador](#el-primer-excavador) | Umbral, fallos, portales |
+| [Diálogos](./DIALOGUES.md) | Voz, inicios, descubrimientos, Excavador |
 | [Música](#música-del-movimiento-i) | Dirección sonora |
 | [Dirección visual](#dirección-visual) | Bioma y paleta |
 | [Cierre del movimiento](#cierre-del-movimiento) | Estado de los portales |
@@ -255,6 +256,8 @@ Nivel que combina elementos enseñados y **introduce el golem avanzado**:
 
 El puzzle y el entorno **cuentan**, sin discurso doctrinal, sobre el **Primer Excavador** como figura laboral de la montaña — quién fue, qué dejó, qué protege.
 
+Los **fragmentos especializados (R3)** de este nivel refuerzan esa lectura en diálogo: [`DIALOGUES.md` — R3 / Excavador](./DIALOGUES.md#pool--fragmentos-especializados-r3-n6-historia-del-excavador).
+
 No se explican Piedra / Eco / Llama.
 
 Si el jugador **falla el Nivel 7**, regresa aquí. El reintento refuerza la lectura del preámbulo.
@@ -291,8 +294,9 @@ El Excavador **comenta durante** el encuentro y **al final**.
 Si el viajero **no supera** el umbral:
 
 1. No avanza.
-2. Debe **repetir el Nivel 6**.
-3. Luego puede volver a intentar el Nivel 7.
+2. Diálogo del Excavador: [`DIALOGUES.md` — Prueba fallida](./DIALOGUES.md#prueba-fallida-umbral-no-superado).
+3. Debe **repetir el Nivel 6**.
+4. Luego puede volver a intentar el Nivel 7.
 
 Las mejoras fabricadas en el Taller **no se borran** por el fallo.
 
@@ -343,10 +347,12 @@ No se llama “La Forja”: ese nombre queda reservado al Movimiento V. Ver [Dis
 
 | Quién | Cuándo |
 | ----- | ------ |
-| Enanos del taller | Desde la primera visita |
+| **Brun** (enano del taller; horno + yunque) | Desde la primera visita (tras N2) |
 | **Primer Excavador** | Tras superar el Nivel 7 |
 
-En movimientos posteriores, otros guardianes pueden pasar a habitar el Taller con lore propio. En el Mov. I solo aplica el Excavador.
+Diálogos (intro, avance/fallo por nivel, craft, recetas, amistad): [`DIALOGUES.md` — El Taller](./DIALOGUES.md#el-taller--brun).
+
+En movimientos posteriores, otros guardianes pueden pasar a habitar el Taller con lore propio.
 
 ### Fabricación
 
@@ -378,6 +384,8 @@ Protege un límite.
 La carrera de recursos y la tensión bomba/pico **son** esa pregunta jugable.
 
 ### Comentarios
+
+Textos propuestos: [`DIALOGUES.md` — Primer Excavador](./DIALOGUES.md#primer-excavador).
 
 - **Durante** el encuentro: observaciones sobre cómo trabaja el viajero.
 - **Al final:** reconocimiento + visión **general** de lo que viene en la aventura.
