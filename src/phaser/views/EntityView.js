@@ -1,22 +1,23 @@
 import Phaser from 'phaser'
 import {
-  DIR_UP,
   DIR_DOWN,
   DIR_LEFT,
   DIR_RIGHT,
+  DIR_UP,
   PLAYER_BOMB_ANIMATION_DURATION,
   PLAYER_ESCAPE_DURATION,
   PLAYER_HURT_ANIMATION_DURATION,
-  PLAYER_SPEED,
-  TILE_SIZE,
 } from '../../config/constants.js'
 import { miningDurationFactor } from '../../config/crafting.js'
 import { getAudio } from '../audio/AudioService.js'
+import {
+  createPlayerAnimationSet,
+  createPlayerSprite,
+  ensurePlayerLocomotionAnims,
+  playPlayerIdle,
+  syncPlayerLocomotion,
+} from './playerLocomotion.js'
 
-// Un ciclo completo de walk (~8 frames) cubre ~3 tiles a velocidad base.
-const WALK_FRAME_COUNT = 8
-const WALK_CYCLE_DISTANCE = TILE_SIZE * 3
-const WALK_FRAME_RATE = (PLAYER_SPEED / WALK_CYCLE_DISTANCE) * WALK_FRAME_COUNT
 const MINE_FRAME_RATE = 8
 /** Golpe de pico: frame 4 en numeración 1–6 → índice Phaser 3 (0–5). */
 const MINE_HIT_FRAME_INDEX = 3
@@ -40,20 +41,6 @@ const BOMB_FRAME_LAST = BOMB_FRAME_COUNT - 1
 const EXPLOSION_CENTER_FRAMES = [0, 1, 2, 3, 4, 5, 6, 7, 8]
 /** Aledaños: 7→8→9 y luego 1→9 (índices). */
 const EXPLOSION_ADJACENT_FRAMES = [6, 7, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8]
-
-const PLAYER_WALK_ANIMATIONS = {
-  [DIR_DOWN]: { key: 'player-walk-down', start: 0, end: 7 },
-  [DIR_LEFT]: { key: 'player-walk-left', start: 8, end: 15 },
-  [DIR_RIGHT]: { key: 'player-walk-right', start: 16, end: 23 },
-  [DIR_UP]: { key: 'player-walk-up', start: 24, end: 31 },
-}
-
-const PLAYER_IDLE_ANIMATIONS = {
-  [DIR_DOWN]: { key: 'player-idle-down', start: 0, end: 5 },
-  [DIR_LEFT]: { key: 'player-idle-left', start: 6, end: 11 },
-  [DIR_RIGHT]: { key: 'player-idle-right', start: 12, end: 17 },
-  [DIR_UP]: { key: 'player-idle-up', start: 18, end: 23 },
-}
 
 const PLAYER_HURT_ANIMATIONS = {
   [DIR_DOWN]: { key: 'player-hurt-down', start: 0, end: 6 },
@@ -90,12 +77,7 @@ export class EntityView {
     this.audio = getAudio(scene)
     this.graphics = scene.add.graphics({ x: 0, y: 0 })
     this._createPlayerAnimations()
-    this.playerSprite = scene.add.sprite(0, 0, 'playerIdle', 0)
-      // El dibujo toca el borde inferior de cada frame: los pies son el ancla.
-      // Sobre la niebla (950): el casco siempre ilumina el tile del jugador,
-      // y al medir 64px la cabeza invade el tile superior (muro sombreado).
-      .setOrigin(0.5, 1)
-      .setDepth(955)
+    this.playerSprite = createPlayerSprite(scene, 955)
     this.lastPlayerPosition = null
     /** @type {Map<object, Phaser.GameObjects.Sprite>} */
     this.bombSprites = new Map()
@@ -127,6 +109,14 @@ export class EntityView {
     this._drawPuzzleFlashes()
     this._drawTrapWarnings()
     this._drawDarts()
+  }
+
+  /** Fuerza idle (p. ej. al entrar en blackout; Phaser sigue animando sin update). */
+  freezePlayerIdle() {
+    const player = this.world.player
+    if (!player?.alive || !this.playerSprite) return
+    playPlayerIdle(this.playerSprite, player)
+    this.lastPlayerPosition = { x: player.posX, y: player.posY }
   }
 
   destroy() {
@@ -176,48 +166,22 @@ export class EntityView {
   }
 
   _createPlayerAnimations() {
-    this._createAnimationSet(PLAYER_WALK_ANIMATIONS, 'playerWalk', {
-      frameRate: WALK_FRAME_RATE,
-    })
-    this._createAnimationSet(PLAYER_IDLE_ANIMATIONS, 'playerIdle', {
-      frameRate: 4,
-    })
-    this._createAnimationSet(PLAYER_HURT_ANIMATIONS, 'playerHurt', {
+    ensurePlayerLocomotionAnims(this.scene)
+    createPlayerAnimationSet(this.scene, PLAYER_HURT_ANIMATIONS, 'playerHurt', {
       duration: PLAYER_HURT_ANIMATION_DURATION * 1000,
       repeat: 0,
     })
-    this._createAnimationSet(PLAYER_BOMB_ANIMATIONS, 'playerBomb', {
+    createPlayerAnimationSet(this.scene, PLAYER_BOMB_ANIMATIONS, 'playerBomb', {
       duration: PLAYER_BOMB_ANIMATION_DURATION * 1000,
       repeat: 0,
     })
-    this._createAnimationSet(PLAYER_MINE_ANIMATIONS, 'playerMine', {
+    createPlayerAnimationSet(this.scene, PLAYER_MINE_ANIMATIONS, 'playerMine', {
       frameRate: MINE_FRAME_RATE,
     })
-    this._createAnimationSet(PLAYER_ESCAPE_ANIMATIONS, 'playerDeath', {
+    createPlayerAnimationSet(this.scene, PLAYER_ESCAPE_ANIMATIONS, 'playerDeath', {
       duration: PLAYER_ESCAPE_DURATION * 1000,
       repeat: 0,
     })
-  }
-
-  _createAnimationSet(animationSet, texture, {
-    frameRate,
-    duration,
-    repeat = -1,
-  }) {
-    for (const animation of Object.values(animationSet)) {
-      if (this.scene.anims.exists(animation.key)) continue
-      const config = {
-        key: animation.key,
-        frames: this.scene.anims.generateFrameNumbers(texture, {
-          start: animation.start,
-          end: animation.end,
-        }),
-        repeat,
-      }
-      if (duration !== undefined) config.duration = duration
-      else config.frameRate = frameRate
-      this.scene.anims.create(config)
-    }
   }
 
   _updatePlayerSprite() {
@@ -227,17 +191,6 @@ export class EntityView {
       return
     }
 
-    const feetX = player.posX + player.size / 2
-    const feetY = player.posY + player.size
-    const moved = Boolean(
-      this.lastPlayerPosition
-      && (
-        Math.abs(player.posX - this.lastPlayerPosition.x) > 0.01
-        || Math.abs(player.posY - this.lastPlayerPosition.y) > 0.01
-      )
-    )
-    this.lastPlayerPosition = { x: player.posX, y: player.posY }
-
     const hurtActive = player.alive && player.hurtAnimationTimer > 0
     const flickerHidden = (
       player.alive
@@ -245,23 +198,16 @@ export class EntityView {
       && player.invulnerableTimer > 0
       && Math.floor(player.invulnerableTimer * 20) % 2 !== 0
     )
-    this.playerSprite
-      .setPosition(feetX, feetY)
-      .setVisible(!flickerHidden)
 
-    const walkAnimation = PLAYER_WALK_ANIMATIONS[player.facing]
-      ?? PLAYER_WALK_ANIMATIONS[DIR_DOWN]
-    const idleAnimation = PLAYER_IDLE_ANIMATIONS[player.facing]
-      ?? PLAYER_IDLE_ANIMATIONS[DIR_DOWN]
-    const hurtAnimation = PLAYER_HURT_ANIMATIONS[player.facing]
-      ?? PLAYER_HURT_ANIMATIONS[DIR_DOWN]
-    const bombAnimation = PLAYER_BOMB_ANIMATIONS[player.facing]
-      ?? PLAYER_BOMB_ANIMATIONS[DIR_DOWN]
-    const mineAnimation = PLAYER_MINE_ANIMATIONS[player.facing]
-      ?? PLAYER_MINE_ANIMATIONS[DIR_DOWN]
-    const escapeAnimation = PLAYER_ESCAPE_ANIMATIONS[player.facing]
-      ?? PLAYER_ESCAPE_ANIMATIONS[DIR_DOWN]
     if (hurtActive) {
+      const feetX = player.posX + player.size / 2
+      const feetY = player.posY + player.size
+      this.lastPlayerPosition = { x: player.posX, y: player.posY }
+      this.playerSprite
+        .setPosition(feetX, feetY)
+        .setVisible(true)
+      const hurtAnimation = PLAYER_HURT_ANIMATIONS[player.facing]
+        ?? PLAYER_HURT_ANIMATIONS[DIR_DOWN]
       this.playerSprite.clearTint()
       this.playerSprite.anims.timeScale = 1
       this.playerSprite.play(hurtAnimation.key, true)
@@ -269,6 +215,14 @@ export class EntityView {
     }
 
     if (player.alive && player.bombPlacement) {
+      const feetX = player.posX + player.size / 2
+      const feetY = player.posY + player.size
+      this.lastPlayerPosition = { x: player.posX, y: player.posY }
+      this.playerSprite
+        .setPosition(feetX, feetY)
+        .setVisible(!flickerHidden)
+      const bombAnimation = PLAYER_BOMB_ANIMATIONS[player.facing]
+        ?? PLAYER_BOMB_ANIMATIONS[DIR_DOWN]
       this.playerSprite.clearTint()
       this.playerSprite.anims.timeScale = 1
       this.playerSprite.play(bombAnimation.key, true)
@@ -276,28 +230,41 @@ export class EntityView {
     }
 
     if (player.alive && this.world.activeMiningTarget) {
+      const feetX = player.posX + player.size / 2
+      const feetY = player.posY + player.size
+      this.lastPlayerPosition = { x: player.posX, y: player.posY }
+      this.playerSprite
+        .setPosition(feetX, feetY)
+        .setVisible(!flickerHidden)
+      const mineAnimation = PLAYER_MINE_ANIMATIONS[player.facing]
+        ?? PLAYER_MINE_ANIMATIONS[DIR_DOWN]
       this.playerSprite.clearTint()
       this.playerSprite.anims.timeScale = 1 / miningDurationFactor(player.pickSpeed ?? 0)
       this.playerSprite.play(mineAnimation.key, true)
       return
     }
 
-    if (player.alive && moved) {
-      this.playerSprite.clearTint()
-      this.playerSprite.anims.timeScale = player.speed / PLAYER_SPEED
-      this.playerSprite.play(walkAnimation.key, true)
-      return
-    }
-
-    if (player.alive) {
-      this.playerSprite.clearTint()
-      this.playerSprite.anims.timeScale = 1
-      this.playerSprite.play(idleAnimation.key, true)
-    } else {
+    if (!player.alive) {
+      const feetX = player.posX + player.size / 2
+      const feetY = player.posY + player.size
+      this.lastPlayerPosition = { x: player.posX, y: player.posY }
+      this.playerSprite
+        .setPosition(feetX, feetY)
+        .setVisible(true)
+      const escapeAnimation = PLAYER_ESCAPE_ANIMATIONS[player.facing]
+        ?? PLAYER_ESCAPE_ANIMATIONS[DIR_DOWN]
       this.playerSprite.clearTint()
       this.playerSprite.anims.timeScale = 1
       this.playerSprite.play(escapeAnimation.key, true)
+      return
     }
+
+    this.lastPlayerPosition = syncPlayerLocomotion(
+      this.playerSprite,
+      player,
+      this.lastPlayerPosition,
+    )
+    if (flickerHidden) this.playerSprite.setVisible(false)
   }
 
   _drawEnemy(enemy) {

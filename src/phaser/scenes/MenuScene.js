@@ -1,10 +1,18 @@
 import Phaser from 'phaser'
 import { session } from '../../core/session.js'
 import { getAudio } from '../audio/AudioService.js'
+import {
+  maybeFadeInFromBlackout,
+  takeBlackoutFadeIn,
+} from '../fx/blackout.js'
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
     super('Menu')
+  }
+
+  init(data) {
+    this._pendingBlackoutFadeIn = takeBlackoutFadeIn(data)
   }
 
   create() {
@@ -62,5 +70,10 @@ export class MenuScene extends Phaser.Scene {
       this.gameState.wipeProgress()
       this.scene.start('LevelSelect')
     })
+
+    if (this._pendingBlackoutFadeIn) {
+      this._pendingBlackoutFadeIn = false
+      maybeFadeInFromBlackout(this)
+    }
   }
 }

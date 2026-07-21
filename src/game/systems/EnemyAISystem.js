@@ -48,7 +48,9 @@ function updateSpiritRage(enemy, world, dt) {
   }
 
   if (nearExplosion) {
+    const wasAggressive = enemy.aggressive
     enemy.setAggressive(true, enemy.chaseTimeout)
+    if (!wasAggressive) world.events.push('spiritRage')
     return
   }
 

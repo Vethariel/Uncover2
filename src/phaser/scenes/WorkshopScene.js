@@ -17,13 +17,25 @@ import { getAudio } from '../audio/AudioService.js'
 import { WorkshopView } from '../views/WorkshopView.js'
 import { createWorkshopWorld } from '../../game/workshop/WorkshopWorld.js'
 import { WorkshopLoop } from '../../game/workshop/WorkshopLoop.js'
+import {
+  BLACKOUT_DATA_KEY,
+  maybeFadeInFromBlackout,
+  runBlackout,
+  takeBlackoutFadeIn,
+} from '../fx/blackout.js'
 
 export class WorkshopScene extends Phaser.Scene {
   constructor() {
     super('Workshop')
   }
 
+  init(data) {
+    this._pendingBlackoutFadeIn = takeBlackoutFadeIn(data)
+  }
+
   create() {
+    // Phaser reutiliza la instancia: un blackout previo hacia Game deja el flag.
+    this._blackoutRunning = false
     this.gameState = session.gameState
     this.gameState.recomputeStatsFromUpgrades()
     this.gameState.hubUnlocked = true
@@ -56,9 +68,16 @@ export class WorkshopScene extends Phaser.Scene {
     )
 
     this.audio.playMusic('workshop')
+
+    if (this._pendingBlackoutFadeIn) {
+      this._pendingBlackoutFadeIn = false
+      maybeFadeInFromBlackout(this)
+    }
   }
 
   update(_time, delta) {
+    if (this._blackoutRunning) return
+
     const dt = Math.min(delta / 1000, 0.05)
 
     if (this.menu) {
@@ -150,6 +169,7 @@ export class WorkshopScene extends Phaser.Scene {
   }
 
   _openStationMenu(station) {
+    this.view?.freezePlayerIdle()
     this.menuIndex = 0
     this.menu = {
       kind: station.kind,
@@ -331,13 +351,17 @@ export class WorkshopScene extends Phaser.Scene {
   }
 
   _leaveHub() {
+    this.view?.freezePlayerIdle()
     const index = this.gameState.levelIndexForHubExit()
-    if (index >= LEVELS.length) {
-      this.scene.start('Menu')
-      return
-    }
-    this.gameState.hubEntry = null
-    this.gameState.save()
-    this.scene.start('Game')
+    const nextScene = index >= LEVELS.length ? 'Menu' : 'Game'
+    runBlackout(this, {
+      onBlack: () => {
+        if (nextScene === 'Game') {
+          this.gameState.hubEntry = null
+          this.gameState.save()
+        }
+        this.scene.start(nextScene, { [BLACKOUT_DATA_KEY]: true })
+      },
+    })
   }
 }

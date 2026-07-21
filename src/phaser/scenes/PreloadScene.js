@@ -59,6 +59,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.audio('playerDeath', 'assets/sounds/player_death.mp3')
     this.load.audio('enemyDeath', 'assets/sounds/enemy_death.wav')
     this.load.audio('enemyHurt', 'assets/sounds/enemy_hurt.mp3')
+    this.load.audio('spiritRage', 'assets/sounds/spirit_rage.mp3')
+    this.load.audio('golemAggro', 'assets/sounds/golem_aggro.mp3')
     this.load.audio('uiStep', 'assets/sounds/ui_step.mp3')
     this.load.audio('puzzleComplete', 'assets/sounds/puzzle_complete.mp3')
     this.load.audio('puzzleFail', 'assets/sounds/puzzle_fail.mp3')

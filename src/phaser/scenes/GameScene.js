@@ -24,6 +24,12 @@ import { HudView } from '../views/HudView.js'
 import { DialogueView } from '../views/DialogueView.js'
 import { LevelCompleteView } from '../views/LevelCompleteView.js'
 import { isNearOpenableChest } from '../../game/systems/PuzzleSystem.js'
+import {
+  BLACKOUT_DATA_KEY,
+  maybeFadeInFromBlackout,
+  runBlackout,
+  takeBlackoutFadeIn,
+} from '../fx/blackout.js'
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -31,20 +37,42 @@ export class GameScene extends Phaser.Scene {
     this.controller = new GameController()
   }
 
-  init(_data) {
+  init(data) {
+    this._pendingBlackoutFadeIn = takeBlackoutFadeIn(data)
   }
 
   create() {
+    // Phaser reutiliza la instancia: un blackout previo hacia Workshop deja el flag.
+    this._blackoutRunning = false
     this.gameState = session.gameState
     this.inputAdapter = new InputAdapter(this)
     this.audio = getAudio(this)
     this.soundBridge = new SoundBridge(this)
 
     this._startLevel()
+    if (this._pendingBlackoutFadeIn) {
+      this._pendingBlackoutFadeIn = false
+      maybeFadeInFromBlackout(this, () => this._beginLevelIntro())
+    } else {
+      this._beginLevelIntro()
+    }
   }
 
   update(_time, delta) {
+    if (this._blackoutRunning) return
+
     const dt = Math.min(delta / 1000, 0.05)
+
+    if (this._pendingLevelIntro) {
+      this.entityView?.update()
+      this._syncCamera()
+      return
+    }
+
+    if (this.levelIntro) {
+      this._updateLevelIntro(dt)
+      return
+    }
 
     if (this.dialogueController?.active) {
       this._updateDialogue(dt)
@@ -97,16 +125,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   _routeAfterVictory(completedIndex) {
+    this.entityView?.freezePlayerIdle()
     const route = this.gameState.routeAfterVictory(completedIndex)
-    if (route === 'menu') {
-      this._cleanupLevel()
-      this.scene.start('Menu')
-    } else if (route === 'workshop') {
-      this._cleanupLevel()
-      this.scene.start('Workshop')
-    } else {
-      this._startLevel()
+    if (route === 'level') {
+      runBlackout(this, {
+        sameScene: true,
+        onBlack: () => this._startLevel(),
+        onReveal: () => this._beginLevelIntro(),
+      })
+      return
     }
+
+    const nextScene = route === 'workshop' ? 'Workshop' : 'Menu'
+    runBlackout(this, {
+      onBlack: () => {
+        this._cleanupLevel()
+        this.scene.start(nextScene, { [BLACKOUT_DATA_KEY]: true })
+      },
+    })
   }
 
   _openOverlay(type, duration = 0) {
@@ -164,6 +200,73 @@ export class GameScene extends Phaser.Scene {
 
     this.pendingMusicKey = this.world.levelVisualConfig?.bgMusic ?? 'mov1_n1'
     this.audio.stopMusic()
+    this.levelIntro = null
+    this._pendingLevelIntro = true
+  }
+
+  /**
+   * Camina 1 tile hacia el interior (opuesto al muro indestructible tras la puerta)
+   * y recién entonces abre el diálogo de entrada.
+   */
+  _beginLevelIntro() {
+    this._pendingLevelIntro = false
+    const door = this.world?.entryDoor
+    const player = this.world?.player
+    const target = entryWalkTarget(door)
+    if (!player || !target) {
+      this._startLevelDialogue()
+      return
+    }
+
+    player.facing = facingIntoRoom(door.orientation)
+    this.levelIntro = {
+      x: target.x,
+      y: target.y,
+      speed: player.speed,
+    }
+    this.inputAdapter.flush()
+  }
+
+  _updateLevelIntro(dt) {
+    const intro = this.levelIntro
+    const player = this.world.player
+    if (!intro || !player) {
+      this.levelIntro = null
+      this._startLevelDialogue()
+      return
+    }
+
+    const target = positionFromTile(
+      intro.x,
+      intro.y,
+      this.world.tileSize,
+      player.size,
+    )
+    const dx = target.posX - player.posX
+    const dy = target.posY - player.posY
+    const distance = Math.hypot(dx, dy)
+
+    if (distance > 0.01) {
+      const amount = Math.min(distance, (intro.speed ?? player.speed) * dt)
+      player.posX += (dx / distance) * amount
+      player.posY += (dy / distance) * amount
+      syncTileFromPosition(player, this.world.tileSize)
+    }
+
+    this.entityView.update()
+    this.fogOfWarView?.update(dt)
+    this.minimapView?.update()
+    this.hudView?.update()
+    this._syncCamera()
+
+    if (distance <= 0.01) {
+      this.levelIntro = null
+      this._startLevelDialogue()
+    }
+  }
+
+  _startLevelDialogue() {
+    const levelSpec = LEVELS[this.gameState.currentLevelIndex] ?? LEVELS[0]
     this._startDialogue(levelStartDialogue(
       this.gameState.currentLevelIndex,
       levelSpec.name,
@@ -326,6 +429,8 @@ export class GameScene extends Phaser.Scene {
     this.levelCompleteView?.destroy()
     this.levelCompleteView = null
     this.levelResult = null
+    this.levelIntro = null
+    this._pendingLevelIntro = false
     this.chestPrompt?.destroy()
     this.chestPrompt = null
     this.pendingMusicKey = null
@@ -336,5 +441,31 @@ export class GameScene extends Phaser.Scene {
     if (this.scene.isActive('GameOverlay')) {
       this.scene.stop('GameOverlay')
     }
+  }
+}
+
+/** Tile frontal central: un paso hacia dentro, opuesto al backing indestructible. */
+function entryWalkTarget(entryDoor) {
+  if (!entryDoor) return null
+  const front = entryDoor.frontTiles
+  if (front?.length) return front[Math.floor(front.length / 2)]
+  const trigger = entryDoor.trigger ?? entryDoor.triggerTiles?.[0]
+  if (!trigger) return null
+  switch (entryDoor.orientation) {
+    case 'north': return { x: trigger.x, y: trigger.y + 1 }
+    case 'south': return { x: trigger.x, y: trigger.y - 1 }
+    case 'west': return { x: trigger.x + 1, y: trigger.y }
+    case 'east': return { x: trigger.x - 1, y: trigger.y }
+    default: return null
+  }
+}
+
+function facingIntoRoom(orientation) {
+  switch (orientation) {
+    case 'north': return DIR_DOWN
+    case 'south': return DIR_UP
+    case 'west': return DIR_RIGHT
+    case 'east': return DIR_LEFT
+    default: return DIR_DOWN
   }
 }

@@ -15,6 +15,8 @@ export class AudioService {
       playerHurt: 0.8,
       fragmentCollected: 0.75,
       enemyHurt: 0.85,
+      spiritRage: 0.9,
+      golemAggro: 0.35,
       dartHit: 0.85,
     }
   }

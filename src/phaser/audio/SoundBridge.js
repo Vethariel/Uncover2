@@ -59,6 +59,12 @@ export class SoundBridge {
         case 'enemyDeath':
           this.audio.playSFX('enemyDeath')
           break
+        case 'spiritRage':
+          this.audio.playSFX('spiritRage')
+          break
+        case 'golemAggro':
+          this.audio.playSFX('golemAggro')
+          break
         case 'puzzleStep':
         case 'trapArmed':
           this.audio.playSFX('uiStep')

@@ -120,7 +120,10 @@ export class LifeSystem {
   onEnemyAttacked(world, attacker) {
     if (attacker.kind !== 'golem_basic') return
 
+    const wasAggressive = attacker.aggressive
     attacker.setAggressive(true, attacker.chaseTimeout)
+    if (!wasAggressive) world.events.push('golemAggro')
+
     const radius = attacker.alertRadius || GOLEM_BASIC_ALERT_RADIUS
     for (const other of world.enemies) {
       if (!other.alive || other === attacker) continue
@@ -128,7 +131,9 @@ export class LifeSystem {
       const dist = Math.abs(other.tileX - attacker.tileX)
         + Math.abs(other.tileY - attacker.tileY)
       if (dist <= radius) {
+        const otherWasAggressive = other.aggressive
         other.setAggressive(true, other.chaseTimeout)
+        if (!otherWasAggressive) world.events.push('golemAggro')
       }
     }
   }
