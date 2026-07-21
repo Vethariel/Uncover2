@@ -1,3 +1,4 @@
+import Phaser from 'phaser'
 import {
   DIR_UP,
   DIR_DOWN,
@@ -10,12 +11,19 @@ import {
   TILE_SIZE,
 } from '../../config/constants.js'
 import { miningDurationFactor } from '../../config/crafting.js'
+import { getAudio } from '../audio/AudioService.js'
 
 // Un ciclo completo de walk (~8 frames) cubre ~3 tiles a velocidad base.
 const WALK_FRAME_COUNT = 8
 const WALK_CYCLE_DISTANCE = TILE_SIZE * 3
 const WALK_FRAME_RATE = (PLAYER_SPEED / WALK_CYCLE_DISTANCE) * WALK_FRAME_COUNT
 const MINE_FRAME_RATE = 8
+/** Golpe de pico: frame 4 en numeración 1–6 → índice Phaser 3 (0–5). */
+const MINE_HIT_FRAME_INDEX = 3
+/** Whoosh de escape: frame 8 en numeración 1–13 → índice Phaser 7 (0–12). */
+const ESCAPE_SFX_FRAME_INDEX = 7
+/** Impacto al colocar bomba: frame 5 en numeración 1–7 → índice Phaser 4 (0–6). */
+const BOMB_PLACE_SFX_FRAME_INDEX = 4
 
 const COLORS = {
   enemy: {
@@ -74,6 +82,7 @@ export class EntityView {
   constructor(scene, world) {
     this.scene = scene
     this.world = world
+    this.audio = getAudio(scene)
     this.graphics = scene.add.graphics({ x: 0, y: 0 })
     this._createPlayerAnimations()
     this.playerSprite = scene.add.sprite(0, 0, 'playerIdle', 0)
@@ -83,6 +92,11 @@ export class EntityView {
       .setOrigin(0.5, 1)
       .setDepth(955)
     this.lastPlayerPosition = null
+    this.playerSprite.on(
+      Phaser.Animations.Events.ANIMATION_UPDATE,
+      this._onPlayerAnimationUpdate,
+      this,
+    )
   }
 
   update() {
@@ -107,8 +121,32 @@ export class EntityView {
   }
 
   destroy() {
+    this.playerSprite.off(
+      Phaser.Animations.Events.ANIMATION_UPDATE,
+      this._onPlayerAnimationUpdate,
+      this,
+    )
     this.graphics.destroy()
     this.playerSprite.destroy()
+  }
+
+  _onPlayerAnimationUpdate(animation, frame) {
+    const key = animation?.key
+    if (!key) return
+
+    if (key.startsWith('player-mine-') && frame.index === MINE_HIT_FRAME_INDEX) {
+      this.audio.playSFX('mine')
+      return
+    }
+
+    if (key.startsWith('player-bomb-') && frame.index === BOMB_PLACE_SFX_FRAME_INDEX) {
+      this.audio.playSFX('bombPlace')
+      return
+    }
+
+    if (key.startsWith('player-escape-') && frame.index === ESCAPE_SFX_FRAME_INDEX) {
+      this.audio.playSFX('playerDeath')
+    }
   }
 
   _draw(kind, entity) {

@@ -18,26 +18,44 @@ export class SoundBridge {
             this.walkCooldown = this.walkCooldownMax
           }
           break
-        case 'bombPlace':
-          this.audio.playSFX('bombPlace')
-          break
-        case 'explosion':
-          this.audio.playSFX('explosion')
-          break
-        case 'playerDeath':
-          this.audio.playSFX('playerDeath')
+        case 'playerDamaged':
+          this.audio.playSFX('playerHurt')
           break
         case 'enemyDeath':
           this.audio.playSFX('enemyDeath')
           break
         case 'puzzleStep':
-        case 'puzzleFail':
-        case 'puzzleComplete':
-        case 'chestOpen':
         case 'trapArmed':
+          this.audio.playSFX('uiStep')
+          break
+        case 'puzzleComplete':
+          this.audio.playSFX('puzzleComplete')
+          break
+        case 'puzzleFail':
+          this.audio.playSFX('puzzleFail')
+          break
         case 'dartFire':
+          this.audio.playSFX('dartFire')
+          break
         case 'trapDestroyed':
-          // Hooks listos; SFX dedicados cuando haya assets.
+          this.audio.playSFX('trapDestroyed')
+          break
+        case 'chestOpen':
+          this.audio.playSFX('chestOpen')
+          break
+        case 'mineComplete':
+        case 'resourceCollected':
+          this.audio.playSFX('mineComplete')
+          break
+        case 'fragmentCollected':
+          this.audio.playSFX('fragmentCollected')
+          break
+        case 'explosion':
+          this.audio.playSFX('explosion')
+          break
+        case 'bombPlace':
+        case 'playerDeath':
+          // bombPlace / playerDeath: sincronizados a frame en EntityView.
           break
       }
     }

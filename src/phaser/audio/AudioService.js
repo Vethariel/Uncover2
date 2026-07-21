@@ -6,6 +6,15 @@ export class AudioService {
     this.sfxVolume = 0.8
     this.musicVolume = 0.5
     this.musicDuckScale = 1
+    /** Escala relativa por clave (1 = volumen SFX global). */
+    this.sfxGain = {
+      mineComplete: 0.55,
+      trapDestroyed: 0.7,
+      explosion: 0.75,
+      puzzleFail: 0.75,
+      playerHurt: 0.8,
+      fragmentCollected: 0.75,
+    }
   }
 
   static get(game) {
@@ -39,7 +48,8 @@ export class AudioService {
 
   playSFX(key) {
     if (!this.game.cache.audio.exists(key)) return
-    this.game.sound.play(key, { volume: this.sfxVolume })
+    const gain = this.sfxGain[key] ?? 1
+    this.game.sound.play(key, { volume: this.sfxVolume * gain })
   }
 
   playMusic(key, loop = true) {
