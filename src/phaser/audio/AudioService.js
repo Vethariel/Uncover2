@@ -14,6 +14,8 @@ export class AudioService {
       puzzleFail: 0.75,
       playerHurt: 0.8,
       fragmentCollected: 0.75,
+      enemyHurt: 0.85,
+      dartHit: 0.85,
     }
   }
 
@@ -46,10 +48,14 @@ export class AudioService {
     this.overlay = null
   }
 
-  playSFX(key) {
+  playSFX(key, options = {}) {
     if (!this.game.cache.audio.exists(key)) return
     const gain = this.sfxGain[key] ?? 1
-    this.game.sound.play(key, { volume: this.sfxVolume * gain })
+    const volumeScale = options.volume ?? 1
+    this.game.sound.play(key, {
+      volume: this.sfxVolume * gain * volumeScale,
+      rate: options.rate ?? 1,
+    })
   }
 
   playMusic(key, loop = true) {

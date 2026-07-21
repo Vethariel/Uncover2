@@ -62,7 +62,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     const result = this.controller.update(this.world, dt, this.inputAdapter)
-    this.soundBridge.handleEvents(result.events, dt)
+    this.soundBridge.handleEvents(result.events, dt, this.world)
 
     this.tilemapView.update(dt)
     this.entityView.update()
