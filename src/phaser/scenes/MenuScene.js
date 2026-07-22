@@ -5,6 +5,7 @@ import {
   maybeFadeInFromBlackout,
   takeBlackoutFadeIn,
 } from '../fx/blackout.js'
+import { MenuBackgroundView } from '../views/MenuBackgroundView.js'
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -24,44 +25,39 @@ export class MenuScene extends Phaser.Scene {
 
     getAudio(this).playMusic('menu')
 
+    this.menuBg = new MenuBackgroundView(this)
+
     const cx = this.scale.width / 2
-    const cy = this.scale.height / 2
-
-    this.bombShape = this.add.circle(cx, cy - 60, 18, 0x20242b)
-      .setStrokeStyle(3, 0xffc857)
-
-    this.tweens.add({
-      targets: this.bombShape,
-      scale: 1.15,
-      duration: 450,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    })
-
-    this.add.text(cx, cy - 10, 'UNCOVER', {
-      fontSize: '16px',
-      color: '#ffffff',
-    }).setOrigin(0.5)
-
-    this.pressText = this.add.text(cx, cy + 15, 'PRESS ENTER TO START', {
+    const promptStyle = {
       fontSize: '8px',
-      color: '#c8c8c8',
-    }).setOrigin(0.5)
+      color: '#e8e0d0',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }
+
+    this.pressText = this.add
+      .text(cx, this.scale.height - 36, 'PRESS ENTER TO START', promptStyle)
+      .setOrigin(0.5)
+      .setDepth(10)
 
     this.tweens.add({
       targets: this.pressText,
-      alpha: 0.2,
-      duration: 500,
+      alpha: 0.35,
+      duration: 550,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     })
 
-    this.add.text(cx, cy + 40, 'N — NEW GAME', {
-      fontSize: '8px',
-      color: '#8a93a0',
-    }).setOrigin(0.5)
+    this.add
+      .text(cx, this.scale.height - 18, 'N — NEW GAME', {
+        fontSize: '8px',
+        color: '#9aa3ad',
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(10)
 
     this.input.keyboard.on('keydown-ENTER', () => {
       this.scene.start('LevelSelect')

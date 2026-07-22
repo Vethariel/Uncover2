@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { preloadMenuBackground } from '../views/MenuBackgroundView.js'
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -6,6 +7,8 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload() {
+    preloadMenuBackground(this.load)
+
     this.load.spritesheet(
       'playerWalk',
       'assets/sprites/player_walk.png',
