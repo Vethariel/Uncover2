@@ -1,13 +1,49 @@
+import {
+  DEFAULT_BRUN_EXPRESSION,
+  DEFAULT_EXCAVATOR_EXPRESSION,
+  DEFAULT_PLAYER_EXPRESSION,
+  BRUN_EXPRESSIONS,
+  EXCAVATOR_EXPRESSIONS,
+  PLAYER_EXPRESSIONS,
+} from '../config/portraitExpressions.js'
+
 const DEFAULT_CHARS_PER_SECOND = 40
+
+function normalizeExpression(portrait, expression) {
+  if (portrait === 'player') {
+    return PLAYER_EXPRESSIONS.includes(expression)
+      ? expression
+      : DEFAULT_PLAYER_EXPRESSION
+  }
+  if (portrait === 'excavator') {
+    return EXCAVATOR_EXPRESSIONS.includes(expression)
+      ? expression
+      : DEFAULT_EXCAVATOR_EXPRESSION
+  }
+  if (portrait === 'smith') {
+    return BRUN_EXPRESSIONS.includes(expression)
+      ? expression
+      : DEFAULT_BRUN_EXPRESSION
+  }
+  return null
+}
 
 function normalizeEntry(entry) {
   if (typeof entry === 'string') {
-    return { speaker: '', text: entry, portrait: null, animation: null }
+    return {
+      speaker: '',
+      text: entry,
+      portrait: null,
+      expression: null,
+      animation: null,
+    }
   }
+  const portrait = entry?.portrait ?? null
   return {
     speaker: entry?.speaker ?? '',
     text: entry?.text ?? '',
-    portrait: entry?.portrait ?? null,
+    portrait,
+    expression: normalizeExpression(portrait, entry?.expression ?? null),
     animation: entry?.animation ?? null,
   }
 }

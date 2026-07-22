@@ -1,5 +1,11 @@
 import Phaser from 'phaser'
 import { preloadMenuBackground } from '../views/MenuBackgroundView.js'
+import {
+  BRUN_EXPRESSIONS,
+  EXCAVATOR_EXPRESSIONS,
+  PLAYER_EXPRESSIONS,
+  portraitTextureKey,
+} from '../../config/portraitExpressions.js'
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -8,6 +14,24 @@ export class PreloadScene extends Phaser.Scene {
 
   preload() {
     preloadMenuBackground(this.load)
+    for (const expression of PLAYER_EXPRESSIONS) {
+      this.load.image(
+        portraitTextureKey('player', expression),
+        `assets/ui/portraits/player/${expression}.png`,
+      )
+    }
+    for (const expression of EXCAVATOR_EXPRESSIONS) {
+      this.load.image(
+        portraitTextureKey('excavator', expression),
+        `assets/ui/portraits/excavator/${expression}.png`,
+      )
+    }
+    for (const expression of BRUN_EXPRESSIONS) {
+      this.load.image(
+        portraitTextureKey('smith', expression),
+        `assets/ui/portraits/brun/${expression}.png`,
+      )
+    }
 
     this.load.spritesheet(
       'playerWalk',
