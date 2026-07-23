@@ -17,12 +17,14 @@ export const ENEMY_LIGHT = 2
 export const ENRAGED_SPIRIT_LIGHT = 5
 export const EXPLOSION_LIGHT = 5
 export const WALL_LIGHT = 10
+export const DOOR_LIGHT = 10
 export const MAX_LIGHT = 10
-export const FLASHLIGHT_CONE_DEGREES = 100
+export const FLASHLIGHT_CONE_DEGREES = 180
 
-const FLASHLIGHT_HALF_ANGLE_COS = Math.cos(
-  (FLASHLIGHT_CONE_DEGREES / 2) * Math.PI / 180,
-)
+// cos(90°) en float no es exactamente 0; forzar 0 para semicírculo.
+const FLASHLIGHT_HALF_ANGLE_COS = FLASHLIGHT_CONE_DEGREES >= 180
+  ? 0
+  : Math.cos((FLASHLIGHT_CONE_DEGREES / 2) * Math.PI / 180)
 
 function tileKey(x, y) {
   return `${x},${y}`
@@ -288,6 +290,19 @@ export class VisionSystem {
       )
     }
 
+    for (const door of [world.entryDoor, world.exitDoor]) {
+      const center = door?.trigger ?? door?.center
+      if (!center) continue
+      propagateSource(
+        world,
+        lightLevels,
+        center.x,
+        center.y,
+        DOOR_LIGHT,
+        viewport,
+      )
+    }
+
     applyEmptyTileLight(world, lightLevels, emptyTileLight, viewport)
 
     const visible = new Set()
@@ -295,6 +310,21 @@ export class VisionSystem {
       if (level <= 0) continue
       visible.add(cellKey)
       world.discoveredTiles.add(cellKey)
+    }
+
+    // Muros ortogonales a un tile lit: el borde de galería se descubre con el pasillo
+    // (si no, el sprite queda oculto en penumbra mientras el suelo sí se ve).
+    for (const cellKey of visible) {
+      const [xs, ys] = cellKey.split(',')
+      const x = Number(xs)
+      const y = Number(ys)
+      for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const wx = x + ox
+        const wy = y + oy
+        if (!grid.inBounds(wx, wy)) continue
+        if (grid.get(wx, wy) !== TILE_WALL) continue
+        world.discoveredTiles.add(`${wx},${wy}`)
+      }
     }
 
     world.lightLevels = lightLevels

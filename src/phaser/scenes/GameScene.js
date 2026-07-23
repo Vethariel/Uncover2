@@ -116,8 +116,8 @@ export class GameScene extends Phaser.Scene {
     this.soundBridge.handleEvents(result.events, dt, this.world)
     this._scanFacingDiscoveries()
 
-    this.tilemapView.update(dt)
     this.fogOfWarView.update(dt)
+    this.tilemapView.update(dt)
     this.entityView.update()
     this.minimapView.update()
     this.hudView.update()

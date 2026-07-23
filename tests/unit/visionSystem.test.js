@@ -17,7 +17,7 @@ function openMap(size = 13) {
 }
 
 describe('VisionSystem', () => {
-  it('usa casco 7 como cono orientado dentro del radio visual máximo', () => {
+  it('usa casco 7 como semicírculo orientado dentro del radio visual máximo', () => {
     const world = createTestWorld(openMap(25), { playerSpawn: { x: 12, y: 12 } })
     world.player.facing = DIR_DOWN
     vision.update(world)
@@ -26,7 +26,8 @@ describe('VisionSystem', () => {
     expect(world.lightLevels.get('12,13')).toBe(6)
     expect(world.lightLevels.get('13,13')).toBe(6)
     expect(world.lightLevels.get('12,18')).toBe(1)
-    expect(world.visibleTiles.has('13,12')).toBe(false)
+    // 180°: el lateral a 90° entra; lo de atrás no.
+    expect(world.visibleTiles.has('13,12')).toBe(true)
     expect(world.visibleTiles.has('12,11')).toBe(false)
     expect(world.visibleTiles.has('12,19')).toBe(false)
 
@@ -37,19 +38,19 @@ describe('VisionSystem', () => {
     expect(world.discoveredTiles.has('12,12')).toBe(true)
   })
 
-  it('recalcula y rota el cono cuando cambia el facing', () => {
+  it('recalcula y rota el semicírculo cuando cambia el facing', () => {
     const world = createTestWorld(openMap(25), { playerSpawn: { x: 12, y: 12 } })
     world.player.facing = DIR_DOWN
     vision.update(world)
     const revision = world.visionRevision
     expect(world.visibleTiles.has('12,16')).toBe(true)
-    expect(world.visibleTiles.has('16,12')).toBe(false)
+    expect(world.visibleTiles.has('12,8')).toBe(false)
 
     world.player.facing = DIR_RIGHT
     vision.update(world)
     expect(world.visionRevision).toBe(revision + 1)
-    expect(world.visibleTiles.has('12,16')).toBe(false)
     expect(world.visibleTiles.has('16,12')).toBe(true)
+    expect(world.visibleTiles.has('8,12')).toBe(false)
   })
 
   it('ilumina a 10 todas las casillas vacías visibles en niveles iniciales', () => {
@@ -101,10 +102,10 @@ describe('VisionSystem', () => {
 
     expect(world.enemies[0].getLightEmission()).toBe(2)
     expect(world.enemies[1].getLightEmission()).toBe(5)
-    // La bomba ilumina a la derecha; el casco orientado abajo ya no suma allí.
-    expect(world.lightLevels.get('18,12')).toBe(8)
+    // Bomba a la derecha + casco en semicírculo (lateral a 90° también suma).
+    expect(world.lightLevels.get('18,12')).toBe(9)
     expect(world.lightLevels.get('12,18')).toBe(9)
-    expect(world.lightLevels.get('6,12')).toBe(5)
+    expect(world.lightLevels.get('6,12')).toBe(6)
     expect(world.lightLevels.get('12,6')).toBe(5)
     expect(world.lightLevels.get('16,16')).toBe(10)
     expect(Math.max(...world.lightLevels.values())).toBe(10)
@@ -162,6 +163,40 @@ describe('VisionSystem', () => {
     expect(world.visibleTiles.has('12,12')).toBe(false)
     expect(world.discoveredTiles.has('12,12')).toBe(true)
     expect(world.lightLevels.get('12,12') ?? 0).toBe(0)
+  })
+
+  it('descubre muros ortogonales a un tile iluminado del pasillo', () => {
+    const world = createTestWorld(openMap(25), { playerSpawn: { x: 12, y: 12 } })
+    world.player.facing = DIR_RIGHT
+    world.grid.set(14, 11, TILE_WALL)
+    world.grid.revision = (world.grid.revision ?? 0) + 1
+    vision.update(world)
+
+    expect(world.visibleTiles.has('14,12')).toBe(true)
+    expect(world.discoveredTiles.has('14,11')).toBe(true)
+  })
+
+  it('la puerta emite luz 10 desde su centro', () => {
+    const world = createTestWorld(openMap(25), { playerSpawn: { x: 12, y: 12 } })
+    world.player.facing = DIR_RIGHT
+    world.exitDoor = {
+      kind: 'exit',
+      center: { x: 16, y: 12 },
+      trigger: { x: 16, y: 12 },
+      tiles: [
+        { x: 16, y: 11 },
+        { x: 16, y: 12 },
+        { x: 16, y: 13 },
+      ],
+      sideTiles: [
+        { x: 16, y: 11 },
+        { x: 16, y: 13 },
+      ],
+      backingTiles: [],
+    }
+    vision.update(world)
+    expect(world.lightLevels.get('16,12')).toBe(10)
+    expect(world.lightLevels.get('15,12')).toBeGreaterThanOrEqual(9)
   })
 
   it('los destructibles también bloquean la propagación', () => {

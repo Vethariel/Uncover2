@@ -31,11 +31,17 @@ export const DEFAULT_PLAYER_EXPRESSION = 'calm'
 export const DEFAULT_EXCAVATOR_EXPRESSION = 'stern'
 export const DEFAULT_BRUN_EXPRESSION = 'warm'
 
+/** Textura única: inscripción / fragmento en la peña. */
+export const FRAGMENT_PORTRAIT_KEY = 'portrait_fragment'
+
 /**
- * @param {'player'|'excavator'|'smith'} portrait
+ * @param {'player'|'excavator'|'smith'|'fragment'|string|null} portrait
  * @param {string|null|undefined} expression
  */
 export function portraitTextureKey(portrait, expression) {
+  if (portrait === 'fragment' || portrait === 'narrator') {
+    return FRAGMENT_PORTRAIT_KEY
+  }
   if (portrait === 'player') {
     const name = PLAYER_EXPRESSIONS.includes(expression)
       ? expression

@@ -51,6 +51,9 @@ export class World {
     this.lightLevels = new Map()
     /** Luz suavizada (FogOfWarView) para tint de sprites alineado a la niebla. */
     this.displayedLightLevels = new Map()
+    /** Luces por cuarto de muro [NW,NE,SW,SE], suavizadas. */
+    this.displayedWallQuarters = new Map()
+    this.lightDisplayRevision = 0
     this.visionViewport = null
     this.visionSourceSignature = ''
     this.visionRevision = 0
@@ -98,6 +101,8 @@ export class World {
     this.discoveredTiles = new Set()
     this.lightLevels = new Map()
     this.displayedLightLevels = new Map()
+    this.displayedWallQuarters = new Map()
+    this.lightDisplayRevision = 0
     this.visionViewport = null
     this.visionSourceSignature = ''
     this.visionRevision = 0

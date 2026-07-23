@@ -537,7 +537,7 @@ const DIALOGUES = {
     },
     {
       "speaker": "",
-      "portrait": "narrator",
+      "portrait": "fragment",
       "text": "«Lo que se saca de la piedra no siempre es mineral. A veces es memoria de oficio.»"
     },
     {

@@ -40,6 +40,10 @@ export class PreloadScene extends Phaser.Scene {
         `assets/ui/portraits/brun/${expression}.png`,
       )
     }
+    this.load.image(
+      portraitTextureKey('fragment'),
+      'assets/ui/portraits/fragment.png',
+    )
 
     this.load.spritesheet(
       'playerWalk',

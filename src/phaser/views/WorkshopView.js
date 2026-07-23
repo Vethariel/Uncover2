@@ -21,9 +21,9 @@ import {
   createAnvilSprite,
   syncAnvilSprite,
 } from './anvilSprite.js'
+import { drawDoorPortal } from './doorVisual.js'
 
-const WALL = 0x1a1f18
-const DOOR = 0xffc857
+const WALL = 0x000000
 
 export class WorkshopView {
   constructor(scene, world) {
@@ -143,10 +143,7 @@ export class WorkshopView {
       }
     }
 
-    for (const tile of exitDoor.tiles) {
-      g.fillStyle(DOOR)
-      g.fillRect(tile.x * tileSize + 4, tile.y * tileSize + 8, tileSize - 8, tileSize - 12)
-    }
+    drawDoorPortal(this.graphics, exitDoor, tileSize, 'exit')
 
     for (const actor of this.npcActors) {
       actor.body.destroy()
