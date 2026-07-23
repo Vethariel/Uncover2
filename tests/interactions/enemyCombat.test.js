@@ -121,7 +121,7 @@ describe('ciclo e IA de enemigos', () => {
     expect(spirit.alive).toBe(false)
     expect(spirit.respawnTimer).toBe(20)
 
-    stepLife(world, 1)
+    stepLife(world, spirit.corpseDuration)
     expect(spirit.visible).toBe(false)
 
     world.player.tileX = 3

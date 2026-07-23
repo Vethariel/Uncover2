@@ -67,6 +67,20 @@ export function stepTrap(world, dt = 0) {
 
 export function explodeBomb(world, bombIndex = 0) {
   bomb.explode(world, world.bombs[bombIndex])
+  // La expansión en anillos es asíncrona (BLAST_EXPAND_DELAY); los tests
+  // síncronos necesitan ver el blast completo.
+  flushPendingBlastWaves(world)
+}
+
+/** Avanza todas las ondas de blast pendientes hasta agotarlas. */
+export function flushPendingBlastWaves(world) {
+  let guard = 64
+  while ((world.pendingBlastWaves ?? []).length > 0 && guard-- > 0) {
+    for (const wave of world.pendingBlastWaves) {
+      wave.timer = 0
+    }
+    bomb.updatePendingBlastWaves(world, 0)
+  }
 }
 
 export { DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT }
