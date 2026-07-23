@@ -17,6 +17,20 @@ import {
   playPlayerIdle,
   syncPlayerLocomotion,
 } from './playerLocomotion.js'
+import {
+  createExcavatorSprite,
+  levelActorDepth,
+  placeExcavatorOnTile,
+} from './excavatorIdle.js'
+import {
+  createGolemSprite,
+  syncGolemSprite,
+} from './golemIdle.js'
+import {
+  createSpiritSprite,
+  syncSpiritSprite,
+} from './spiritIdle.js'
+import { enemyCorpseAlpha } from '../../config/enemyTypes.js'
 
 const MINE_FRAME_RATE = 8
 /** Golpe de pico: frame 4 en numeración 1–6 → índice Phaser 3 (0–5). */
@@ -83,6 +97,12 @@ export class EntityView {
     this.bombSprites = new Map()
     /** @type {Map<object, Phaser.GameObjects.Sprite>} */
     this.explosionSprites = new Map()
+    /** @type {Map<object, Phaser.GameObjects.Sprite>} */
+    this.npcSprites = new Map()
+    /** @type {Map<object, Phaser.GameObjects.Sprite>} */
+    this.enemySprites = new Map()
+    /** @type {Map<object, { x: number, y: number }>} */
+    this.enemyLastPos = new Map()
     this._narrativeFrozen = false
     this._destroyed = false
     this.playerSprite.on(
@@ -97,23 +117,18 @@ export class EntityView {
 
     const drawables = [
       ...this.world.enemies.map((entity) => ({ entity, kind: 'enemy' })),
-      ...(this.world.npcs ?? []).map((npc) => ({ entity: npc, kind: 'npc' })),
     ]
 
     drawables
-      .sort((a, b) => {
-        const ay = a.kind === 'npc'
-          ? a.entity.tile.y * this.world.tileSize
-          : a.entity.posY + a.entity.size
-        const by = b.kind === 'npc'
-          ? b.entity.tile.y * this.world.tileSize
-          : b.entity.posY + b.entity.size
-        return ay - by
-      })
+      .sort((a, b) => (
+        (a.entity.posY + a.entity.size) - (b.entity.posY + b.entity.size)
+      ))
       .forEach(({ entity, kind }) => this._draw(kind, entity))
 
     this._syncBombSprites()
     this._syncExplosionSprites()
+    this._syncNpcSprites()
+    this._syncEnemySprites()
     this._updatePlayerSprite()
     this._drawMiningProgress()
     this._drawFragmentProgress()
@@ -177,6 +192,11 @@ export class EntityView {
     this.bombSprites.clear()
     for (const sprite of this.explosionSprites.values()) sprite.destroy()
     this.explosionSprites.clear()
+    for (const sprite of this.npcSprites.values()) sprite.destroy()
+    this.npcSprites.clear()
+    for (const sprite of this.enemySprites.values()) sprite.destroy()
+    this.enemySprites.clear()
+    this.enemyLastPos.clear()
     this.graphics?.destroy()
     this.graphics = null
   }
@@ -201,8 +221,7 @@ export class EntityView {
   }
 
   _draw(kind, entity) {
-    if (kind === 'npc') {
-      this._drawNpc(entity)
+    if (kind === 'enemy' && (entity.kind === 'golem_basic' || entity.kind === 'spirit')) {
       return
     }
 
@@ -218,18 +237,104 @@ export class EntityView {
     }
   }
 
-  _drawNpc(npc) {
-    const { tileSize } = this.world
-    const key = `${npc.tile.x},${npc.tile.y}`
-    if (this.world.visibleTiles && !this.world.visibleTiles.has(key)) return
+  _syncNpcSprites() {
+    const { tileSize, visibleTiles } = this.world
+    const active = new Set()
 
-    const cx = npc.tile.x * tileSize + tileSize / 2
-    const cy = npc.tile.y * tileSize + tileSize / 2
-    const g = this.graphics
-    g.fillStyle(npc.color ?? 0x6b7a88, 1)
-    g.fillCircle(cx, cy, tileSize * 0.32)
-    g.lineStyle(2, 0x1a1f18, 0.9)
-    g.strokeCircle(cx, cy, tileSize * 0.32)
+    for (const npc of this.world.npcs ?? []) {
+      if (npc.id !== 'excavator' && npc.kind !== 'excavator') continue
+      active.add(npc)
+
+      let sprite = this.npcSprites.get(npc)
+      if (!sprite) {
+        const feetY = (npc.tile.y + 1) * tileSize
+        sprite = createExcavatorSprite(this.scene, levelActorDepth(feetY))
+        placeExcavatorOnTile(sprite, npc.tile, tileSize)
+        this.npcSprites.set(npc, sprite)
+      }
+
+      const feetY = (npc.tile.y + 1) * tileSize
+      placeExcavatorOnTile(sprite, npc.tile, tileSize)
+      sprite.setDepth(levelActorDepth(feetY))
+
+      const hidden = Boolean(
+        visibleTiles && !visibleTiles.has(`${npc.tile.x},${npc.tile.y}`),
+      )
+      sprite.setVisible(!hidden)
+    }
+
+    for (const [npc, sprite] of this.npcSprites) {
+      if (active.has(npc)) continue
+      sprite.destroy()
+      this.npcSprites.delete(npc)
+    }
+  }
+
+  _syncEnemySprites() {
+    const visible = this.world.visibleTiles
+    const active = new Set()
+
+    for (const enemy of this.world.enemies ?? []) {
+      const isGolem = enemy.kind === 'golem_basic'
+      const isSpirit = enemy.kind === 'spirit'
+      if (!isGolem && !isSpirit) continue
+      active.add(enemy)
+
+      let sprite = this.enemySprites.get(enemy)
+      if (!sprite) {
+        sprite = isGolem
+          ? createGolemSprite(this.scene, levelActorDepth(enemy.posY + enemy.size))
+          : createSpiritSprite(this.scene, levelActorDepth(enemy.posY + enemy.size))
+        this.enemySprites.set(enemy, sprite)
+      }
+
+      const last = this.enemyLastPos.get(enemy)
+      const moved = Boolean(
+        enemy.alive
+        && last
+        && (
+          Math.abs(enemy.posX - last.x) > 0.01
+          || Math.abs(enemy.posY - last.y) > 0.01
+        ),
+      )
+      this.enemyLastPos.set(enemy, { x: enemy.posX, y: enemy.posY })
+
+      if (isGolem) syncGolemSprite(sprite, enemy, { moved })
+      else syncSpiritSprite(sprite, enemy, { moved })
+
+      sprite.setDepth(levelActorDepth(enemy.posY + enemy.size))
+
+      const fogHidden = Boolean(
+        visible && !visible.has(`${enemy.tileX},${enemy.tileY}`),
+      )
+      const hurtActive = enemy.alive && (enemy.hurtAnimationTimer ?? 0) > 0
+      const flickerHidden = (
+        enemy.alive
+        && !hurtActive
+        && enemy.invulnerableTimer > 0
+        && Math.floor(enemy.invulnerableTimer * 20) % 2 !== 0
+      )
+      const gone = enemy.visible === false
+      sprite.setVisible(!fogHidden && !flickerHidden && !gone)
+      sprite.setAlpha(enemy.alive ? 1 : enemyCorpseAlpha(enemy))
+
+      if (!enemy.alive || hurtActive) {
+        sprite.clearTint()
+      } else if (enemy.aggressive) {
+        sprite.setTint(isSpirit ? 0xa8e6ff : 0xffd0a0)
+        if (!sprite.anims.isPlaying) sprite.anims.resume()
+      } else {
+        sprite.clearTint()
+        if (!sprite.anims.isPlaying) sprite.anims.resume()
+      }
+    }
+
+    for (const [enemy, sprite] of this.enemySprites) {
+      if (active.has(enemy)) continue
+      sprite.destroy()
+      this.enemySprites.delete(enemy)
+      this.enemyLastPos.delete(enemy)
+    }
   }
 
   _createPlayerAnimations() {
@@ -258,6 +363,8 @@ export class EntityView {
       sprite?.setVisible(false)
       return
     }
+
+    sprite.setDepth(levelActorDepth(player.posY + player.size))
 
     if (this._narrativeFrozen) {
       const feetX = player.posX + player.size / 2
@@ -358,8 +465,9 @@ export class EntityView {
     else if (enemy.aggressive && enemy.kind === 'golem_basic') color = 0xb08d57
     else if (enemy.aggressive && enemy.kind === 'spirit') color = 0xa8e6ff
 
-    this.graphics.fillStyle(color).fillRect(enemy.posX, enemy.posY, enemy.size, enemy.size)
-    this.graphics.lineStyle(1, 0xffffff, 0.65)
+    const alpha = enemy.alive ? 1 : enemyCorpseAlpha(enemy)
+    this.graphics.fillStyle(color, alpha).fillRect(enemy.posX, enemy.posY, enemy.size, enemy.size)
+    this.graphics.lineStyle(1, 0xffffff, 0.65 * alpha)
     this.graphics.strokeRect(enemy.posX + 0.5, enemy.posY + 0.5, enemy.size - 1, enemy.size - 1)
   }
 

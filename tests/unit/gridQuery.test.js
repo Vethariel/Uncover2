@@ -44,6 +44,17 @@ describe('GridQuery', () => {
     expect(q.isWalkable(1, 1)).toBe(false)
   })
 
+  it('blocksMovement e isWalkable respetan tiles de NPC', () => {
+    const world = createTestWorld(map, { playerSpawn: { x: 1, y: 1 } })
+    world.npcs = [{ id: 'excavator', tile: { x: 3, y: 1 } }]
+    const q = GridQuery.for(world)
+
+    expect(q.hasNpc(3, 1)).toBe(true)
+    expect(q.blocksMovement(3, 1, world.player)).toBe(true)
+    expect(q.isWalkable(3, 1)).toBe(false)
+    expect(q.blocksMovement(2, 1, world.player)).toBe(false)
+  })
+
   it('isDangerous detecta explosión activa y bomba a punto de detonar', () => {
     const world = createTestWorld(map, { playerSpawn: { x: 2, y: 2 } })
     const q = GridQuery.for(world)

@@ -50,6 +50,7 @@ export class Enemy {
     this.alive = true
     this.aggressionTimer = 0
     this.invulnerableTimer = 0
+    this.hurtAnimationTimer = 0
     this.thinkTimer = 0
     this.thinkInterval = config.thinkInterval
     this.deathTimer = 0

@@ -44,6 +44,46 @@ export class PreloadScene extends Phaser.Scene {
       { frameWidth: 64, frameHeight: 64 },
     )
     this.load.spritesheet(
+      'brunIdle',
+      'assets/sprites/brun_idle.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
+      'excavatorIdle',
+      'assets/sprites/excavator_idle.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
+      'golemIdle',
+      'assets/sprites/golem_idle.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
+      'golemWalk',
+      'assets/sprites/golem_walk.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
+      'golemHurt',
+      'assets/sprites/golem_hurt.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
+      'golemDeath',
+      'assets/sprites/golem_death.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
+      'spiritFloat',
+      'assets/sprites/spirit_idle_walk.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
+      'spiritDeath',
+      'assets/sprites/spirit_death.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
       'playerHurt',
       'assets/sprites/player_hurt.png',
       { frameWidth: 64, frameHeight: 64 },

@@ -3,7 +3,29 @@ import { createChaseFleeTree } from '../game/ai/trees/basicEnemy.js'
 
 export const ENEMY_INVULNERABLE_DURATION = 2
 export const ENEMY_RESPAWN_DELAY = 20
-export const ENEMY_CORPSE_DURATION = 1
+/** Tras la animación de muerte (si hay), el cadáver hace fade a alpha 0. */
+export const ENEMY_CORPSE_FADE_DURATION = 0.5
+/** Hurt del golem básico (7 frames) — alineado al hurt del viajero. */
+export const GOLEM_HURT_ANIMATION_DURATION = 0.55
+/** Death del golem básico (7 frames), luego empieza el fade. */
+export const GOLEM_DEATH_ANIMATION_DURATION = 0.7
+/** Death del espíritu (7 frames), misma cadencia que el golem. */
+export const SPIRIT_DEATH_ANIMATION_DURATION = GOLEM_DEATH_ANIMATION_DURATION
+/** Tiempo total visible del cadáver = death anim (si aplica) + fade. */
+export const ENEMY_CORPSE_DURATION = GOLEM_DEATH_ANIMATION_DURATION + ENEMY_CORPSE_FADE_DURATION
+
+/**
+ * Alpha del cadáver: 1 mientras corre la muerte / hold, luego 1→0 en el fade final.
+ * @param {{ alive?: boolean, deathTimer?: number, corpseDuration?: number }} enemy
+ */
+export function enemyCorpseAlpha(enemy) {
+  if (enemy.alive) return 1
+  const fade = ENEMY_CORPSE_FADE_DURATION
+  const timer = enemy.deathTimer ?? 0
+  if (timer <= 0) return 0
+  if (fade <= 0 || timer > fade) return 1
+  return timer / fade
+}
 
 export const GOLEM_BASIC_ALERT_RADIUS = 5
 export const GOLEM_BASIC_CHASE_TIMEOUT = 8

@@ -39,12 +39,20 @@ export class GridQuery {
     return false
   }
 
-  /** Bloqueo total para movimiento continuo (terreno + bomba). */
+  /** Bloqueo total para movimiento continuo (terreno + bomba + NPC). */
   blocksMovement(x, y, entity = null) {
     if (this.isSolidTile(x, y, entity)) return true
     if (entity && this.bombBlocksEntity(x, y, entity)) return true
     if (!entity && this.hasBomb(x, y)) return true
+    if (this.hasNpc(x, y)) return true
     return false
+  }
+
+  /** NPC sólido en este tile (Brun / Excavador). */
+  hasNpc(x, y) {
+    return (this.world.npcs ?? []).some(
+      (npc) => npc.tile?.x === x && npc.tile?.y === y,
+    )
   }
 
   /** IA: tile transitable (sin bomba). TILE_PASS y TILE_EMPTY son válidos. */
@@ -52,6 +60,7 @@ export class GridQuery {
     if (!this.inBounds(x, y)) return false
     if (this.isSolidTile(x, y, entity)) return false
     if (this.hasBomb(x, y)) return false
+    if (this.hasNpc(x, y)) return false
     return true
   }
 

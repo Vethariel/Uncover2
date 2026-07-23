@@ -94,6 +94,11 @@ export function createWorkshopWorld(tileSize = TILE_SIZE, options = {}) {
     })
   }
 
+  // Bloquean movimiento; se habla desde un tile adyacente (interactTarget).
+  for (const npc of npcs) {
+    grid.set(npc.tile.x, npc.tile.y, TILE_WALL)
+  }
+
   return {
     tileSize,
     grid,

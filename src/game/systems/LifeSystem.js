@@ -7,7 +7,10 @@ import {
 import { evaluateN7Trial, isN7Level } from '../../config/n7Trial.js'
 import { GridQuery } from '../GridQuery.js'
 import { positionFromTile } from '../entityTiles.js'
-import { GOLEM_BASIC_ALERT_RADIUS } from '../../config/enemyTypes.js'
+import {
+  GOLEM_BASIC_ALERT_RADIUS,
+  GOLEM_HURT_ANIMATION_DURATION,
+} from '../../config/enemyTypes.js'
 
 export class LifeSystem {
   update(world, dt) {
@@ -33,6 +36,12 @@ export class LifeSystem {
 
     if (player.hurtAnimationTimer > 0) {
       player.hurtAnimationTimer = Math.max(0, player.hurtAnimationTimer - dt)
+    }
+
+    for (const enemy of world.enemies) {
+      if (enemy.hurtAnimationTimer > 0) {
+        enemy.hurtAnimationTimer = Math.max(0, enemy.hurtAnimationTimer - dt)
+      }
     }
 
     for (const entity of [world.player, ...world.enemies]) {
@@ -111,6 +120,9 @@ export class LifeSystem {
     this.onEnemyAttacked(world, enemy)
     if (enemy.hp > 0) {
       enemy.invulnerableTimer = enemy.invulnerableDuration
+      if (enemy.kind === 'golem_basic') {
+        enemy.hurtAnimationTimer = GOLEM_HURT_ANIMATION_DURATION
+      }
       world.events.push('enemyDamaged')
       return
     }
@@ -148,6 +160,7 @@ export class LifeSystem {
     enemy.visible = true
     enemy.setAggressive(false)
     enemy.invulnerableTimer = 0
+    enemy.hurtAnimationTimer = 0
     enemy.blackboard.clear('patrolTarget')
     enemy.blackboard.clear('patrolWaiting')
     enemy.blackboard.clear('patrolWaitTimer')
@@ -174,6 +187,7 @@ export class LifeSystem {
     enemy.deathTimer = 0
     enemy.respawnTimer = 0
     enemy.invulnerableTimer = 0
+    enemy.hurtAnimationTimer = 0
     enemy.desiredFacing = DIR_NONE
     enemy.setAggressive(enemy.initialAggressive, enemy.chaseTimeout)
     world.events.push('enemyRespawn')
