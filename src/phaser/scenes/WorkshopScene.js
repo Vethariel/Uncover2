@@ -76,21 +76,21 @@ export class WorkshopScene extends Phaser.Scene {
         backgroundColor: '#111820cc',
         padding: { x: 4, y: 2 },
       }),
-    ).setScrollFactor(0).setDepth(1000).setVisible(false)
+    ).setDepth(2000).setVisible(false)
 
     this.hud = new WorkshopHudView(this, this.gameState)
     this._buildStationLabels()
 
-    this.cameras.main.setBounds(
-      0,
-      0,
-      this.world.grid.cols * TILE_SIZE,
-      this.world.grid.rows * TILE_SIZE,
-    )
-    this.cameras.main.centerOn(
-      this.world.player.posX + this.world.player.size / 2,
-      this.world.player.posY + this.world.player.size / 2,
-    )
+    const worldW = this.world.grid.cols * TILE_SIZE
+    const worldH = this.world.grid.rows * TILE_SIZE
+    const cam = this.cameras.main
+    cam.setBackgroundColor(0x0a0c10)
+    // Bounds del viewport completo: si el mundo es más chico, permite scroll
+    // negativo y centerOn puede centrar la sala (si no, Phaser la clampa a 0,0).
+    const padX = Math.max(0, cam.width - worldW)
+    const padY = Math.max(0, cam.height - worldH)
+    cam.setBounds(-padX / 2, -padY / 2, worldW + padX, worldH + padY)
+    cam.centerOn(worldW / 2, worldH / 2)
 
     this.audio.playMusic('workshop')
 
@@ -120,6 +120,9 @@ export class WorkshopScene extends Phaser.Scene {
       this.stationPanel?.refresh()
     }
 
+    // Sprites de estación siguen el job aunque haya diálogo / panel abierto.
+    this.view?.update(this.gameState.furnaceJob, this.gameState.anvilJob)
+
     if (this.narrativeDirector?.active) {
       this._updateNarrative(dt)
       return
@@ -138,7 +141,6 @@ export class WorkshopScene extends Phaser.Scene {
     }
 
     const result = this.loop.update(this.world, dt, this.inputAdapter)
-    this.view.update()
     this._updatePrompt(result.focus)
 
     if (result.interact?.type === 'station') {
@@ -211,14 +213,32 @@ export class WorkshopScene extends Phaser.Scene {
       this.promptText.setVisible(false)
       return
     }
-    const label = focus.type === 'npc'
-      ? focus.npc.label
-      : focus.station.label
+
+    const tileSize = this.world.tileSize
+    let x
+    let y
+    let label
+    if (focus.type === 'npc') {
+      label = focus.npc.label
+      x = focus.npc.tile.x * tileSize + tileSize / 2
+      y = focus.npc.tile.y * tileSize - 2
+    } else {
+      label = focus.station.label
+      if (focus.station.origin && focus.station.size) {
+        x = focus.station.origin.x + focus.station.size.w / 2
+        y = focus.station.origin.y - 14
+      } else {
+        const tiles = focus.station.tiles
+        const minX = Math.min(...tiles.map((t) => t.x))
+        const maxX = Math.max(...tiles.map((t) => t.x))
+        const minY = Math.min(...tiles.map((t) => t.y))
+        x = ((minX + maxX + 1) / 2) * tileSize
+        y = minY * tileSize - 14
+      }
+    }
+
     this.promptText.setText(`E — ${label}`)
-    this.promptText.setPosition(
-      this.world.player.posX + this.world.player.size / 2,
-      this.world.player.posY - 10,
-    )
+    this.promptText.setPosition(x, y)
     this.promptText.setOrigin(0.5, 1)
     this.promptText.setVisible(true)
   }

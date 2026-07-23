@@ -1,9 +1,16 @@
 import {
   TILE_DESTRUCTIBLE,
+  TILE_EMPTY,
   TILE_PASS,
   TILE_WALL,
 } from '../../config/constants.js'
 import { TERRAIN_TILES, terrainTileFor } from '../../config/terrainTypes.js'
+import {
+  MINE_WALLS_TEXTURE,
+  isMineWallTile,
+  mineWallFrameIndex,
+  mineWallNeighborMask,
+} from '../../config/mineWalls.js'
 
 const TILE_COLORS = {
   [TILE_DESTRUCTIBLE]: 0xa87342,
@@ -43,7 +50,11 @@ export class TilemapView {
   constructor(scene, world) {
     this.scene = scene
     this.world = world
-    this.graphics = scene.add.graphics({ x: 0, y: 0 })
+    // Textura 128×128 seamless → se repite cada 4 tiles de 32.
+    this.floor = null
+    /** @type {Map<string, Phaser.GameObjects.Image>} */
+    this.wallSprites = new Map()
+    this.graphics = scene.add.graphics({ x: 0, y: 0 }).setDepth(1)
     // Encima de la niebla (depth 950): señala menas/fragmentos aún no visibles.
     this.sparkleGraphics = scene.add.graphics({ x: 0, y: 0 }).setDepth(960)
     this.sparkleTimer = 0
@@ -98,12 +109,67 @@ export class TilemapView {
   destroy() {
     this.chestSprite?.destroy()
     this.chestSprite = null
+    this.floor?.destroy()
+    this.floor = null
+    this._clearWallSprites()
     this.graphics.destroy()
     this.sparkleGraphics.destroy()
   }
 
+  _clearWallSprites() {
+    for (const sprite of this.wallSprites.values()) sprite.destroy()
+    this.wallSprites.clear()
+  }
+
+  _ensureFloor() {
+    const { grid, tileSize } = this.world
+    const w = grid.cols * tileSize
+    const h = grid.rows * tileSize
+    if (!this.floor) {
+      this.floor = this.scene.add.tileSprite(0, 0, w, h, 'mineFloor')
+        .setOrigin(0, 0)
+        .setDepth(0)
+      return
+    }
+    if (this.floor.width !== w || this.floor.height !== h) {
+      this.floor.setSize(w, h)
+    }
+  }
+
+  _syncWallSprites() {
+    const { grid, tileSize } = this.world
+    const seen = new Set()
+
+    for (let y = 0; y < grid.rows; y++) {
+      for (let x = 0; x < grid.cols; x++) {
+        if (!isMineWallTile(grid.get(x, y))) continue
+        const key = `${x},${y}`
+        seen.add(key)
+        const frame = mineWallFrameIndex(mineWallNeighborMask(grid, x, y), x, y)
+        let sprite = this.wallSprites.get(key)
+        if (!sprite) {
+          sprite = this.scene.add.image(x * tileSize, y * tileSize, MINE_WALLS_TEXTURE, frame)
+            .setOrigin(0, 0)
+            .setDepth(0.5)
+          this.wallSprites.set(key, sprite)
+        } else {
+          sprite.setFrame(frame)
+          sprite.setPosition(x * tileSize, y * tileSize)
+        }
+      }
+    }
+
+    for (const [key, sprite] of this.wallSprites) {
+      if (seen.has(key)) continue
+      sprite.destroy()
+      this.wallSprites.delete(key)
+    }
+  }
+
   _drawGrid(state = this.world.grid.tiles.flat().join('')) {
     const { grid, tileSize } = this.world
+    this._ensureFloor()
+    this._syncWallSprites()
     const graphics = this.graphics
     graphics.clear()
 
@@ -112,6 +178,10 @@ export class TilemapView {
         const tile = grid.get(x, y)
         const px = x * tileSize
         const py = y * tileSize
+
+        // Suelo / muros con tileset: sin fill de color.
+        if (tile === TILE_EMPTY || isMineWallTile(tile)) continue
+
         const region = this.world.terrainRegions?.get(x, y)
         const terrainTile = terrainTileFor(region, tile)
         const color = TILE_COLORS[tile]

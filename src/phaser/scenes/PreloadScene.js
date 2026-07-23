@@ -8,6 +8,9 @@ import {
 } from '../../config/portraitExpressions.js'
 import { preloadUiAtlas, registerUiAtlasFrames } from '../ui/uiAtlas.js'
 import { preloadIconsAtlas, registerIconsAtlasFrames } from '../ui/iconsAtlas.js'
+import { preloadFurnace } from '../views/furnaceSprite.js'
+import { preloadAnvil } from '../views/anvilSprite.js'
+import { preloadMineWalls } from '../../config/mineWalls.js'
 import { waitForGameFonts } from '../../config/typography.js'
 
 export class PreloadScene extends Phaser.Scene {
@@ -128,6 +131,11 @@ export class PreloadScene extends Phaser.Scene {
       'assets/sprites/player_mine.png',
       { frameWidth: 64, frameHeight: 64 },
     )
+    this.load.image('mineFloor', 'assets/tilemaps/mine_floor.png')
+    this.load.image('workshopFloor', 'assets/tilemaps/workshop_floor.png')
+    preloadMineWalls(this.load)
+    preloadFurnace(this.load)
+    preloadAnvil(this.load)
     this.load.spritesheet(
       'chest',
       'assets/sprites/chest.png',

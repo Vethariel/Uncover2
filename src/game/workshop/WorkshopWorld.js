@@ -1,5 +1,7 @@
 import { Grid } from '../Grid.js'
 import { Player } from '../entities/Player.js'
+import { Furnace } from '../entities/Furnace.js'
+import { Anvil } from '../entities/Anvil.js'
 import {
   DIR_DOWN,
   PLAYER_SIZE,
@@ -8,14 +10,25 @@ import {
   TILE_WALL,
   TILE_SIZE,
 } from '../../config/constants.js'
+import {
+  ANVIL_FRAME_H,
+  ANVIL_FRAME_W,
+  FURNACE_FRAME_H,
+  FURNACE_FRAME_W,
+} from '../../config/workshopProps.js'
 import { positionFromTile } from '../entityTiles.js'
 
-const COLS = 20
-const ROWS = 11
+// Habitación compacta (antes 20×11 = viewport entero).
+const COLS = 12
+const ROWS = 8
+
+/** Esquina superior izquierda del sprite (px, tamaño nativo). */
+const FURNACE_ORIGIN = { x: 2 * TILE_SIZE, y: 1 * TILE_SIZE }
+const ANVIL_ORIGIN = { x: 7 * TILE_SIZE, y: 1 * TILE_SIZE }
 
 /**
  * Habitación rectangular del taller.
- * Horno y yunque 2×3 juntos al norte; puerta de salida al sur.
+ * Horno y yunque = entidades con body 3×3 (+ sprites nativos); puerta al sur.
  */
 export function createWorkshopWorld(tileSize = TILE_SIZE, options = {}) {
   const grid = new Grid(COLS, ROWS)
@@ -26,44 +39,53 @@ export function createWorkshopWorld(tileSize = TILE_SIZE, options = {}) {
     }
   }
 
-  const furnace = {
-    id: 'furnace',
-    label: 'HORNO',
-    kind: 'furnace',
-    tiles: fillRect(7, 2, 2, 3),
+  const furnaceOrigin = {
+    x: (FURNACE_ORIGIN.x / TILE_SIZE) * tileSize,
+    y: (FURNACE_ORIGIN.y / TILE_SIZE) * tileSize,
   }
-  const anvil = {
-    id: 'anvil',
-    label: 'YUNQUE',
-    kind: 'anvil',
-    tiles: fillRect(11, 2, 2, 3),
-  }
+  const furnace = new Furnace({
+    tileX: Math.floor((furnaceOrigin.x + FURNACE_FRAME_W / 2) / tileSize),
+    tileY: Math.floor((furnaceOrigin.y + FURNACE_FRAME_H / 2) / tileSize),
+    originX: furnaceOrigin.x,
+    originY: furnaceOrigin.y,
+    width: FURNACE_FRAME_W,
+    height: FURNACE_FRAME_H,
+    bodySize: 3,
+  })
 
-  for (const station of [furnace, anvil]) {
-    for (const tile of station.tiles) {
-      grid.set(tile.x, tile.y, TILE_WALL)
-    }
+  const anvilOrigin = {
+    x: (ANVIL_ORIGIN.x / TILE_SIZE) * tileSize,
+    y: (ANVIL_ORIGIN.y / TILE_SIZE) * tileSize,
   }
+  const anvil = new Anvil({
+    tileX: Math.floor((anvilOrigin.x + ANVIL_FRAME_W / 2) / tileSize),
+    tileY: Math.floor((anvilOrigin.y + ANVIL_FRAME_H / 2) / tileSize),
+    originX: anvilOrigin.x,
+    originY: anvilOrigin.y,
+    width: ANVIL_FRAME_W,
+    height: ANVIL_FRAME_H,
+    bodySize: 3,
+  })
 
   // Puerta sur centrada. Al pisar su trigger interior se sale automáticamente.
   const doorTiles = [
-    { x: 9, y: ROWS - 1 },
-    { x: 10, y: ROWS - 1 },
-    { x: 11, y: ROWS - 1 },
+    { x: 5, y: ROWS - 1 },
+    { x: 6, y: ROWS - 1 },
+    { x: 7, y: ROWS - 1 },
   ]
   for (const tile of doorTiles) grid.set(tile.x, tile.y, TILE_EMPTY)
   const exitDoor = {
     kind: 'exit',
     tiles: doorTiles,
     triggerTiles: [
-      { x: 9, y: ROWS - 2 },
-      { x: 10, y: ROWS - 2 },
-      { x: 11, y: ROWS - 2 },
+      { x: 5, y: ROWS - 2 },
+      { x: 6, y: ROWS - 2 },
+      { x: 7, y: ROWS - 2 },
     ],
-    center: { x: 10, y: ROWS - 1 },
+    center: { x: 6, y: ROWS - 1 },
   }
 
-  const spawn = { x: 10, y: 6 }
+  const spawn = { x: 6, y: 5 }
   const playerPos = positionFromTile(spawn.x, spawn.y, tileSize, PLAYER_SIZE)
   const player = new Player(
     playerPos.posX,
@@ -80,7 +102,7 @@ export function createWorkshopWorld(tileSize = TILE_SIZE, options = {}) {
       id: 'brun',
       label: 'BRUN',
       kind: 'smith',
-      tile: { x: 5, y: 5 },
+      tile: { x: 2, y: 5 },
       color: 0xc77b3f,
     },
   ]
@@ -89,7 +111,7 @@ export function createWorkshopWorld(tileSize = TILE_SIZE, options = {}) {
       id: 'excavator',
       label: 'EXCAVADOR',
       kind: 'excavator',
-      tile: { x: 15, y: 5 },
+      tile: { x: 10, y: 4 },
       color: 0x6b7a88,
     })
   }
@@ -114,20 +136,12 @@ export function createWorkshopWorld(tileSize = TILE_SIZE, options = {}) {
   }
 }
 
-function fillRect(x0, y0, w, h) {
-  const tiles = []
-  for (let y = y0; y < y0 + h; y++) {
-    for (let x = x0; x < x0 + w; x++) {
-      tiles.push({ x, y })
-    }
-  }
-  return tiles
-}
-
 export function stationAt(world, x, y) {
-  return world.stations.find((station) => (
-    station.tiles.some((tile) => tile.x === x && tile.y === y)
-  )) ?? null
+  return world.stations.find((station) => {
+    if (station.tileX === x && station.tileY === y) return true
+    if (station.tile?.x === x && station.tile?.y === y) return true
+    return station.tiles?.some((tile) => tile.x === x && tile.y === y) ?? false
+  }) ?? null
 }
 
 export function npcAt(world, x, y) {

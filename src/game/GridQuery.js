@@ -39,12 +39,13 @@ export class GridQuery {
     return false
   }
 
-  /** Bloqueo total para movimiento continuo (terreno + bomba + NPC). */
+  /** Bloqueo total para movimiento continuo (terreno + bomba + NPC + props sólidos). */
   blocksMovement(x, y, entity = null) {
     if (this.isSolidTile(x, y, entity)) return true
     if (entity && this.bombBlocksEntity(x, y, entity)) return true
     if (!entity && this.hasBomb(x, y)) return true
     if (this.hasNpc(x, y)) return true
+    if (this.hasSolidEntity(x, y)) return true
     return false
   }
 
@@ -55,12 +56,24 @@ export class GridQuery {
     )
   }
 
+  /** Entidades sólidas (horno, etc.) — body en `tiles`, sin TILE_WALL en el grid. */
+  hasSolidEntity(x, y) {
+    for (const station of this.world.stations ?? []) {
+      if (!station.solid) continue
+      if (station.tiles?.some((tile) => tile.x === x && tile.y === y)) return true
+      if (station.tileX === x && station.tileY === y) return true
+      if (station.tile?.x === x && station.tile?.y === y) return true
+    }
+    return false
+  }
+
   /** IA: tile transitable (sin bomba). TILE_PASS y TILE_EMPTY son válidos. */
   isWalkable(x, y, entity = null) {
     if (!this.inBounds(x, y)) return false
     if (this.isSolidTile(x, y, entity)) return false
     if (this.hasBomb(x, y)) return false
     if (this.hasNpc(x, y)) return false
+    if (this.hasSolidEntity(x, y)) return false
     return true
   }
 
