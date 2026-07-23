@@ -15,6 +15,11 @@ import { NarrativeDirector } from '../../core/NarrativeDirector.js'
 import { TutorialController } from '../../core/TutorialController.js'
 import { createLevelResult } from '../../core/LevelResult.js'
 import { evaluateN7Trial, isN7Level } from '../../config/n7Trial.js'
+import {
+  COLOR_TITLE,
+  FONT_SIZE_HUD,
+  textStyleBody,
+} from '../../config/typography.js'
 import { GameController } from '../../game/GameController.js'
 import { positionFromTile, syncTileFromPosition } from '../../game/entityTiles.js'
 import { InputAdapter } from '../input/InputAdapter.js'
@@ -275,13 +280,17 @@ export class GameScene extends Phaser.Scene {
     })
     this.levelCompleteView = new LevelCompleteView(this)
     this.levelResult = null
-    this.chestPrompt = this.add.text(0, 0, 'E — ABRIR COFRE', {
-      fontSize: '10px',
-      fontFamily: 'monospace',
-      color: '#ffc857',
-      backgroundColor: '#111820cc',
-      padding: { x: 4, y: 2 },
-    }).setDepth(980).setVisible(false)
+    this.chestPrompt = this.add.text(
+      0,
+      0,
+      'E — ABRIR COFRE',
+      textStyleBody({
+        fontSize: `${FONT_SIZE_HUD}px`,
+        color: COLOR_TITLE,
+        backgroundColor: '#111820cc',
+        padding: { x: 4, y: 2 },
+      }),
+    ).setDepth(980).setVisible(false)
     this._syncViews()
     this._setupCamera()
 

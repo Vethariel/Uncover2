@@ -28,6 +28,16 @@ import {
   runBlackout,
   takeBlackoutFadeIn,
 } from '../fx/blackout.js'
+import {
+  COLOR_MUTED,
+  COLOR_TITLE,
+  FONT_SIZE_BODY,
+  FONT_SIZE_DISPLAY,
+  FONT_SIZE_HINT,
+  FONT_SIZE_HUD,
+  textStyleBody,
+  textStyleDisplay,
+} from '../../config/typography.js'
 
 export class WorkshopScene extends Phaser.Scene {
   constructor() {
@@ -70,13 +80,17 @@ export class WorkshopScene extends Phaser.Scene {
 
     this.menu = null
     this.menuIndex = 0
-    this.promptText = this.add.text(0, 0, '', {
-      fontSize: '10px',
-      fontFamily: 'monospace',
-      color: '#ffc857',
-      backgroundColor: '#111820cc',
-      padding: { x: 4, y: 2 },
-    }).setScrollFactor(0).setDepth(1000).setVisible(false)
+    this.promptText = this.add.text(
+      0,
+      0,
+      '',
+      textStyleBody({
+        fontSize: `${FONT_SIZE_HUD}px`,
+        color: COLOR_TITLE,
+        backgroundColor: '#111820cc',
+        padding: { x: 4, y: 2 },
+      }),
+    ).setScrollFactor(0).setDepth(1000).setVisible(false)
 
     this._buildHud()
     this._buildStationLabels()
@@ -184,23 +198,26 @@ export class WorkshopScene extends Phaser.Scene {
       .setDepth(1000)
       .setStrokeStyle(1, 0x53616d)
 
-    this.hudTitle = this.add.text(12, HUD_HEIGHT / 2, 'TALLER', {
-      fontSize: '12px',
-      fontFamily: 'monospace',
-      color: '#ffc857',
-    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1001)
+    this.hudTitle = this.add.text(
+      12,
+      HUD_HEIGHT / 2,
+      'TALLER',
+      textStyleDisplay({ fontSize: `${FONT_SIZE_BODY}px` }),
+    ).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1001)
 
-    this.hudResources = this.add.text(width / 2, HUD_HEIGHT / 2, '', {
-      fontSize: '10px',
-      fontFamily: 'monospace',
-      color: '#c8d0d8',
-    }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(1001)
+    this.hudResources = this.add.text(
+      width / 2,
+      HUD_HEIGHT / 2,
+      '',
+      textStyleBody({ fontSize: `${FONT_SIZE_HUD}px`, color: '#c8d0d8' }),
+    ).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(1001)
 
-    this.hudHint = this.add.text(width - 12, HUD_HEIGHT / 2, 'E interactuar', {
-      fontSize: '9px',
-      fontFamily: 'monospace',
-      color: '#8a93a0',
-    }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(1001)
+    this.hudHint = this.add.text(
+      width - 12,
+      HUD_HEIGHT / 2,
+      'E interactuar',
+      textStyleBody({ fontSize: `${FONT_SIZE_HINT}px`, color: COLOR_MUTED }),
+    ).setOrigin(1, 0.5).setScrollFactor(0).setDepth(1001)
 
     this._refreshHud()
   }
@@ -208,11 +225,12 @@ export class WorkshopScene extends Phaser.Scene {
   _buildStationLabels() {
     for (const station of this.world.stations) {
       const anchor = station._labelAnchor
-      this.add.text(anchor.x, anchor.y, station.label, {
-        fontSize: '9px',
-        fontFamily: 'monospace',
-        color: '#ffffff',
-      }).setOrigin(0.5, 1)
+      this.add.text(
+        anchor.x,
+        anchor.y,
+        station.label,
+        textStyleBody({ fontSize: `${FONT_SIZE_HINT}px`, color: '#ffffff' }),
+      ).setOrigin(0.5, 1)
     }
   }
 
@@ -351,11 +369,12 @@ export class WorkshopScene extends Phaser.Scene {
         .setDepth(1100),
     )
     this.menuNodes.push(
-      this.add.text(cx, cy - panelHeight / 2 + 20, title, {
-        fontSize: '14px',
-        fontFamily: 'monospace',
-        color: '#ffc857',
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(1101),
+      this.add.text(
+        cx,
+        cy - panelHeight / 2 + 20,
+        title,
+        textStyleDisplay({ fontSize: `${FONT_SIZE_DISPLAY}px` }),
+      ).setOrigin(0.5).setScrollFactor(0).setDepth(1101),
     )
 
     this.menu.items.forEach((item, index) => {
@@ -366,21 +385,21 @@ export class WorkshopScene extends Phaser.Scene {
           cx,
           cy - panelHeight / 2 + 48 + index * 18,
           `${selected ? '>' : ' '} ${item.text}`,
-          {
-            fontSize: '10px',
-            fontFamily: 'monospace',
-            color: selected ? '#ffffff' : muted ? '#6f7780' : '#9aa3ad',
-          },
+          textStyleBody({
+            fontSize: `${FONT_SIZE_HUD}px`,
+            color: selected ? '#ffffff' : muted ? '#6f7780' : COLOR_MUTED,
+          }),
         ).setOrigin(0.5).setScrollFactor(0).setDepth(1101),
       )
     })
 
     this.menuNodes.push(
-      this.add.text(cx, cy + panelHeight / 2 - 18, '↑↓ elegir   ENTER confirmar   ESC cerrar', {
-        fontSize: '9px',
-        fontFamily: 'monospace',
-        color: '#8a93a0',
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(1101),
+      this.add.text(
+        cx,
+        cy + panelHeight / 2 - 18,
+        '↑↓ elegir   ENTER confirmar   ESC cerrar',
+        textStyleBody({ fontSize: `${FONT_SIZE_HINT}px`, color: COLOR_MUTED }),
+      ).setOrigin(0.5).setScrollFactor(0).setDepth(1101),
     )
   }
 

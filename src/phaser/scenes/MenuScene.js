@@ -1,4 +1,3 @@
-import Phaser from 'phaser'
 import { session } from '../../core/session.js'
 import { getAudio } from '../audio/AudioService.js'
 import {
@@ -6,6 +5,14 @@ import {
   takeBlackoutFadeIn,
 } from '../fx/blackout.js'
 import { MenuBackgroundView } from '../views/MenuBackgroundView.js'
+import { createUiButton } from '../ui/uiButton.js'
+
+/** Ancla sobre la puerta del arte de menú (640×360), bajo el relieve. */
+const DOOR_BUTTON_X = 478
+const DOOR_BUTTON_Y = 268
+const BUTTON_WIDTH = 152
+const BUTTON_HEIGHT = 28
+const BUTTON_GAP = 10
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -27,49 +34,43 @@ export class MenuScene extends Phaser.Scene {
 
     this.menuBg = new MenuBackgroundView(this)
 
-    const cx = this.scale.width / 2
-    const promptStyle = {
-      fontSize: '8px',
-      color: '#e8e0d0',
-      stroke: '#000000',
-      strokeThickness: 3,
-    }
+    const yNew = DOOR_BUTTON_Y - (BUTTON_HEIGHT + BUTTON_GAP) / 2
+    const yDev = DOOR_BUTTON_Y + (BUTTON_HEIGHT + BUTTON_GAP) / 2
 
-    this.pressText = this.add
-      .text(cx, this.scale.height - 36, 'PRESS ENTER TO START', promptStyle)
-      .setOrigin(0.5)
-      .setDepth(10)
-
-    this.tweens.add({
-      targets: this.pressText,
-      alpha: 0.35,
-      duration: 550,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
+    this.btnNewGame = createUiButton(this, {
+      x: DOOR_BUTTON_X,
+      y: yNew,
+      width: BUTTON_WIDTH,
+      height: BUTTON_HEIGHT,
+      label: 'NUEVO JUEGO',
+      onClick: () => this._startNewGame(),
     })
 
-    this.add
-      .text(cx, this.scale.height - 18, 'N — NEW GAME', {
-        fontSize: '8px',
-        color: '#9aa3ad',
-        stroke: '#000000',
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5)
-      .setDepth(10)
+    this.btnDev = createUiButton(this, {
+      x: DOOR_BUTTON_X,
+      y: yDev,
+      width: BUTTON_WIDTH,
+      height: BUTTON_HEIGHT,
+      label: 'DEV',
+      onClick: () => this._openDev(),
+    })
 
-    this.input.keyboard.on('keydown-ENTER', () => {
-      this.scene.start('LevelSelect')
-    })
-    this.input.keyboard.on('keydown-N', () => {
-      this.gameState.wipeProgress()
-      this.scene.start('LevelSelect')
-    })
+    this.input.keyboard.on('keydown-ENTER', () => this._startNewGame())
+    this.input.keyboard.on('keydown-N', () => this._startNewGame())
+    this.input.keyboard.on('keydown-D', () => this._openDev())
 
     if (this._pendingBlackoutFadeIn) {
       this._pendingBlackoutFadeIn = false
       maybeFadeInFromBlackout(this)
     }
+  }
+
+  _startNewGame() {
+    this.gameState.wipeProgress()
+    this.scene.start('LevelSelect')
+  }
+
+  _openDev() {
+    this.scene.start('LevelSelect')
   }
 }

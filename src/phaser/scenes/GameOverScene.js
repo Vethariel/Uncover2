@@ -6,6 +6,13 @@ import { DialogueView } from '../views/DialogueView.js'
 import { TutorialController } from '../../core/TutorialController.js'
 import { TutorialView } from '../views/TutorialView.js'
 import { getAudio } from '../audio/AudioService.js'
+import {
+  COLOR_MUTED,
+  FONT_SIZE_DISPLAY_LG,
+  FONT_SIZE_HINT,
+  textStyleBody,
+  textStyleDisplay,
+} from '../../config/typography.js'
 
 export class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -73,27 +80,35 @@ export class GameOverScene extends Phaser.Scene {
     const cx = this.scale.width / 2
     const cy = this.scale.height / 2
 
-    this.titleText = this.add.text(cx, cy - 48, presentation.title, {
-      fontSize: '18px',
-      fontFamily: 'monospace',
-      color: '#ffc857',
-      align: 'center',
-    }).setOrigin(0.5)
+    this.titleText = this.add.text(
+      cx,
+      cy - 48,
+      presentation.title,
+      textStyleDisplay({
+        fontSize: `${FONT_SIZE_DISPLAY_LG}px`,
+        align: 'center',
+      }),
+    ).setOrigin(0.5)
 
-    this.detailText = this.add.text(cx, cy - 8, presentation.detail, {
-      fontSize: '9px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
-      align: 'center',
-      lineSpacing: 6,
-      wordWrap: { width: this.scale.width - 80 },
-    }).setOrigin(0.5)
+    this.detailText = this.add.text(
+      cx,
+      cy - 8,
+      presentation.detail,
+      textStyleBody({
+        fontSize: `${FONT_SIZE_HINT}px`,
+        color: '#ffffff',
+        align: 'center',
+        lineSpacing: 6,
+        wordWrap: { width: this.scale.width - 80 },
+      }),
+    ).setOrigin(0.5)
 
-    this.hintText = this.add.text(cx, cy + 48, '', {
-      fontSize: '8px',
-      fontFamily: 'monospace',
-      color: '#c8c8c8',
-    }).setOrigin(0.5)
+    this.hintText = this.add.text(
+      cx,
+      cy + 48,
+      '',
+      textStyleBody({ fontSize: `${FONT_SIZE_HINT}px`, color: COLOR_MUTED }),
+    ).setOrigin(0.5)
 
     this._refreshStaticUi()
   }

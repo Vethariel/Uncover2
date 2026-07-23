@@ -1,4 +1,8 @@
 import Phaser from 'phaser'
+import {
+  FONT_SIZE_DISPLAY_LG,
+  textStyleDisplay,
+} from '../../config/typography.js'
 
 export class SplashScene extends Phaser.Scene {
   constructor() {
@@ -9,15 +13,25 @@ export class SplashScene extends Phaser.Scene {
     this.blinkVisible = true
     this.blinkTimer = 0
 
-    this.add.text(this.scale.width / 2, this.scale.height / 2 - 15, 'CLICK OR PRESS', {
-      fontSize: '16px',
-      color: '#ffffff',
-    }).setOrigin(0.5)
+    this.add.text(
+      this.scale.width / 2,
+      this.scale.height / 2 - 15,
+      'CLICK OR PRESS',
+      textStyleDisplay({
+        fontSize: `${FONT_SIZE_DISPLAY_LG}px`,
+        color: '#ffffff',
+      }),
+    ).setOrigin(0.5)
 
-    this.enterText = this.add.text(this.scale.width / 2, this.scale.height / 2 + 15, 'ENTER TO START', {
-      fontSize: '16px',
-      color: '#ffffff',
-    }).setOrigin(0.5)
+    this.enterText = this.add.text(
+      this.scale.width / 2,
+      this.scale.height / 2 + 15,
+      'ENTER TO START',
+      textStyleDisplay({
+        fontSize: `${FONT_SIZE_DISPLAY_LG}px`,
+        color: '#ffffff',
+      }),
+    ).setOrigin(0.5)
 
     this.input.keyboard.once('keydown-ENTER', () => this._goMenu())
     this.input.once('pointerdown', () => this._goMenu())

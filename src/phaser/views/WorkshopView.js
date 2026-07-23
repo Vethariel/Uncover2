@@ -13,6 +13,10 @@ import {
   playPlayerIdle,
   syncPlayerLocomotion,
 } from './playerLocomotion.js'
+import {
+  FONT_SIZE_HINT,
+  textStyleBody,
+} from '../../config/typography.js'
 
 const FLOOR = 0x3a4038
 const WALL = 0x1a1f18
@@ -141,13 +145,12 @@ export class WorkshopView {
           sprite.x,
           sprite.y - 50,
           npc.label,
-          {
-            fontSize: '8px',
-            fontFamily: 'monospace',
+          textStyleBody({
+            fontSize: `${FONT_SIZE_HINT}px`,
             color: '#ffffff',
             backgroundColor: '#111820cc',
             padding: { x: 3, y: 1 },
-          },
+          }),
         ).setOrigin(0.5, 1).setDepth(feetY + 0.1)
         this.npcActors.push({ body: sprite, label, feetY })
         continue
@@ -158,13 +161,17 @@ export class WorkshopView {
       const body = this.scene.add.circle(cx, cy, tileSize * 0.32, npc.color ?? 0x888888, 1)
         .setStrokeStyle(2, 0x1a1f18, 0.9)
         .setDepth(feetY)
-      const label = this.scene.add.text(cx, cy - tileSize * 0.55, npc.label, {
-        fontSize: '8px',
-        fontFamily: 'monospace',
-        color: '#ffffff',
-        backgroundColor: '#111820cc',
-        padding: { x: 3, y: 1 },
-      }).setOrigin(0.5, 1).setDepth(feetY + 0.1)
+      const label = this.scene.add.text(
+        cx,
+        cy - tileSize * 0.55,
+        npc.label,
+        textStyleBody({
+          fontSize: `${FONT_SIZE_HINT}px`,
+          color: '#ffffff',
+          backgroundColor: '#111820cc',
+          padding: { x: 3, y: 1 },
+        }),
+      ).setOrigin(0.5, 1).setDepth(feetY + 0.1)
       this.npcActors.push({ body, label, feetY })
     }
   }

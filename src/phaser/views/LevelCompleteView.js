@@ -1,11 +1,31 @@
+import {
+  COLOR_HUD,
+  COLOR_MUTED,
+  COLOR_TITLE,
+  FONT_SIZE_DISPLAY_LG,
+  textStyleBody,
+  textStyleDisplay,
+} from '../../config/typography.js'
+import { createUiImage, createUiNineSlice } from '../ui/uiAtlas.js'
+
 const DEPTH = 1250
+const PANEL_FILL = 0x0a0e14
+const PANEL_WIDTH = 420
+const PANEL_HEIGHT = 292
+const PANEL_PAD = 24
+const ICON_SIZE = 32
+const ROW_GAP = 32
 
 const ROWS = [
-  { path: ['resources', 'bronze'], label: 'Bronce', color: 0xc77b3f },
-  { path: ['resources', 'iron'], label: 'Hierro', color: 0xb9c0c7 },
-  { path: ['resources', 'crystal'], label: 'Cristal', color: 0x78d7e8 },
-  { path: ['fragments', 'generic'], label: 'Fragmentos genéricos', color: 0xd28cff },
-  { path: ['fragments', 'specialized'], label: 'Fragmentos especializados', color: 0xff9f6b },
+  { path: ['resources', 'bronze'], label: 'Bronce', icon: 'bronze_icon' },
+  { path: ['resources', 'iron'], label: 'Hierro', icon: 'iron_icon' },
+  { path: ['resources', 'crystal'], label: 'Cristal', icon: 'crystal_icon' },
+  { path: ['fragments', 'generic'], label: 'Fragmentos genéricos', icon: 'fragment_icon' },
+  {
+    path: ['fragments', 'specialized'],
+    label: 'Fragmentos especializados',
+    icon: 'fragment_icon',
+  },
 ]
 
 function valueAt(result, path) {
@@ -17,12 +37,10 @@ export class LevelCompleteView {
     this.scene = scene
     const width = scene.scale.width
     const height = scene.scale.height
-    const panelWidth = 390
-    const panelHeight = 270
     const cx = width / 2
     const cy = height / 2
-    const left = cx - panelWidth / 2
-    const top = cy - panelHeight / 2
+    const left = Math.round(cx - PANEL_WIDTH / 2)
+    const top = Math.round(cy - PANEL_HEIGHT / 2)
 
     this.container = scene.add.container(0, 0)
       .setScrollFactor(0)
@@ -31,74 +49,94 @@ export class LevelCompleteView {
 
     this.dim = scene.add.rectangle(0, 0, width, height, 0x000000, 0.72)
       .setOrigin(0)
-    this.panel = scene.add.rectangle(
+
+    this.panelFill = scene.add.rectangle(
+      left + 3,
+      top + 3,
+      PANEL_WIDTH - 6,
+      PANEL_HEIGHT - 6,
+      PANEL_FILL,
+      0.96,
+    ).setOrigin(0)
+
+    this.panel = createUiNineSlice(
+      scene,
+      'tutorial_frame',
       left,
       top,
-      panelWidth,
-      panelHeight,
-      0x0b1118,
-      0.98,
-    ).setOrigin(0).setStrokeStyle(2, 0xb08d57, 1)
+      PANEL_WIDTH,
+      PANEL_HEIGHT,
+    )
 
-    this.titleText = scene.add.text(cx, top + 24, 'NIVEL COMPLETADO', {
-      fontSize: '20px',
-      fontFamily: 'monospace',
-      color: '#ffc857',
-    }).setOrigin(0.5)
+    this.titleText = scene.add.text(
+      cx,
+      top + 22,
+      'NIVEL COMPLETADO',
+      textStyleDisplay({ fontSize: `${FONT_SIZE_DISPLAY_LG}px` }),
+    ).setOrigin(0.5)
 
-    this.levelText = scene.add.text(cx, top + 52, '', {
-      fontSize: '10px',
-      fontFamily: 'monospace',
-      color: '#c8d0d8',
-    }).setOrigin(0.5)
+    this.levelText = scene.add.text(
+      cx,
+      top + 44,
+      '',
+      textStyleBody({ fontSize: '13px', color: COLOR_HUD }),
+    ).setOrigin(0.5)
 
-    this.collectedText = scene.add.text(left + 28, top + 76, 'OBJETOS RECOLECTADOS', {
-      fontSize: '10px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
-    })
+    this.collectedText = scene.add.text(
+      left + PANEL_PAD,
+      top + 64,
+      'OBJETOS RECOLECTADOS',
+      textStyleBody({ fontSize: '13px', color: '#ffffff' }),
+    )
 
+    const rowsTop = top + 88
     this.rowNodes = ROWS.map((row, index) => {
-      const y = top + 103 + index * 25
-      const icon = scene.add.circle(left + 38, y + 5, 6, row.color, 0.95)
-      const label = scene.add.text(left + 55, y, row.label, {
-        fontSize: '11px',
-        fontFamily: 'monospace',
-        color: '#c8d0d8',
-      })
-      const value = scene.add.text(left + panelWidth - 30, y, 'x0', {
-        fontSize: '11px',
-        fontFamily: 'monospace',
-        color: '#ffffff',
-      }).setOrigin(1, 0)
+      const y = rowsTop + index * ROW_GAP
+      const icon = createUiImage(
+        scene,
+        row.icon,
+        left + PANEL_PAD + ICON_SIZE / 2,
+        y + ICON_SIZE / 2,
+      )
+      const label = scene.add.text(
+        left + PANEL_PAD + ICON_SIZE + 8,
+        y + (ICON_SIZE - 14) / 2,
+        row.label,
+        textStyleBody({ fontSize: '14px', color: COLOR_HUD }),
+      )
+      const value = scene.add.text(
+        left + PANEL_WIDTH - PANEL_PAD,
+        y + (ICON_SIZE - 14) / 2,
+        'x0',
+        textStyleBody({ fontSize: '14px', color: '#ffffff' }),
+      ).setOrigin(1, 0)
       return { icon, label, value, row }
     })
 
-    this.totalText = scene.add.text(left + 28, top + panelHeight - 40, '', {
-      fontSize: '10px',
-      fontFamily: 'monospace',
-      color: '#ffc857',
-    })
+    this.trialText = scene.add.text(
+      cx,
+      top + PANEL_HEIGHT - 48,
+      '',
+      textStyleBody({ fontSize: '13px', color: '#78d7e8' }),
+    ).setOrigin(0.5)
 
-    this.trialText = scene.add.text(cx, top + panelHeight - 58, '', {
-      fontSize: '10px',
-      fontFamily: 'monospace',
-      color: '#78d7e8',
-    }).setOrigin(0.5)
+    this.totalText = scene.add.text(
+      left + PANEL_PAD,
+      top + PANEL_HEIGHT - 32,
+      '',
+      textStyleBody({ fontSize: '14px', color: COLOR_TITLE }),
+    )
 
     this.continueText = scene.add.text(
-      left + panelWidth - 24,
-      top + panelHeight - 20,
+      left + PANEL_WIDTH - PANEL_PAD,
+      top + PANEL_HEIGHT - 12,
       'ESPACIO: CONTINUAR',
-      {
-        fontSize: '9px',
-        fontFamily: 'monospace',
-        color: '#9aa3ad',
-      },
+      textStyleBody({ fontSize: '13px', color: COLOR_MUTED }),
     ).setOrigin(1, 1)
 
     this.container.add([
       this.dim,
+      this.panelFill,
       this.panel,
       this.titleText,
       this.levelText,

@@ -1,7 +1,7 @@
 export const TILE_SIZE = 32
 export const VIEW_TILES_X = 20
 export const VIEW_TILES_Y = 11
-export const HUD_HEIGHT = 28
+export const HUD_HEIGHT = 44
 // Buffer interno 16:9 (640×360): se escala con Scale.FIT a cualquier ventana.
 export const INTERNAL_WIDTH = 640
 export const INTERNAL_HEIGHT = 360

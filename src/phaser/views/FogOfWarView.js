@@ -1,10 +1,37 @@
-const UNEXPLORED_COLOR = 0x05080b
-const EXPLORED_COLOR = 0x12151a
+import { PLAYER_VISION_RADIUS } from '../../config/constants.js'
+
+const UNEXPLORED_COLOR = 0x010203
+const EXPLORED_COLOR = 0x020305
+/** Niebla de memoria: casi negra. */
+const EXPLORED_FOG_ALPHA = 0.995
+/** Con luz máxima y visión plena, sin velo. */
+const LIT_CLEAR_ALPHA = 0
 const MAX_LIGHT = 10
-const LIGHT_TRANSITION_SECONDS = 0.14
+/** Suavizado al cambiar luz y el anillo de visión (antes 0.14s). */
+const LIGHT_TRANSITION_SECONDS = 0.42
+/** Distancia a la que empieza a “no alcanzar a ver”. */
+const VISION_SOFT_START = 5
 
 function tileKey(x, y) {
   return `${x},${y}`
+}
+
+/**
+ * 0 = visión plena, 1 = niebla total.
+ * Entre softStart y softEnd: oscurecimiento por distancia (sin borde duro).
+ */
+function visionEdgeDarken(dist, softStart = VISION_SOFT_START, softEnd = PLAYER_VISION_RADIUS) {
+  if (dist >= softEnd) return 1
+  if (dist <= softStart) return 0
+  const t = (dist - softStart) / (softEnd - softStart)
+  return t * t * (3 - 2 * t)
+}
+
+function fogAlphaForLight(light, discovered) {
+  const fogAlpha = discovered ? EXPLORED_FOG_ALPHA : 1
+  if (light <= 0) return fogAlpha
+  const clear = discovered ? LIT_CLEAR_ALPHA : LIT_CLEAR_ALPHA * 0.5
+  return fogAlpha - (Math.min(light, MAX_LIGHT) / MAX_LIGHT) * (fogAlpha - clear)
 }
 
 export class FogOfWarView {
@@ -16,6 +43,16 @@ export class FogOfWarView {
     this.transitionFrom = new Map(world.lightLevels)
     this.transitionTo = new Map(world.lightLevels)
     this.transitionElapsed = LIGHT_TRANSITION_SECONDS
+
+    const px = world.player?.tileX ?? 0
+    const py = world.player?.tileY ?? 0
+    this.visionFromX = px
+    this.visionFromY = py
+    this.visionToX = px
+    this.visionToY = py
+    this.displayedVisionX = px
+    this.displayedVisionY = py
+
     this.world.displayedLightLevels = this.displayedLightLevels
     this._draw()
   }
@@ -25,6 +62,10 @@ export class FogOfWarView {
       this.lastRevision = this.world.visionRevision
       this.transitionFrom = new Map(this.displayedLightLevels)
       this.transitionTo = new Map(this.world.lightLevels)
+      this.visionFromX = this.displayedVisionX
+      this.visionFromY = this.displayedVisionY
+      this.visionToX = this.world.player?.tileX ?? this.displayedVisionX
+      this.visionToY = this.world.player?.tileY ?? this.displayedVisionY
       this.transitionElapsed = 0
     }
 
@@ -49,6 +90,11 @@ export class FogOfWarView {
       if (light > 0.01) this.displayedLightLevels.set(key, light)
     }
 
+    this.displayedVisionX = this.visionFromX
+      + (this.visionToX - this.visionFromX) * easedProgress
+    this.displayedVisionY = this.visionFromY
+      + (this.visionToY - this.visionFromY) * easedProgress
+
     this.world.displayedLightLevels = this.displayedLightLevels
     this._draw()
   }
@@ -66,6 +112,8 @@ export class FogOfWarView {
     const maxX = visionViewport?.maxX ?? grid.cols - 1
     const minY = visionViewport?.minY ?? 0
     const maxY = visionViewport?.maxY ?? grid.rows - 1
+    const px = this.displayedVisionX
+    const py = this.displayedVisionY
 
     // Fuera del viewport: negro total (culling de niebla).
     if (minY > 0) {
@@ -104,36 +152,19 @@ export class FogOfWarView {
       for (let x = minX; x <= maxX; x++) {
         const key = tileKey(x, y)
         const light = this.displayedLightLevels.get(key) ?? 0
-        if (light >= MAX_LIGHT) continue
-
         const discovered = discoveredTiles.has(key)
+        const edge = visionEdgeDarken(Math.hypot(x - px, y - py))
+        const litAlpha = fogAlphaForLight(light, discovered)
+        const fogAlpha = discovered ? EXPLORED_FOG_ALPHA : 1
+        const alpha = litAlpha + (fogAlpha - litAlpha) * edge
 
-        if (light > 0) {
-          if (discovered) {
-            // El gradiente converge al tono de niebla explorada, no a negro:
-            // así el apagado no produce un destello oscuro antes de la memoria.
-            const alpha = 0.94 - (light / MAX_LIGHT) * 0.86
-            this.graphics.fillStyle(EXPLORED_COLOR, alpha)
-          } else {
-            const alpha = 1 - (light / MAX_LIGHT) * 0.92
-            this.graphics.fillStyle(UNEXPLORED_COLOR, alpha)
-          }
-          this.graphics.fillRect(x * tileSize, y * tileSize, tileSize, tileSize)
-          continue
-        }
+        if (alpha <= 0.02) continue
 
-        if (discovered) {
-          // Memoria explorada: tono neutro muy oscuro, sin parecer iluminación.
-          this.graphics.fillStyle(EXPLORED_COLOR, 0.94)
-          this.graphics.fillRect(x * tileSize, y * tileSize, tileSize, tileSize)
-          continue
-        }
-
-        this.graphics.fillStyle(UNEXPLORED_COLOR, 1)
+        const color = discovered ? EXPLORED_COLOR : UNEXPLORED_COLOR
+        this.graphics.fillStyle(color, Math.min(1, alpha))
         this.graphics.fillRect(x * tileSize, y * tileSize, tileSize, tileSize)
       }
     }
-
   }
 
   destroy() {

@@ -1,6 +1,13 @@
 import Phaser from 'phaser'
 import { session } from '../../core/session.js'
 import { getAudio } from '../audio/AudioService.js'
+import {
+  COLOR_MUTED,
+  FONT_SIZE_DISPLAY_LG,
+  FONT_SIZE_HINT,
+  textStyleBody,
+  textStyleDisplay,
+} from '../../config/typography.js'
 
 /** Overlay de pausa. Intro/victoria se manejan por otro flujo. */
 export class GameOverlayScene extends Phaser.Scene {
@@ -26,9 +33,27 @@ export class GameOverlayScene extends Phaser.Scene {
     const cy = this.scale.height / 2
 
     this.add.rectangle(cx, cy, this.scale.width, this.scale.height, 0x000000, 0.6).setDepth(0)
-    this.add.text(cx, cy - 30, 'PAUSED', { fontSize: '20px', color: '#ffffff' }).setOrigin(0.5)
-    this.add.text(cx, cy + 10, 'ESC TO RESUME', { fontSize: '8px', color: '#c8c8c8' }).setOrigin(0.5)
-    this.add.text(cx, cy + 25, 'ENTER TO QUIT TO MENU', { fontSize: '8px', color: '#c8c8c8' }).setOrigin(0.5)
+    this.add.text(
+      cx,
+      cy - 30,
+      'PAUSED',
+      textStyleDisplay({
+        fontSize: `${FONT_SIZE_DISPLAY_LG}px`,
+        color: '#ffffff',
+      }),
+    ).setOrigin(0.5)
+    this.add.text(
+      cx,
+      cy + 10,
+      'ESC TO RESUME',
+      textStyleBody({ fontSize: `${FONT_SIZE_HINT}px`, color: COLOR_MUTED }),
+    ).setOrigin(0.5)
+    this.add.text(
+      cx,
+      cy + 25,
+      'ENTER TO QUIT TO MENU',
+      textStyleBody({ fontSize: `${FONT_SIZE_HINT}px`, color: COLOR_MUTED }),
+    ).setOrigin(0.5)
   }
 
   update() {

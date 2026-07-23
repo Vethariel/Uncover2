@@ -1,6 +1,15 @@
 import Phaser from 'phaser'
 import { session } from '../../core/session.js'
 import { LEVELS } from '../../config/levels.js'
+import {
+  COLOR_MUTED,
+  COLOR_TITLE,
+  FONT_SIZE_BODY,
+  FONT_SIZE_DISPLAY_LG,
+  FONT_SIZE_HINT,
+  textStyleBody,
+  textStyleDisplay,
+} from '../../config/typography.js'
 
 export class LevelSelectScene extends Phaser.Scene {
   constructor() {
@@ -14,28 +23,39 @@ export class LevelSelectScene extends Phaser.Scene {
       LEVELS.length - 1,
     )
 
-    this.add.text(this.scale.width / 2, 24, 'SELECT LEVEL', {
-      fontSize: '16px',
-      color: '#ffffff',
-    }).setOrigin(0.5)
+    this.add.text(
+      this.scale.width / 2,
+      24,
+      'SELECT LEVEL',
+      textStyleDisplay({
+        fontSize: `${FONT_SIZE_DISPLAY_LG}px`,
+        color: '#ffffff',
+      }),
+    ).setOrigin(0.5)
 
-    this.add.text(this.scale.width / 2, 42, 'DEBUG — todos los niveles abiertos', {
-      fontSize: '8px',
-      color: '#ffc857',
-    }).setOrigin(0.5)
+    this.add.text(
+      this.scale.width / 2,
+      42,
+      'DEBUG — todos los niveles abiertos',
+      textStyleBody({ fontSize: `${FONT_SIZE_HINT}px`, color: COLOR_TITLE }),
+    ).setOrigin(0.5)
 
     this.cards = []
     this._drawCards()
 
-    this.labelText = this.add.text(this.scale.width / 2, this.scale.height - 50, '', {
-      fontSize: '11px',
-      color: '#ffffff',
-    }).setOrigin(0.5)
+    this.labelText = this.add.text(
+      this.scale.width / 2,
+      this.scale.height - 50,
+      '',
+      textStyleBody({ fontSize: `${FONT_SIZE_BODY}px`, color: '#ffffff' }),
+    ).setOrigin(0.5)
 
-    this.controlsText = this.add.text(this.scale.width / 2, this.scale.height - 30, '← → MOVE    ENTER PLAY    ESC MENU', {
-      fontSize: '7px',
-      color: '#646464',
-    }).setOrigin(0.5)
+    this.controlsText = this.add.text(
+      this.scale.width / 2,
+      this.scale.height - 30,
+      '← → MOVE    ENTER PLAY    ESC MENU',
+      textStyleBody({ fontSize: `${FONT_SIZE_HINT}px`, color: COLOR_MUTED }),
+    ).setOrigin(0.5)
 
     this._updateLabel()
 
@@ -87,10 +107,15 @@ export class LevelSelectScene extends Phaser.Scene {
         .setStrokeStyle(isSelected ? 2 : 0, 0xffffff)
       this.cards.push(rect)
 
-      const text = this.add.text(x + cardW / 2, y + cardH / 2, `${i + 1}`, {
-        fontSize: '11px',
-        color: isSelected ? '#000000' : '#c8c8c8',
-      }).setOrigin(0.5)
+      const text = this.add.text(
+        x + cardW / 2,
+        y + cardH / 2,
+        `${i + 1}`,
+        textStyleBody({
+          fontSize: `${FONT_SIZE_BODY}px`,
+          color: isSelected ? '#000000' : '#c8c8c8',
+        }),
+      ).setOrigin(0.5)
       this.cards.push(text)
     }
   }

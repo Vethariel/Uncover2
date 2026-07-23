@@ -1,4 +1,16 @@
+import {
+  COLOR_MUTED,
+  FONT_SIZE_DISPLAY_LG,
+  textStyleBody,
+  textStyleDisplay,
+} from '../../config/typography.js'
+import { createUiNineSlice } from '../ui/uiAtlas.js'
+
 const DEPTH = 1230
+const PANEL_FILL = 0x0a0e14
+const PANEL_WIDTH = 420
+const PANEL_HEIGHT = 200
+const PANEL_PAD = 28
 
 export class TutorialView {
   constructor(scene, controller) {
@@ -7,12 +19,10 @@ export class TutorialView {
 
     const width = scene.scale.width
     const height = scene.scale.height
-    const panelWidth = 420
-    const panelHeight = 220
     const cx = width / 2
     const cy = height / 2
-    const left = cx - panelWidth / 2
-    const top = cy - panelHeight / 2
+    const left = Math.round(cx - PANEL_WIDTH / 2)
+    const top = Math.round(cy - PANEL_HEIGHT / 2)
 
     this.container = scene.add.container(0, 0)
       .setScrollFactor(0)
@@ -22,42 +32,52 @@ export class TutorialView {
     this.dim = scene.add.rectangle(0, 0, width, height, 0x000000, 0.72)
       .setOrigin(0)
 
-    this.panel = scene.add.rectangle(
+    this.panelFill = scene.add.rectangle(
+      left + 3,
+      top + 3,
+      PANEL_WIDTH - 6,
+      PANEL_HEIGHT - 6,
+      PANEL_FILL,
+      0.96,
+    ).setOrigin(0)
+
+    this.panel = createUiNineSlice(
+      scene,
+      'tutorial_frame',
       left,
       top,
-      panelWidth,
-      panelHeight,
-      0x0b1118,
-      0.98,
-    ).setOrigin(0).setStrokeStyle(2, 0xb08d57, 1)
+      PANEL_WIDTH,
+      PANEL_HEIGHT,
+    )
 
-    this.titleText = scene.add.text(cx, top + 28, '', {
-      fontSize: '16px',
-      fontFamily: 'monospace',
-      color: '#ffc857',
-    }).setOrigin(0.5)
+    this.titleText = scene.add.text(
+      cx,
+      top + 28,
+      '',
+      textStyleDisplay({ fontSize: `${FONT_SIZE_DISPLAY_LG}px` }),
+    ).setOrigin(0.5)
 
-    this.bodyText = scene.add.text(left + 28, top + 64, '', {
-      fontSize: '12px',
-      fontFamily: 'monospace',
-      color: '#f0f2f4',
-      wordWrap: { width: panelWidth - 56, useAdvancedWrap: true },
-      lineSpacing: 8,
-    })
+    this.bodyText = scene.add.text(
+      left + PANEL_PAD,
+      top + 58,
+      '',
+      textStyleBody({
+        fontSize: '15px',
+        wordWrap: { width: PANEL_WIDTH - PANEL_PAD * 2, useAdvancedWrap: true },
+        lineSpacing: 6,
+      }),
+    )
 
     this.continueText = scene.add.text(
-      left + panelWidth - 24,
-      top + panelHeight - 20,
+      left + PANEL_WIDTH - PANEL_PAD,
+      top + PANEL_HEIGHT - 14,
       'ESPACIO: CONTINUAR',
-      {
-        fontSize: '9px',
-        fontFamily: 'monospace',
-        color: '#9aa3ad',
-      },
+      textStyleBody({ fontSize: '13px', color: COLOR_MUTED }),
     ).setOrigin(1, 1)
 
     this.container.add([
       this.dim,
+      this.panelFill,
       this.panel,
       this.titleText,
       this.bodyText,
