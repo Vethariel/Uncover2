@@ -40,6 +40,11 @@ const PROXIMITY_GAP = 10
 const WALL_LIGHT_SPACING = 6
 const WALL_LIGHT_TILE_BUDGET = 80
 const CORRIDOR_LIGHT_TILE_BUDGET = 40
+/** Un tramo de riel cada ~N casillas candidatas de pasillo. */
+const CORRIDOR_RAIL_TILE_BUDGET = 18
+const CORRIDOR_RAIL_SPACING = 4
+const CORRIDOR_RAIL_SEGMENT_MIN = 2
+const CORRIDOR_RAIL_SEGMENT_MAX = 5
 
 const ENEMY_KIND_WEIGHTS = {
   golem_basic: 0.50,
@@ -198,6 +203,7 @@ function chooseWallLightSpawns(
       wallY: wall.y,
       orientation,
       location: candidate.location,
+      phaseOffset: rand(),
     })
     return true
   }
@@ -220,6 +226,101 @@ function chooseWallLightSpawns(
   for (const candidate of generalCandidates) {
     if (selected.length >= targetCount) break
     trySelect(candidate)
+  }
+
+  return selected
+}
+
+/**
+ * Rieles decorativos en casillas vacías de pasillo (no bloquean).
+ * Usa terreno `corridor` + orientación por paredes / aperturas.
+ */
+function chooseCorridorRailSpawns(
+  grid,
+  terrainRegions,
+  occupiedKeys,
+  rand,
+) {
+  const reserved = new Set(occupiedKeys ?? [])
+  const candidates = []
+
+  for (let y = 0; y < grid.rows; y++) {
+    for (let x = 0; x < grid.cols; x++) {
+      if (grid.get(x, y) !== TILE_EMPTY) continue
+      if (terrainRegions?.get(x, y) !== TERRAIN_REGION.corridor) continue
+      const cellKey = key(x, y)
+      if (reserved.has(cellKey)) continue
+
+      const wallN = grid.get(x, y - 1) === TILE_WALL
+      const wallS = grid.get(x, y + 1) === TILE_WALL
+      const wallE = grid.get(x + 1, y) === TILE_WALL
+      const wallW = grid.get(x - 1, y) === TILE_WALL
+      const openN = grid.get(x, y - 1) === TILE_EMPTY
+      const openS = grid.get(x, y + 1) === TILE_EMPTY
+      const openE = grid.get(x + 1, y) === TILE_EMPTY
+      const openW = grid.get(x - 1, y) === TILE_EMPTY
+      const vertOpen = (openN ? 1 : 0) + (openS ? 1 : 0)
+      const horzOpen = (openE ? 1 : 0) + (openW ? 1 : 0)
+
+      let orientation = null
+      if (wallE && wallW && !(wallN && wallS)) orientation = 'vertical'
+      else if (wallN && wallS && !(wallE && wallW)) orientation = 'horizontal'
+      else if (vertOpen > horzOpen) orientation = 'vertical'
+      else if (horzOpen > vertOpen) orientation = 'horizontal'
+      else if (wallE && wallW) orientation = 'vertical'
+      else if (wallN && wallS) orientation = 'horizontal'
+      else continue
+
+      candidates.push({ x, y, orientation })
+    }
+  }
+
+  const segmentTarget = candidates.length < 6
+    ? 0
+    : Math.max(1, Math.floor(candidates.length / CORRIDOR_RAIL_TILE_BUDGET))
+  if (segmentTarget <= 0) return []
+
+  const byKey = new Map(candidates.map((c) => [`${c.x},${c.y}`, c]))
+  const selected = []
+  const used = new Set()
+  let segments = 0
+  const starts = shuffle([...candidates], rand)
+
+  for (const start of starts) {
+    if (segments >= segmentTarget) break
+    const startKey = `${start.x},${start.y}`
+    if (used.has(startKey)) continue
+
+    const tooClose = selected.some((rail) => (
+      Math.abs(rail.x - start.x) + Math.abs(rail.y - start.y) < CORRIDOR_RAIL_SPACING
+    ))
+    if (tooClose) continue
+
+    const dir = start.orientation === 'vertical'
+      ? { x: 0, y: 1 }
+      : { x: 1, y: 0 }
+    const length = CORRIDOR_RAIL_SEGMENT_MIN
+      + Math.floor(rand() * (CORRIDOR_RAIL_SEGMENT_MAX - CORRIDOR_RAIL_SEGMENT_MIN + 1))
+    const segment = []
+    for (let i = 0; i < length; i++) {
+      const x = start.x + dir.x * i
+      const y = start.y + dir.y * i
+      const k = `${x},${y}`
+      const cell = byKey.get(k)
+      if (!cell || used.has(k) || cell.orientation !== start.orientation) break
+      segment.push(cell)
+    }
+    if (segment.length < CORRIDOR_RAIL_SEGMENT_MIN) continue
+
+    segments++
+    for (const cell of segment) {
+      used.add(`${cell.x},${cell.y}`)
+      selected.push({
+        x: cell.x,
+        y: cell.y,
+        orientation: cell.orientation,
+      })
+    }
   }
 
   return selected
@@ -1740,6 +1841,34 @@ export class LevelGenerator {
       shiftedMask,
       corridorCells,
       protectedCells,
+      rand,
+    )
+    const railOccupied = new Set([
+      key(world.playerSpawn.x, world.playerSpawn.y),
+      ...world.wallLightSpawns.map((light) => key(light.x, light.y)),
+      ...(world.resourceSpawns ?? []).map((r) => key(r.x, r.y)),
+      ...(world.traps ?? []).flatMap((trap) => [
+        key(trap.plate.x, trap.plate.y),
+        key(trap.launcher.x, trap.launcher.y),
+      ]),
+      ...(world.enemySpawns ?? []).map((e) => key(e.x, e.y)),
+      ...(world.puzzleTablets ?? []).map((t) => key(t.x, t.y)),
+    ])
+    for (const door of [world.entryDoor, world.exitDoor]) {
+      if (!door) continue
+      for (const tile of [
+        ...(door.tiles ?? []),
+        ...(door.frontTiles ?? []),
+        ...(door.triggerTiles ?? []),
+      ]) {
+        railOccupied.add(key(tile.x, tile.y))
+      }
+    }
+    if (world.chest) railOccupied.add(key(world.chest.x, world.chest.y))
+    world.railSpawns = chooseCorridorRailSpawns(
+      grid,
+      world.terrainRegions,
+      railOccupied,
       rand,
     )
     world.levelTimer = spec.timeLimit ?? null

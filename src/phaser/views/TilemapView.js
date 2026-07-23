@@ -19,10 +19,32 @@ import {
   isWallFullyEnclosed3x3,
 } from '../../config/mineWalls.js'
 import { displayedLightWithVisionEdge } from '../../config/visionFog.js'
-import { enemyLightTint, multiplyTint } from './enemyLighting.js'
-import { collectDoorWallKeys, drawDoorPortal, drawDoorLightCircle, AMBER_GLOW } from './doorVisual.js'
+import {
+  MINE_PROPS_TEXTURE,
+  genericDestructibleFrame,
+  resourceBlockFrame,
+  MINE_PROP_FRAME,
+} from '../../config/mineProps.js'
+import {
+  TORCH_TEXTURE,
+  ensureTorchAnims,
+} from '../../config/torch.js'
+import {
+  RAIL_TEXTURE,
+  railRotation,
+} from '../../config/rail.js'
+import { enemyLightTint } from './enemyLighting.js'
+import {
+  AMBER_GLOW,
+  collectDoorWallKeys,
+  drawDoorLightCircle,
+  drawDoorPortal,
+} from './doorVisual.js'
 
 const WALL_DEPTH = 0.5
+const RAIL_DEPTH = 0.35
+const PROP_DEPTH = 0.55
+const TORCH_DEPTH = 0.6
 /** Muro en niebla de memoria (descubierto, sin luz): sprite completo, casi negro. */
 const WALL_MEMORY_TINT = 0x030304
 /** Interior de masa 3×3: negro pleno. */
@@ -72,6 +94,12 @@ export class TilemapView {
     this.floor = null
     /** @type {Map<string, { quarters: Phaser.GameObjects.Image[] }>} */
     this.wallSprites = new Map()
+    /** @type {Map<string, Phaser.GameObjects.Image>} */
+    this.propSprites = new Map()
+    /** @type {Map<string, Phaser.GameObjects.Sprite>} */
+    this.torchSprites = new Map()
+    /** @type {Map<string, Phaser.GameObjects.Image>} */
+    this.railSprites = new Map()
     this.graphics = scene.add.graphics({ x: 0, y: 0 }).setDepth(1)
     // Encima de la niebla (depth 950): señala menas/fragmentos aún no visibles.
     this.sparkleGraphics = scene.add.graphics({ x: 0, y: 0 }).setDepth(960)
@@ -80,6 +108,7 @@ export class TilemapView {
     this.chestSprite = null
     this.chestOpenKey = null
     this._createChestAnimation()
+    ensureTorchAnims(scene)
     this.build()
   }
 
@@ -121,7 +150,11 @@ export class TilemapView {
     if (state !== this.lastGridState) this._drawGrid(state)
 
     this._syncWallLighting()
+    this._syncMineProps()
+    this._syncRailSprites()
+    this._syncTorchSprites()
     this._syncChestSprite()
+    this._syncFloor()
     this.sparkleTimer += dt
     this._drawSparkles()
   }
@@ -132,6 +165,9 @@ export class TilemapView {
     this.floor?.destroy()
     this.floor = null
     this._clearWallSprites()
+    this._clearPropSprites()
+    this._clearRailSprites()
+    this._clearTorchSprites()
     this.graphics.destroy()
     this.sparkleGraphics.destroy()
   }
@@ -143,19 +179,77 @@ export class TilemapView {
     this.wallSprites.clear()
   }
 
+  _clearPropSprites() {
+    for (const img of this.propSprites.values()) img.destroy()
+    this.propSprites.clear()
+  }
+
+  _clearTorchSprites() {
+    for (const sprite of this.torchSprites.values()) sprite.destroy()
+    this.torchSprites.clear()
+  }
+
+  _clearRailSprites() {
+    for (const img of this.railSprites.values()) img.destroy()
+    this.railSprites.clear()
+  }
+
   _ensureFloor() {
-    const { grid, tileSize } = this.world
-    const w = grid.cols * tileSize
-    const h = grid.rows * tileSize
+    const cam = this.scene.cameras.main
+    // Solo el viewport: tileSprite a mapa completo se “desliza” al hacer scroll.
+    const w = Math.ceil(cam.width) + 2
+    const h = Math.ceil(cam.height) + 2
     if (!this.floor) {
       this.floor = this.scene.add.tileSprite(0, 0, w, h, 'mineFloor')
         .setOrigin(0, 0)
+        .setScrollFactor(0)
         .setDepth(0)
       return
     }
     if (this.floor.width !== w || this.floor.height !== h) {
       this.floor.setSize(w, h)
     }
+  }
+
+  /** Patrón del piso anclado al mundo (coincide con el scroll que usará la cámara). */
+  _syncFloor() {
+    this._ensureFloor()
+    const cam = this.scene.cameras.main
+    const player = this.world.player
+    let scrollX = cam.scrollX
+    let scrollY = cam.scrollY
+    if (player) {
+      const halfW = cam.width * 0.5
+      const halfH = cam.height * 0.5
+      const bounds = cam.getBounds()
+      const cx = player.posX + player.size / 2
+      const cy = player.posY + player.size / 2
+      const maxX = Math.max(bounds.x, bounds.right - cam.width)
+      const maxY = Math.max(bounds.y, bounds.bottom - cam.height)
+      scrollX = Math.min(maxX, Math.max(bounds.x, cx - halfW))
+      scrollY = Math.min(maxY, Math.max(bounds.y, cy - halfH))
+    }
+    // roundPixels de la cámara: el patrón debe usar el mismo scroll entero.
+    this.floor.setPosition(0, 0)
+    this.floor.tilePositionX = Math.round(scrollX)
+    this.floor.tilePositionY = Math.round(scrollY)
+  }
+
+  _viewportBounds() {
+    const { grid, visionViewport } = this.world
+    if (!grid) {
+      return { minX: 0, maxX: -1, minY: 0, maxY: -1 }
+    }
+    return {
+      minX: visionViewport?.minX ?? 0,
+      maxX: visionViewport?.maxX ?? grid.cols - 1,
+      minY: visionViewport?.minY ?? 0,
+      maxY: visionViewport?.maxY ?? grid.rows - 1,
+    }
+  }
+
+  _inViewport(x, y, vp = this._viewportBounds()) {
+    return x >= vp.minX && x <= vp.maxX && y >= vp.minY && y <= vp.maxY
   }
 
   _makeWallImage(x, y, tileSize, frame) {
@@ -181,6 +275,8 @@ export class TilemapView {
     for (let y = 0; y < grid.rows; y++) {
       for (let x = 0; x < grid.cols; x++) {
         if (!isMineWallTile(grid.get(x, y))) continue
+        // Relleno 3×3: la niebla lo pinta negro; sin GameObjects.
+        if (isWallFullyEnclosed3x3(grid, x, y)) continue
         const key = `${x},${y}`
         seen.add(key)
         const frame = mineWallFrameIndex(mineWallNeighborMask(grid, x, y), x, y)
@@ -212,48 +308,52 @@ export class TilemapView {
 
   _syncWallLighting() {
     const { grid, tileSize } = this.world
+    if (!grid) return
     const doorWalls = collectDoorWallKeys(this.world)
+    const vp = this._viewportBounds()
 
-    for (const [key, entry] of this.wallSprites) {
-      const [xs, ys] = key.split(',')
-      const x = Number(xs)
-      const y = Number(ys)
+    for (let y = vp.minY; y <= vp.maxY; y++) {
+      for (let x = vp.minX; x <= vp.maxX; x++) {
+        const key = `${x},${y}`
+        const entry = this.wallSprites.get(key)
+        if (!entry) continue
 
-      if (doorWalls.has(key) || isWallFullyEnclosed3x3(grid, x, y)) {
-        // Marco de puerta o masa interior: tile entero negro.
-        entry.quarters[0].setCrop().setTint(WALL_ENCLOSED_TINT).setVisible(true)
-        for (let i = 1; i < entry.quarters.length; i++) {
-          entry.quarters[i].setVisible(false)
+        if (doorWalls.has(key)) {
+          // Marco de puerta: tile entero negro.
+          entry.quarters[0].setCrop().setTint(WALL_ENCLOSED_TINT).setVisible(true)
+          for (let i = 1; i < entry.quarters.length; i++) {
+            entry.quarters[i].setVisible(false)
+          }
+          continue
         }
-        continue
-      }
 
-      if (!wallIsRevealed(this.world, x, y)) {
-        for (const img of entry.quarters) img.setVisible(false)
-        continue
-      }
-
-      const arr = this.world.displayedWallQuarters?.get(key)
-      const lights = [
-        arr?.[0] ?? 0,
-        arr?.[1] ?? 0,
-        arr?.[2] ?? 0,
-        arr?.[3] ?? 0,
-      ]
-      const maxL = Math.max(...lights)
-
-      if (maxL <= 0.01) {
-        entry.quarters[0].setCrop().setTint(WALL_MEMORY_TINT).setVisible(true)
-        for (let i = 1; i < entry.quarters.length; i++) {
-          entry.quarters[i].setVisible(false)
+        if (!wallIsRevealed(this.world, x, y)) {
+          for (const img of entry.quarters) img.setVisible(false)
+          continue
         }
-        continue
-      }
 
-      for (let i = 0; i < entry.quarters.length; i++) {
-        const img = entry.quarters[i]
-        this._applyQuarterCrop(img, tileSize, QUARTER_IDS[i])
-        img.setTint(enemyLightTint(lights[i])).setVisible(true)
+        const arr = this.world.displayedWallQuarters?.get(key)
+        const lights = [
+          arr?.[0] ?? 0,
+          arr?.[1] ?? 0,
+          arr?.[2] ?? 0,
+          arr?.[3] ?? 0,
+        ]
+        const maxL = Math.max(...lights)
+
+        if (maxL <= 0.01) {
+          entry.quarters[0].setCrop().setTint(WALL_MEMORY_TINT).setVisible(true)
+          for (let i = 1; i < entry.quarters.length; i++) {
+            entry.quarters[i].setVisible(false)
+          }
+          continue
+        }
+
+        for (let i = 0; i < entry.quarters.length; i++) {
+          const img = entry.quarters[i]
+          this._applyQuarterCrop(img, tileSize, QUARTER_IDS[i])
+          img.setTint(enemyLightTint(lights[i])).setVisible(true)
+        }
       }
     }
   }
@@ -268,6 +368,7 @@ export class TilemapView {
       player,
     } = this.world
     this._ensureFloor()
+    this._syncFloor()
     this._syncWallSprites()
     const graphics = this.graphics
     graphics.clear()
@@ -286,34 +387,23 @@ export class TilemapView {
         const px = x * tileSize
         const py = y * tileSize
 
-        // Suelo / muros con tileset: sin fill de color.
-        if (tile === TILE_EMPTY || isMineWallTile(tile)) continue
+        // Suelo / muros / destructibles con sprites: sin fill de color.
+        if (tile === TILE_EMPTY || isMineWallTile(tile) || tile === TILE_DESTRUCTIBLE) continue
         // Fog bajo (0.25): overlays en depth 1 no deben asomar en no descubierto.
         if (!discoveredTiles?.has(`${x},${y}`)) continue
 
         const region = this.world.terrainRegions?.get(x, y)
         const terrainTile = terrainTileFor(region, tile)
-        let color = TILE_COLORS[tile]
+        const color = TILE_COLORS[tile]
           ?? TERRAIN_TILE_COLORS[terrainTile]
           ?? TERRAIN_TILE_COLORS[TERRAIN_TILES.outside.empty]
-
-        if (tile === TILE_DESTRUCTIBLE) {
-          const raw = levels?.get(`${x},${y}`) ?? 0
-          const dist = Math.hypot(x + 0.5 - visionX, y + 0.5 - visionY)
-          const light = displayedLightWithVisionEdge(raw, dist)
-          color = multiplyTint(color, enemyLightTint(light))
-        }
 
         graphics.fillStyle(color)
         graphics.fillRect(px, py, tileSize, tileSize)
         graphics.lineStyle(1, 0x101820, 0.38)
         graphics.strokeRect(px + 0.5, py + 0.5, tileSize - 1, tileSize - 1)
 
-        if (tile === TILE_DESTRUCTIBLE) {
-          graphics.lineStyle(1, 0x4d2f22, 0.8)
-          graphics.lineBetween(px + 3, py + 3, px + tileSize - 3, py + tileSize - 3)
-          graphics.lineBetween(px + tileSize - 3, py + 3, px + 3, py + tileSize - 3)
-        } else if (tile === TILE_PASS) {
+        if (tile === TILE_PASS) {
           graphics.lineStyle(1, 0xb9e8e7, 0.6)
           graphics.lineBetween(px + 3, py + tileSize / 2, px + tileSize - 3, py + tileSize / 2)
         }
@@ -323,31 +413,120 @@ export class TilemapView {
     this._drawGeneratedContent(graphics, tileSize)
     this.lastGridState = state
     this._syncWallLighting()
+    this._syncMineProps()
   }
 
   _tileDiscovered(x, y) {
     return this.world.discoveredTiles?.has(`${x},${y}`) ?? false
   }
 
+  _ensurePropImage(key, frame, x, y, tileSize) {
+    let img = this.propSprites.get(key)
+    if (!img) {
+      img = this.scene.add.image(0, 0, MINE_PROPS_TEXTURE, frame)
+        .setOrigin(0, 0)
+        .setDepth(PROP_DEPTH)
+      this.propSprites.set(key, img)
+    }
+    img.setFrame(frame)
+      .setPosition(x * tileSize, y * tileSize)
+      .setDisplaySize(tileSize, tileSize)
+      .setVisible(true)
+    return img
+  }
+
+  _syncMineProps() {
+    const {
+      grid,
+      tileSize,
+      discoveredTiles,
+      displayedLightLevels,
+      lightLevels,
+      player,
+    } = this.world
+    if (!grid) return
+
+    const levels = displayedLightLevels ?? lightLevels
+    const visionX = player
+      ? (player.posX + player.size / 2) / tileSize
+      : 0
+    const visionY = player
+      ? (player.posY + player.size / 2) / tileSize
+      : 0
+    const vp = this._viewportBounds()
+    const seen = new Set()
+    const resourceAt = new Map(
+      (this.world.resourceSpawns ?? []).map((r) => [`${r.x},${r.y}`, r]),
+    )
+
+    for (let y = vp.minY; y <= vp.maxY; y++) {
+      for (let x = vp.minX; x <= vp.maxX; x++) {
+        if (grid.get(x, y) !== TILE_DESTRUCTIBLE) continue
+        const key = `block:${x},${y}`
+        if (!discoveredTiles?.has(`${x},${y}`)) continue
+        const resource = resourceAt.get(`${x},${y}`)
+        const frame = resource
+          ? resourceBlockFrame(resource.material)
+          : genericDestructibleFrame(x, y)
+        const img = this._ensurePropImage(key, frame, x, y, tileSize)
+        seen.add(key)
+        const raw = levels?.get(`${x},${y}`) ?? 0
+        const dist = Math.hypot(x + 0.5 - visionX, y + 0.5 - visionY)
+        const light = displayedLightWithVisionEdge(raw, dist)
+        img.setTint(enemyLightTint(light))
+      }
+    }
+
+    for (const trap of this.world.traps ?? []) {
+      if (trap.state === 'disabled') continue
+      const { x, y } = trap.plate
+
+      if (this._inViewport(x, y, vp) && discoveredTiles?.has(`${x},${y}`)) {
+        const key = `plate:${trap.id}`
+        const active = trap.state === 'warning'
+          || (trap.occupiedLastFrame && trap.state !== 'idle')
+        const frame = active
+          ? MINE_PROP_FRAME.plateActive
+          : MINE_PROP_FRAME.plateIdle
+        const img = this._ensurePropImage(key, frame, x, y, tileSize)
+        seen.add(key)
+        const raw = levels?.get(`${x},${y}`) ?? 0
+        const dist = Math.hypot(x + 0.5 - visionX, y + 0.5 - visionY)
+        const light = displayedLightWithVisionEdge(raw, dist)
+        img.setTint(enemyLightTint(Math.max(light, 2)))
+      }
+
+      // Launcher: solo visible mientras la trampa está activada.
+      if (trap.state === 'warning' || trap.state === 'fired') {
+        const lx = trap.launcher.x
+        const ly = trap.launcher.y
+        if (!this._inViewport(lx, ly, vp)) continue
+        const lTile = `${lx},${ly}`
+        discoveredTiles?.add(lTile)
+        const lKey = `launcher:${trap.id}`
+        const lImg = this._ensurePropImage(
+          lKey,
+          MINE_PROP_FRAME.launcher,
+          lx,
+          ly,
+          tileSize,
+        )
+        seen.add(lKey)
+        const lRaw = levels?.get(lTile) ?? 0
+        const lDist = Math.hypot(lx + 0.5 - visionX, ly + 0.5 - visionY)
+        const lLight = displayedLightWithVisionEdge(lRaw, lDist)
+        lImg.setTint(enemyLightTint(Math.max(lLight, 2)))
+      }
+    }
+
+    for (const [key, img] of this.propSprites) {
+      if (seen.has(key)) continue
+      img.destroy()
+      this.propSprites.delete(key)
+    }
+  }
+
   _drawGeneratedContent(graphics, tileSize) {
-    const resourceColors = {
-      bronze: 0xc77b3f,
-      iron: 0xb9c0c7,
-      crystal: 0x78d7e8,
-    }
-
-    for (const resource of this.world.resourceSpawns ?? []) {
-      if (this.world.grid.get(resource.x, resource.y) !== TILE_DESTRUCTIBLE) continue
-      if (!this._tileDiscovered(resource.x, resource.y)) continue
-      const color = resourceColors[resource.material] ?? 0xffffff
-      graphics.fillStyle(color, 0.9)
-      graphics.fillCircle(
-        resource.x * tileSize + tileSize / 2,
-        resource.y * tileSize + tileSize / 2,
-        tileSize * 0.16,
-      )
-    }
-
     for (const fragment of this.world.recipeFragmentSpawns ?? []) {
       if (this.world.grid.get(fragment.x, fragment.y) !== TILE_WALL) continue
       if (!this._tileDiscovered(fragment.x, fragment.y)) continue
@@ -364,59 +543,104 @@ export class TilemapView {
       graphics.fillRect(px + inset, py + inset, tileSize - inset * 2, tileSize - inset * 2)
       graphics.lineStyle(1, 0xb08d57, 0.85)
       graphics.strokeRect(px + inset, py + inset, tileSize - inset * 2, tileSize - inset * 2)
-      // Marca de orden (1..N).
       graphics.fillStyle(0x1a1f18, 0.8)
       graphics.fillCircle(px + tileSize / 2, py + tileSize / 2, 2 + tablet.order * 0.6)
     }
 
-    for (const trap of this.world.traps ?? []) {
-      if (trap.state === 'disabled') continue
-      if (!this._tileDiscovered(trap.plate.x, trap.plate.y)) continue
-      const platePx = trap.plate.x * tileSize
-      const platePy = trap.plate.y * tileSize
-      graphics.fillStyle(0x8a4f3a, 0.75)
-      graphics.fillRect(platePx + 5, platePy + 5, tileSize - 10, tileSize - 10)
-      graphics.lineStyle(1, 0xff9f6b, 0.8)
-      graphics.strokeRect(platePx + 5, platePy + 5, tileSize - 10, tileSize - 10)
-
-      const lx = trap.launcher.x * tileSize + tileSize / 2
-      const ly = trap.launcher.y * tileSize + tileSize / 2
-      graphics.fillStyle(0x4a5560, 0.95)
-      graphics.fillCircle(lx, ly, tileSize * 0.18)
-      graphics.lineStyle(2, 0xc8d0d8, 0.9)
-      graphics.lineBetween(
-        lx,
-        ly,
-        lx + trap.dir.x * tileSize * 0.28,
-        ly + trap.dir.y * tileSize * 0.28,
-      )
-    }
-
-    for (const light of this.world.wallLightSpawns ?? []) {
-      // Solo se ve la fuente si su tile está dentro de la visión actual.
-      // Fuera del radio puede iluminar el área, pero la antorcha permanece oculta.
-      const lightKey = `${light.x},${light.y}`
-      if (!this.world.visibleTiles?.has(lightKey)) continue
-
-      const px = light.x * tileSize
-      const py = light.y * tileSize
-      const cx = px + tileSize / 2
-      const cy = py + tileSize / 2
-      let ox = 0
-      let oy = 0
-      if (light.orientation === 'east') ox = tileSize * 0.22
-      else if (light.orientation === 'west') ox = -tileSize * 0.22
-      else if (light.orientation === 'south') oy = tileSize * 0.22
-      else if (light.orientation === 'north') oy = -tileSize * 0.22
-
-      graphics.fillStyle(0xffd27a, 0.9)
-      graphics.fillCircle(cx + ox, cy + oy, tileSize * 0.12)
-      graphics.lineStyle(2, 0x8a6b3f, 0.9)
-      graphics.lineBetween(cx, cy, cx + ox, cy + oy)
-    }
+    // Trampas: placa siempre; launcher solo al activar (sprites).
+    // Antorchas de suelo: sprites animados en _syncTorchSprites.
 
     this._drawDoor(graphics, this.world.entryDoor, tileSize, 'entry')
     this._drawDoor(graphics, this.world.exitDoor, tileSize, 'exit')
+  }
+
+  _syncRailSprites() {
+    const {
+      tileSize,
+      discoveredTiles,
+      displayedLightLevels,
+      lightLevels,
+      player,
+    } = this.world
+    const vp = this._viewportBounds()
+    const levels = displayedLightLevels ?? lightLevels
+    const visionX = player
+      ? (player.posX + player.size / 2) / tileSize
+      : 0
+    const visionY = player
+      ? (player.posY + player.size / 2) / tileSize
+      : 0
+    const seen = new Set()
+
+    for (const rail of this.world.railSpawns ?? []) {
+      if (!this._inViewport(rail.x, rail.y, vp)) continue
+      if (!discoveredTiles?.has(`${rail.x},${rail.y}`)) continue
+      const key = `${rail.x},${rail.y}`
+      seen.add(key)
+      let img = this.railSprites.get(key)
+      if (!img) {
+        img = this.scene.add.image(0, 0, RAIL_TEXTURE)
+          .setOrigin(0.5, 0.5)
+          .setDepth(RAIL_DEPTH)
+        this.railSprites.set(key, img)
+      }
+      const raw = levels?.get(key) ?? 0
+      const dist = Math.hypot(rail.x + 0.5 - visionX, rail.y + 0.5 - visionY)
+      const light = displayedLightWithVisionEdge(raw, dist)
+      img
+        .setPosition(
+          rail.x * tileSize + tileSize / 2,
+          rail.y * tileSize + tileSize / 2,
+        )
+        .setDisplaySize(tileSize, tileSize)
+        .setRotation(railRotation(rail.orientation))
+        .setTint(enemyLightTint(Math.max(light, 1)))
+        .setVisible(true)
+    }
+
+    for (const [key, img] of this.railSprites) {
+      if (seen.has(key)) continue
+      img.destroy()
+      this.railSprites.delete(key)
+    }
+  }
+
+  _syncTorchSprites() {
+    const { tileSize, visibleTiles } = this.world
+    const vp = this._viewportBounds()
+    const seen = new Set()
+
+    for (const light of this.world.wallLightSpawns ?? []) {
+      const key = `${light.x},${light.y}`
+      // Solo se ve la fuente si su tile está en visión actual.
+      if (!visibleTiles?.has(key)) continue
+      if (!this._inViewport(light.x, light.y, vp)) continue
+
+      seen.add(key)
+      let sprite = this.torchSprites.get(key)
+      if (!sprite) {
+        sprite = this.scene.add.sprite(0, 0, TORCH_TEXTURE, 0)
+          .setOrigin(0.5, 0.5)
+          .setDepth(TORCH_DEPTH)
+        this.torchSprites.set(key, sprite)
+      }
+
+      // Frame y luz comparten reloj (pico de intensidad en frame 4).
+      sprite
+        .setFrame(light.animFrame ?? 0)
+        .setPosition(
+          light.x * tileSize + tileSize / 2,
+          light.y * tileSize + tileSize / 2,
+        )
+        .setDisplaySize(tileSize, tileSize)
+        .setVisible(true)
+    }
+
+    for (const [key, sprite] of this.torchSprites) {
+      if (seen.has(key)) continue
+      sprite.destroy()
+      this.torchSprites.delete(key)
+    }
   }
 
   _syncChestSprite() {

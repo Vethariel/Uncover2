@@ -95,7 +95,7 @@ describe('VisionSystem', () => {
       wallX: 17,
       wallY: 16,
       orientation: 'east',
-      intensity: 10,
+      phaseOffset: 4 / 9, // frame 4 = pico
     }]
 
     vision.update(world)
@@ -121,7 +121,14 @@ describe('VisionSystem', () => {
 
   it('un muro de luz ligeramente fuera del radio puede iluminar hacia dentro', () => {
     const world = createTestWorld(openMap(27), { playerSpawn: { x: 12, y: 12 } })
-    world.wallLightSpawns = [{ x: 20, y: 12, wallX: 21, wallY: 12, orientation: 'east' }]
+    world.wallLightSpawns = [{
+      x: 20,
+      y: 12,
+      wallX: 21,
+      wallY: 12,
+      orientation: 'east',
+      phaseOffset: 4 / 9,
+    }]
 
     vision.update(world)
 
@@ -140,7 +147,7 @@ describe('VisionSystem', () => {
       wallX: 19,
       wallY: 12,
       orientation: 'east',
-      intensity: 10,
+      phaseOffset: 4 / 9,
     }]
 
     vision.update(world)
@@ -221,7 +228,7 @@ describe('VisionSystem', () => {
       wallX: 10,
       wallY: 9,
       orientation: 'north',
-      intensity: 10,
+      phaseOffset: 4 / 9,
     }]
 
     vision.update(world)
@@ -239,6 +246,7 @@ describe('VisionSystem', () => {
       wallX: 12,
       wallY: 11,
       orientation: 'north',
+      phaseOffset: 4 / 9,
     }]
     world.grid.set(13, 13, TILE_WALL)
 

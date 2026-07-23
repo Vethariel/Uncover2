@@ -28,6 +28,7 @@ export class World {
     this.entryDoor = null
     this.exitDoor = null
     this.wallLightSpawns = []
+    this.railSpawns = []
     this.enemySpawns = []
     this.resourceSpawns = []
     this.recipeFragmentSpawns = []
@@ -58,6 +59,7 @@ export class World {
     this.visionSourceSignature = ''
     this.visionRevision = 0
     this.tileAnimTimer = 0
+    this.torchTime = 0
     this.events = []
     this.runResources = createEmptyResources()
     this.runFragments = createEmptyFragmentBag()
@@ -80,6 +82,7 @@ export class World {
     this.entryDoor = null
     this.exitDoor = null
     this.wallLightSpawns = []
+    this.railSpawns = []
     this.bombs = []
     this.gameOver = false
     this.gameWon = false
@@ -107,6 +110,7 @@ export class World {
     this.visionSourceSignature = ''
     this.visionRevision = 0
     this.tileAnimTimer = 0
+    this.torchTime = 0
     this.events = []
     this.miningProgress = new Map()
     this.fragmentProgress = new Map()

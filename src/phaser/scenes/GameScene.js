@@ -291,8 +291,8 @@ export class GameScene extends Phaser.Scene {
         padding: { x: 4, y: 2 },
       }),
     ).setDepth(980).setVisible(false)
-    this._syncViews()
     this._setupCamera()
+    this._syncViews()
 
     this.pendingMusicKey = this.world.levelVisualConfig?.bgMusic ?? 'mov1_n1'
     this.audio.stopMusic()
@@ -352,6 +352,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.fogOfWarView?.update(dt)
+    this.tilemapView?.update(dt)
     this.entityView.update()
     this.minimapView?.update()
     this.hudView?.update()
@@ -542,6 +543,7 @@ export class GameScene extends Phaser.Scene {
 
     this.entityView.update()
     this._syncCamera()
+    this.tilemapView?.update(dt)
     this.inputAdapter.flush()
   }
 

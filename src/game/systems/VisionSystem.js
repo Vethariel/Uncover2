@@ -10,6 +10,10 @@ import {
   VIEW_TILES_X,
   VIEW_TILES_Y,
 } from '../../config/constants.js'
+import {
+  torchAnimFrame,
+  torchLightIntensity,
+} from '../../config/torch.js'
 
 export const HELMET_LIGHT = 7
 export const BOMB_LIGHT = 2
@@ -126,10 +130,10 @@ function propagateSource(
   if (!shouldStartSource(player, startX, startY, strength, viewport)) return
 
   const radius = strength - 1
-  const minX = Math.max(viewport.minX, startX - radius)
-  const maxX = Math.min(viewport.maxX, startX + radius)
-  const minY = Math.max(viewport.minY, startY - radius)
-  const maxY = Math.min(viewport.maxY, startY + radius)
+  const minX = Math.max(viewport.minX, Math.floor(startX - radius))
+  const maxX = Math.min(viewport.maxX, Math.ceil(startX + radius))
+  const minY = Math.max(viewport.minY, Math.floor(startY - radius))
+  const maxY = Math.min(viewport.maxY, Math.ceil(startY + radius))
 
   for (let y = minY; y <= maxY; y++) {
     for (let x = minX; x <= maxX; x++) {
@@ -204,10 +208,37 @@ function collectSourceSignature(world) {
   return `${bombs}|${enemies}|${explosions}|${npcs}`
 }
 
+function collectTorchSignature(world, player) {
+  const t = world.torchTime ?? 0
+  const parts = []
+  for (const light of world.wallLightSpawns ?? []) {
+    const dist = Math.hypot(light.x - player.tileX, light.y - player.tileY)
+    if (dist > PLAYER_VISION_RADIUS + WALL_LIGHT - 1) continue
+    const frame = torchAnimFrame(t, light.phaseOffset ?? 0)
+    const base = light.baseIntensity ?? WALL_LIGHT
+    // Intensidad entera: rebuild solo cuando cambia el brillo perceptible.
+    parts.push(`${light.x},${light.y}:${Math.round(torchLightIntensity(frame, base))}`)
+  }
+  return parts.sort().join(';')
+}
+
+function syncTorchLightState(world) {
+  const t = world.torchTime ?? 0
+  for (const light of world.wallLightSpawns ?? []) {
+    const frame = torchAnimFrame(t, light.phaseOffset ?? 0)
+    const base = light.baseIntensity ?? WALL_LIGHT
+    light.animFrame = frame
+    light.intensity = torchLightIntensity(frame, base)
+  }
+}
+
 export class VisionSystem {
-  update(world) {
+  update(world, dt = 0) {
     const { grid, player } = world
     if (!grid || !player) return
+
+    world.torchTime = (world.torchTime ?? 0) + Math.max(0, dt)
+    syncTorchLightState(world)
 
     const viewport = buildVisionViewport(player, grid)
     world.visionViewport = viewport
@@ -215,7 +246,8 @@ export class VisionSystem {
     const helmet = player.lightEmission ?? HELMET_LIGHT
     const emptyTileLight = world.levelVisualConfig?.emptyTileLight ?? 0
     const sourceSignature = collectSourceSignature(world)
-    const frameSignature = `${player.tileX},${player.tileY}:${player.facing}|${helmet}|${emptyTileLight}|${grid.revision ?? 0}|${sourceSignature}`
+    const torchSignature = collectTorchSignature(world, player)
+    const frameSignature = `${player.tileX},${player.tileY}:${player.facing}|${helmet}|${emptyTileLight}|${grid.revision ?? 0}|${sourceSignature}|${torchSignature}`
     if (frameSignature === world.visionSourceSignature) return
 
     const lightLevels = new Map()
@@ -312,24 +344,23 @@ export class VisionSystem {
       world.discoveredTiles.add(cellKey)
     }
 
-    // Muros ortogonales a un tile lit: el borde de galería se descubre con el pasillo
-    // (si no, el sprite queda oculto en penumbra mientras el suelo sí se ve).
-    for (const cellKey of visible) {
+    // Descubrir muros ortogonales junto a cualquier tile iluminado (caras visibles).
+    for (const cellKey of [...visible]) {
       const [xs, ys] = cellKey.split(',')
       const x = Number(xs)
       const y = Number(ys)
-      for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
-        const wx = x + ox
-        const wy = y + oy
+      for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+        const wx = x + dx
+        const wy = y + dy
         if (!grid.inBounds(wx, wy)) continue
-        if (grid.get(wx, wy) !== TILE_WALL) continue
-        world.discoveredTiles.add(`${wx},${wy}`)
+        if (!isOpaque(grid.get(wx, wy))) continue
+        world.discoveredTiles.add(tileKey(wx, wy))
       }
     }
 
     world.lightLevels = lightLevels
     world.visibleTiles = visible
+    world.visionRevision = (world.visionRevision ?? 0) + 1
     world.visionSourceSignature = frameSignature
-    world.visionRevision++
   }
 }

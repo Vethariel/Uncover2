@@ -42,7 +42,7 @@ export class GameLoop {
     this.bomb.update(world, dt)
     this.traps.update(world, dt)
     this.life.update(world, dt)
-    this.vision.update(world)
+    this.vision.update(world, dt)
 
     return {
       events: world.events.splice(0),

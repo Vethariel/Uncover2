@@ -142,7 +142,6 @@ export class EntityView {
     this._drawMiningProgress()
     this._drawFragmentProgress()
     this._drawPuzzleFlashes()
-    this._drawTrapWarnings()
     this._drawDarts()
   }
 
@@ -616,21 +615,6 @@ export class EntityView {
     }
   }
 
-  _drawTrapWarnings() {
-    const tileSize = this.world.tileSize
-    for (const trap of this.world.traps ?? []) {
-      if (trap.state !== 'warning') continue
-      const pulse = 0.35 + 0.35 * Math.abs(Math.sin(trap.warningTimer * 14))
-      this.graphics.fillStyle(0xff6b4a, pulse)
-      this.graphics.fillRect(
-        trap.plate.x * tileSize + 3,
-        trap.plate.y * tileSize + 3,
-        tileSize - 6,
-        tileSize - 6,
-      )
-    }
-  }
-
   _drawDarts() {
     const tileSize = this.world.tileSize
     for (const dart of this.world.darts ?? []) {
@@ -639,17 +623,16 @@ export class EntityView {
         this.world.visibleTiles
         && !this.world.visibleTiles.has(`${dart.tileX},${dart.tileY}`)
       ) continue
+
       const cx = dart.tileX * tileSize + tileSize / 2
       const cy = dart.tileY * tileSize + tileSize / 2
-      this.graphics.fillStyle(0xe8e0d0, 0.95)
-      this.graphics.fillCircle(cx, cy, 3)
-      this.graphics.lineStyle(2, 0xb0a090, 1)
-      this.graphics.lineBetween(
-        cx - dart.dir.x * 5,
-        cy - dart.dir.y * 5,
-        cx + dart.dir.x * 5,
-        cy + dart.dir.y * 5,
-      )
+      // Proyectil: tres píxeles negros alineados con la dirección de vuelo.
+      const dx = dart.dir?.x ?? 0
+      const dy = dart.dir?.y ?? 0
+      this.graphics.fillStyle(0x000000, 1)
+      this.graphics.fillRect(cx - 0.5, cy - 0.5, 1, 1)
+      this.graphics.fillRect(cx - 0.5 - dx, cy - 0.5 - dy, 1, 1)
+      this.graphics.fillRect(cx - 0.5 + dx, cy - 0.5 + dy, 1, 1)
     }
   }
 
