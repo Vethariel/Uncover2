@@ -209,4 +209,36 @@ describe('GameState resources and progression', () => {
     expect(loaded.workshopSeals.fortune).toBe(1)
     expect(loaded.equippedSeals.filter(Boolean)).toEqual(['maxBombs', 'fortune'])
   })
+
+  it('canContinue solo con save y hub desbloqueado', () => {
+    const state = new GameState()
+    expect(state.canContinue()).toBe(false)
+    state.hubUnlocked = true
+    state.playMode = 'normal'
+    state.save()
+    expect(state.canContinue()).toBe(true)
+    state.wipeProgress()
+    expect(state.canContinue()).toBe(false)
+  })
+
+  it('cambiar de modo borra el save; T/Y solo en dev', () => {
+    const state = new GameState()
+    state.hubUnlocked = true
+    state.workshopCrude.bronze = 9
+    state.enterPlayMode('normal')
+    state.save()
+    expect(state.hasSave()).toBe(true)
+
+    state.enterPlayMode('dev')
+    expect(state.hasSave()).toBe(false)
+    expect(state.isDevMode()).toBe(true)
+    expect(state.workshopCrude.bronze).toBe(0)
+
+    state.hubUnlocked = true
+    state.workshopCrude.bronze = 3
+    state.save()
+    state.enterPlayMode('normal')
+    expect(state.hasSave()).toBe(false)
+    expect(state.isDevMode()).toBe(false)
+  })
 })

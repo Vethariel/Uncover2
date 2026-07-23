@@ -25,7 +25,6 @@ export class MenuScene extends Phaser.Scene {
 
   create() {
     this.gameState = session.gameState
-    // No borrar progreso al visitar el menú; New Game solo si no hay save o tras wipe.
     if (!this.gameState.hasSave()) {
       this.gameState.resetCampaign()
     }
@@ -34,16 +33,18 @@ export class MenuScene extends Phaser.Scene {
 
     this.menuBg = new MenuBackgroundView(this)
 
-    const yNew = DOOR_BUTTON_Y - (BUTTON_HEIGHT + BUTTON_GAP) / 2
+    const yPrimary = DOOR_BUTTON_Y - (BUTTON_HEIGHT + BUTTON_GAP) / 2
     const yDev = DOOR_BUTTON_Y + (BUTTON_HEIGHT + BUTTON_GAP) / 2
+    this._canContinue = this.gameState.canContinue()
+    this._selected = 0
 
-    this.btnNewGame = createUiButton(this, {
+    this.btnPrimary = createUiButton(this, {
       x: DOOR_BUTTON_X,
-      y: yNew,
+      y: yPrimary,
       width: BUTTON_WIDTH,
       height: BUTTON_HEIGHT,
-      label: 'NUEVO JUEGO',
-      onClick: () => this._startNewGame(),
+      label: this._canContinue ? 'CONTINUAR' : 'NUEVO JUEGO',
+      onClick: () => this._onPrimary(),
     })
 
     this.btnDev = createUiButton(this, {
@@ -55,9 +56,17 @@ export class MenuScene extends Phaser.Scene {
       onClick: () => this._openDev(),
     })
 
-    this.input.keyboard.on('keydown-ENTER', () => this._startNewGame())
-    this.input.keyboard.on('keydown-N', () => this._startNewGame())
-    this.input.keyboard.on('keydown-D', () => this._openDev())
+    this.btnPrimary.bg.on('pointerover', () => this._setSelected(0))
+    this.btnDev.bg.on('pointerover', () => this._setSelected(1))
+
+    this._setSelected(0)
+
+    this.input.keyboard.on('keydown-UP', () => this._move(-1))
+    this.input.keyboard.on('keydown-W', () => this._move(-1))
+    this.input.keyboard.on('keydown-DOWN', () => this._move(1))
+    this.input.keyboard.on('keydown-S', () => this._move(1))
+    this.input.keyboard.on('keydown-ENTER', () => this._confirm())
+    this.input.keyboard.on('keydown-SPACE', () => this._confirm())
 
     if (this._pendingBlackoutFadeIn) {
       this._pendingBlackoutFadeIn = false
@@ -65,12 +74,44 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
-  _startNewGame() {
-    this.gameState.wipeProgress()
-    this.scene.start('LevelSelect')
+  _move(delta) {
+    this._setSelected((this._selected + delta + 2) % 2)
   }
 
+  _setSelected(index) {
+    this._selected = index
+    this.btnPrimary.setFocused(index === 0)
+    this.btnDev.setFocused(index === 1)
+  }
+
+  _confirm() {
+    if (this._selected === 0) this._onPrimary()
+    else this._openDev()
+  }
+
+  _onPrimary() {
+    if (this._canContinue) this._continueGame()
+    else this._startNewGame()
+  }
+
+  /** Nueva campaña: modo normal, wipe y arranca N1 sin selector. */
+  _startNewGame() {
+    this.gameState.enterPlayMode('normal')
+    this.gameState.wipeProgress()
+    this.gameState.enterPlayMode('normal')
+    this.gameState.currentLevelIndex = 0
+    this.scene.start('Game')
+  }
+
+  /** Retoma en el taller (reintento del nivel actual). */
+  _continueGame() {
+    this.gameState.enterPlayMode('normal')
+    this.scene.start('Workshop')
+  }
+
+  /** Selector de niveles (debug); habilita T/Y. */
   _openDev() {
+    this.gameState.enterPlayMode('dev')
     this.scene.start('LevelSelect')
   }
 }

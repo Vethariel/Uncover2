@@ -72,8 +72,9 @@ export class GameOverlayScene extends Phaser.Scene {
 
     if (result === 'quit') {
       this.audio.unduckMusic()
+      // Salir a mitad de partida = game over de ese nivel.
       gameScene._cleanupLevel()
-      this.scene.start('Menu')
+      gameScene.scene.start('GameOver')
       return
     }
 

@@ -102,9 +102,9 @@ export class LevelSelectScene extends Phaser.Scene {
       const y = startY + row * (cardH + gap)
       const isSelected = i === this.selectedIndex
 
-      const color = isSelected ? 0x64c8ff : 0x285078
+      const color = isSelected ? 0xffc857 : 0x6b4a1e
       const rect = this.add.rectangle(x + cardW / 2, y + cardH / 2, cardW, cardH, color)
-        .setStrokeStyle(isSelected ? 2 : 0, 0xffffff)
+        .setStrokeStyle(isSelected ? 2 : 0, 0xffe6a8)
       this.cards.push(rect)
 
       const text = this.add.text(
@@ -113,7 +113,7 @@ export class LevelSelectScene extends Phaser.Scene {
         `${i + 1}`,
         textStyleBody({
           fontSize: `${FONT_SIZE_BODY}px`,
-          color: isSelected ? '#000000' : '#c8c8c8',
+          color: isSelected ? '#1a1208' : '#e8d4a8',
         }),
       ).setOrigin(0.5)
       this.cards.push(text)

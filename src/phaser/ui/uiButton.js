@@ -60,7 +60,7 @@ export function createUiButton(scene, opts) {
   bg.on('pointerover', () => text.setColor('#ffc857'))
   bg.on('pointerout', () => {
     release()
-    text.setColor(COLOR_BODY)
+    if (!focused) text.setColor(COLOR_BODY)
   })
   bg.on('pointerdown', press)
   bg.on('pointerup', () => {
@@ -69,9 +69,15 @@ export function createUiButton(scene, opts) {
   })
   bg.on('pointerupoutside', release)
 
+  let focused = false
+
   return {
     bg,
     text,
+    setFocused(value) {
+      focused = Boolean(value)
+      text.setColor(focused ? '#ffc857' : COLOR_BODY)
+    },
     destroy() {
       bg.destroy()
       text.destroy()

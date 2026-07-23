@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { session } from '../../core/session.js'
 
 export class InputAdapter {
   constructor(scene) {
@@ -25,6 +26,10 @@ export class InputAdapter {
     scene.input.keyboard.on('keydown', (event) => {
       this.justPressed.add(event.code)
     })
+  }
+
+  _devEnabled() {
+    return Boolean(session.gameState?.isDevMode?.())
   }
 
   isDown(action) {
@@ -63,9 +68,9 @@ export class InputAdapter {
       case 'interact':
         return Phaser.Input.Keyboard.JustDown(this.keys.interact)
       case 'debugMine':
-        return Phaser.Input.Keyboard.JustDown(this.keys.debugMine)
+        return this._devEnabled() && Phaser.Input.Keyboard.JustDown(this.keys.debugMine)
       case 'debugTeleportExit':
-        return Phaser.Input.Keyboard.JustDown(this.keys.debugTeleportExit)
+        return this._devEnabled() && Phaser.Input.Keyboard.JustDown(this.keys.debugTeleportExit)
       case 'mouse':
         return this.scene.input.activePointer.isDown && this.justPressed.has('pointer')
       default:

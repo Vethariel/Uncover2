@@ -38,14 +38,19 @@ import {
 } from '../config/crafting.js'
 
 const SAVE_KEY = 'uncover_save'
+const PLAY_MODE_KEY = 'uncover_play_mode'
 const SAVE_VERSION = 5
 const MOVE_SPEED_PER_RANK = 18
+
+export const PLAY_MODE_NORMAL = 'normal'
+export const PLAY_MODE_DEV = 'dev'
 
 export class GameState {
   constructor() {
     this.resetCampaign()
     // Debug: LevelSelect abierto.
     this.unlockedLevels = LEVELS.length
+    this.playMode = this._readStoredPlayMode()
   }
 
   resetCampaign() {
@@ -78,6 +83,41 @@ export class GameState {
     this.narrativeFlags = {}
     /** @type {null | { kind: string, title: string, detail: string, hint: string }} */
     this.gameOverPresentation = null
+  }
+
+  _readStoredPlayMode() {
+    try {
+      const mode = localStorage.getItem(PLAY_MODE_KEY)
+      if (mode === PLAY_MODE_DEV || mode === PLAY_MODE_NORMAL) return mode
+    } catch {
+      /* ignore */
+    }
+    return PLAY_MODE_NORMAL
+  }
+
+  _persistPlayMode() {
+    try {
+      localStorage.setItem(PLAY_MODE_KEY, this.playMode)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  isDevMode() {
+    return this.playMode === PLAY_MODE_DEV
+  }
+
+  /**
+   * Cambia modo de juego. Si había save en el otro modo, lo borra.
+   * @param {'normal'|'dev'} mode
+   */
+  enterPlayMode(mode) {
+    const next = mode === PLAY_MODE_DEV ? PLAY_MODE_DEV : PLAY_MODE_NORMAL
+    if (this.playMode !== next && this.hasSave()) {
+      this.wipeProgress()
+    }
+    this.playMode = next
+    this._persistPlayMode()
   }
 
   hasSeen(id) {
@@ -363,6 +403,11 @@ export class GameState {
     return info
   }
 
+  /** Partida campaña (no DEV) con hub: el menú ofrece Continuar. */
+  canContinue() {
+    return this.hasSave() && this.hubUnlocked && this.playMode === PLAY_MODE_NORMAL
+  }
+
   levelIndexForHubExit() {
     return this.currentLevelIndex
   }
@@ -398,8 +443,10 @@ export class GameState {
       furnaceJob: this.furnaceJob ? { ...this.furnaceJob } : null,
       anvilJob: this.anvilJob ? { ...this.anvilJob } : null,
       upgrades: { ...this.upgrades },
+      playMode: this.playMode,
     }
     localStorage.setItem(SAVE_KEY, JSON.stringify(data))
+    this._persistPlayMode()
   }
 
   load() {
@@ -457,6 +504,10 @@ export class GameState {
       }
       this.runFragments = cloneFragmentBag(data.runFragments)
       this.workshopFragments = cloneFragmentBag(data.workshopFragments)
+      this.playMode = data.playMode === PLAY_MODE_DEV
+        ? PLAY_MODE_DEV
+        : PLAY_MODE_NORMAL
+      this._persistPlayMode()
       return true
     } catch {
       return false
