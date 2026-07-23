@@ -7,6 +7,7 @@ import {
   portraitTextureKey,
 } from '../../config/portraitExpressions.js'
 import { preloadUiAtlas, registerUiAtlasFrames } from '../ui/uiAtlas.js'
+import { preloadIconsAtlas, registerIconsAtlasFrames } from '../ui/iconsAtlas.js'
 import { waitForGameFonts } from '../../config/typography.js'
 
 export class PreloadScene extends Phaser.Scene {
@@ -17,6 +18,7 @@ export class PreloadScene extends Phaser.Scene {
   preload() {
     preloadMenuBackground(this.load)
     preloadUiAtlas(this.load)
+    preloadIconsAtlas(this.load)
     for (const expression of PLAYER_EXPRESSIONS) {
       this.load.image(
         portraitTextureKey('player', expression),
@@ -176,6 +178,7 @@ export class PreloadScene extends Phaser.Scene {
 
   create() {
     registerUiAtlasFrames(this)
+    registerIconsAtlasFrames(this)
     waitForGameFonts().then(() => {
       this.scene.start('Splash')
     })

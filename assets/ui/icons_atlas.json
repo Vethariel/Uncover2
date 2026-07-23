@@ -1,0 +1,179 @@
+{
+  "key": "iconsAtlas",
+  "path": "assets/ui/icons_atlas.png",
+  "cell": 32,
+  "cols": 9,
+  "rows": 4,
+  "width": 288,
+  "height": 128,
+  "frames": {
+    "bronze_crude": {
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "iron_crude": {
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "crystal_crude": {
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "bronze_refined": {
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "iron_refined": {
+      "x": 128,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "crystal_refined": {
+      "x": 160,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "fragment_generic": {
+      "x": 192,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "fragment_specialized": {
+      "x": 224,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "schematic_scroll": {
+      "x": 256,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "seal_maxBombs_1": {
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "seal_maxBombs_2": {
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "seal_maxBombs_3": {
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "seal_bombRange_1": {
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "seal_bombRange_2": {
+      "x": 128,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "seal_bombRange_3": {
+      "x": 160,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "seal_pickSpeed_1": {
+      "x": 192,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "seal_pickSpeed_2": {
+      "x": 224,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "seal_pickSpeed_3": {
+      "x": 256,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "seal_fortune_1": {
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "seal_fortune_2": {
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "seal_fortune_3": {
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "seal_moveSpeed_1": {
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "seal_moveSpeed_2": {
+      "x": 128,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "seal_moveSpeed_3": {
+      "x": 160,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "seal_maxLives_1": {
+      "x": 192,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "seal_maxLives_2": {
+      "x": 224,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "seal_maxLives_3": {
+      "x": 256,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "crystal_alloy": {
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    }
+  }
+}

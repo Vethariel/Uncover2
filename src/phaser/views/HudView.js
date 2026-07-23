@@ -7,6 +7,7 @@ import {
   textStyleDisplay,
 } from '../../config/typography.js'
 import { createUiImage, createUiNineSlice } from '../ui/uiAtlas.js'
+import { createIconImage, crudeIconFrame } from '../ui/iconsAtlas.js'
 
 const DEPTH = 1000
 const ICON = 32
@@ -19,9 +20,9 @@ const FRAGMENT_VALUE_SLOT = 36
 const PANEL_FILL = 0x0a0e14
 
 const RESOURCE_SLOTS = [
-  { key: 'bronze', icon: 'bronze_icon', valueSlot: VALUE_SLOT },
-  { key: 'iron', icon: 'iron_icon', valueSlot: VALUE_SLOT },
-  { key: 'crystal', icon: 'crystal_icon', valueSlot: VALUE_SLOT },
+  { key: 'bronze', valueSlot: VALUE_SLOT },
+  { key: 'iron', valueSlot: VALUE_SLOT },
+  { key: 'crystal', valueSlot: VALUE_SLOT },
 ]
 
 function slotWidth(valueSlot) {
@@ -59,7 +60,7 @@ export class HudView {
 
     const centerSlots = [
       ...RESOURCE_SLOTS,
-      { key: 'fragment', icon: 'fragment_icon', valueSlot: FRAGMENT_VALUE_SLOT },
+      { key: 'fragment', valueSlot: FRAGMENT_VALUE_SLOT },
     ]
     const clusterW = centerSlots.reduce(
       (sum, slot, i) => sum + slotWidth(slot.valueSlot) + (i > 0 ? CLUSTER_GAP : 0),
@@ -69,7 +70,12 @@ export class HudView {
 
     this.resourceNodes = []
     for (const slot of RESOURCE_SLOTS) {
-      const icon = createUiImage(scene, slot.icon, x + ICON / 2, midY)
+      const icon = createIconImage(
+        scene,
+        crudeIconFrame(slot.key),
+        x + ICON / 2,
+        midY,
+      )
       const value = scene.add.text(
         x + ICON + ICON_VALUE_GAP,
         midY,
@@ -80,7 +86,7 @@ export class HudView {
       this.resourceNodes.push({ ...slot, icon, value })
     }
 
-    this.fragmentIcon = createUiImage(scene, 'fragment_icon', x + ICON / 2, midY)
+    this.fragmentIcon = createIconImage(scene, 'fragment_generic', x + ICON / 2, midY)
     this.fragmentText = scene.add.text(
       x + ICON + ICON_VALUE_GAP,
       midY,

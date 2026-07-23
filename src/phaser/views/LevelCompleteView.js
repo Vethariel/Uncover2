@@ -6,7 +6,8 @@ import {
   textStyleBody,
   textStyleDisplay,
 } from '../../config/typography.js'
-import { createUiImage, createUiNineSlice } from '../ui/uiAtlas.js'
+import { createUiNineSlice } from '../ui/uiAtlas.js'
+import { createIconImage } from '../ui/iconsAtlas.js'
 
 const DEPTH = 1250
 const PANEL_FILL = 0x0a0e14
@@ -17,14 +18,14 @@ const ICON_SIZE = 32
 const ROW_GAP = 32
 
 const ROWS = [
-  { path: ['resources', 'bronze'], label: 'Bronce', icon: 'bronze_icon' },
-  { path: ['resources', 'iron'], label: 'Hierro', icon: 'iron_icon' },
-  { path: ['resources', 'crystal'], label: 'Cristal', icon: 'crystal_icon' },
-  { path: ['fragments', 'generic'], label: 'Fragmentos genéricos', icon: 'fragment_icon' },
+  { path: ['resources', 'bronze'], label: 'Bronce', icon: 'bronze_crude' },
+  { path: ['resources', 'iron'], label: 'Hierro', icon: 'iron_crude' },
+  { path: ['resources', 'crystal'], label: 'Cristal', icon: 'crystal_crude' },
+  { path: ['fragments', 'generic'], label: 'Fragmentos genéricos', icon: 'fragment_generic' },
   {
     path: ['fragments', 'specialized'],
     label: 'Fragmentos especializados',
-    icon: 'fragment_icon',
+    icon: 'fragment_specialized',
   },
 ]
 
@@ -92,7 +93,7 @@ export class LevelCompleteView {
     const rowsTop = top + 88
     this.rowNodes = ROWS.map((row, index) => {
       const y = rowsTop + index * ROW_GAP
-      const icon = createUiImage(
+      const icon = createIconImage(
         scene,
         row.icon,
         left + PANEL_PAD + ICON_SIZE / 2,

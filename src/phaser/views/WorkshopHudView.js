@@ -4,7 +4,12 @@ import {
   textStyleBody,
   textStyleDisplay,
 } from '../../config/typography.js'
-import { createUiImage, createUiNineSlice } from '../ui/uiAtlas.js'
+import { createUiNineSlice } from '../ui/uiAtlas.js'
+import {
+  createIconImage,
+  crudeIconFrame,
+  refinedIconFrame,
+} from '../ui/iconsAtlas.js'
 
 const DEPTH = 1000
 const ICON = 28
@@ -14,18 +19,14 @@ const ICON_VALUE_GAP = 3
 const VALUE_SLOT = 20
 const PANEL_FILL = 0x0a0e14
 
-const CRUDE_SLOTS = [
-  { key: 'bronze', icon: 'bronze_icon' },
-  { key: 'iron', icon: 'iron_icon' },
-  { key: 'crystal', icon: 'crystal_icon' },
-]
+const MATERIALS = ['bronze', 'iron', 'crystal']
 
 function slotW() {
   return ICON + ICON_VALUE_GAP + VALUE_SLOT
 }
 
 /**
- * HUD del hub: crudo (iconos), refinado (placeholders), fragmentos.
+ * HUD del hub: crudo / refinado / fragmentos (iconsAtlas).
  */
 export class WorkshopHudView {
   constructor(scene, gameState) {
@@ -58,18 +59,21 @@ export class WorkshopHudView {
     this.refinedNodes = []
 
     let x = 72
-    for (const slot of CRUDE_SLOTS) {
-      const icon = createUiImage(scene, slot.icon, x + ICON / 2, midY - 1, {
-        displayWidth: ICON,
-        displayHeight: ICON,
-      })
+    for (const key of MATERIALS) {
+      const icon = createIconImage(
+        scene,
+        crudeIconFrame(key),
+        x + ICON / 2,
+        midY,
+        { displayWidth: ICON, displayHeight: ICON },
+      )
       const value = scene.add.text(
         x + ICON + ICON_VALUE_GAP,
         midY,
         '0',
         textStyleBody({ fontSize: '12px', color: '#c8d0d8' }),
       ).setOrigin(0, 0.5)
-      this.crudeNodes.push({ key: slot.key, icon, value })
+      this.crudeNodes.push({ key, icon, value })
       x += slotW() + 4
     }
 
@@ -78,31 +82,30 @@ export class WorkshopHudView {
       x,
       midY,
       'Ref',
-      textStyleBody({ fontSize: '10px', color: '#6f7780' }),
+      textStyleBody({ fontSize: '10px', color: '#9aa3ad' }),
     ).setOrigin(0, 0.5)
     x += 22
 
-    for (const slot of CRUDE_SLOTS) {
-      const ph = createUiImage(scene, 'item_placeholder', x + ICON / 2, midY, {
-        displayWidth: 20,
-        displayHeight: 20,
-      }).setAlpha(0.85)
-      const tintIcon = createUiImage(scene, slot.icon, x + ICON / 2, midY, {
-        displayWidth: 14,
-        displayHeight: 14,
-      }).setAlpha(0.55)
+    for (const key of MATERIALS) {
+      const icon = createIconImage(
+        scene,
+        refinedIconFrame(key),
+        x + ICON / 2,
+        midY,
+        { displayWidth: ICON, displayHeight: ICON },
+      )
       const value = scene.add.text(
-        x + ICON + ICON_VALUE_GAP - 4,
+        x + ICON + ICON_VALUE_GAP,
         midY,
         '0',
-        textStyleBody({ fontSize: '12px', color: '#9aa3ad' }),
+        textStyleBody({ fontSize: '12px', color: '#c8d0d8' }),
       ).setOrigin(0, 0.5)
-      this.refinedNodes.push({ key: slot.key, ph, tintIcon, value })
+      this.refinedNodes.push({ key, icon, value })
       x += slotW() + 2
     }
 
     x += CLUSTER_GAP
-    this.fragIcon = createUiImage(scene, 'fragment_icon', x + ICON / 2, midY, {
+    this.fragIcon = createIconImage(scene, 'fragment_generic', x + ICON / 2, midY, {
       displayWidth: ICON,
       displayHeight: ICON,
     })
@@ -119,7 +122,7 @@ export class WorkshopHudView {
       this.title,
       ...this.crudeNodes.flatMap((n) => [n.icon, n.value]),
       this.refLabel,
-      ...this.refinedNodes.flatMap((n) => [n.ph, n.tintIcon, n.value]),
+      ...this.refinedNodes.flatMap((n) => [n.icon, n.value]),
       this.fragIcon,
       this.fragValue,
     ])

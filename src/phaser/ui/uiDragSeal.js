@@ -1,16 +1,14 @@
 import Phaser from 'phaser'
-import { placeholderFrameForRank, UPGRADE_DEFS } from '../../config/crafting.js'
-import {
-  COLOR_BODY,
-  FONT_SIZE_HINT,
-  textStyleDisplay,
-} from '../../config/typography.js'
-import { createUiImage, createUiNineSlice } from './uiAtlas.js'
+import { placeholderFrameForRank } from '../../config/crafting.js'
+import { sealIconFrame } from '../../config/iconsAtlas.js'
+import { createUiNineSlice } from './uiAtlas.js'
+import { createIconImage } from './iconsAtlas.js'
 
 const SEAL_SIZE = 32
+const ICON_INSET = 28
 
 /**
- * Sello arrastrable (placeholder por rareza + inicial del nombre).
+ * Sello arrastrable: placeholder por rareza + icono del atlas.
  *
  * @param {Phaser.Scene} scene
  * @param {{
@@ -37,7 +35,7 @@ export function createSealToken(scene, opts) {
   } = opts
 
   const frameId = placeholderFrameForRank(rank)
-  const def = UPGRADE_DEFS[upgradeId]
+  const iconFrame = sealIconFrame(upgradeId, rank)
   const home = { x, y }
 
   const bg = createUiNineSlice(
@@ -49,27 +47,16 @@ export function createSealToken(scene, opts) {
     SEAL_SIZE,
   ).setScrollFactor(0).setDepth(depth)
 
-  const label = scene.add.text(
-    x,
-    y,
-    (def?.name ?? '?').slice(0, 1).toUpperCase(),
-    textStyleDisplay({
-      fontSize: `${FONT_SIZE_HINT + 2}px`,
-      color: COLOR_BODY,
-    }),
-  ).setOrigin(0.5).setScrollFactor(0).setDepth(depth + 1)
-
-  const rankText = scene.add.text(
-    x + 10,
-    y + 10,
-    `R${rank}`,
-    textStyleDisplay({
-      fontSize: '8px',
-      color: '#ffc857',
-    }),
-  ).setOrigin(0.5).setScrollFactor(0).setDepth(depth + 1)
+  const icon = createIconImage(scene, iconFrame, x, y, {
+    displayWidth: ICON_INSET,
+    displayHeight: ICON_INSET,
+  }).setScrollFactor(0).setDepth(depth + 1)
 
   bg.setInteractive({ useHandCursor: true, draggable: Boolean(draggable) })
+
+  const syncFollowers = (cx, cy) => {
+    icon.setPosition(cx, cy)
+  }
 
   if (draggable) {
     scene.input.setDraggable(bg)
@@ -78,16 +65,13 @@ export function createSealToken(scene, opts) {
       bg.y = dragY
       const cx = dragX + SEAL_SIZE / 2
       const cy = dragY + SEAL_SIZE / 2
-      label.setPosition(cx, cy)
-      rankText.setPosition(cx + 10, cy + 10)
+      syncFollowers(cx, cy)
       bg.setDepth(depth + 20)
-      label.setDepth(depth + 21)
-      rankText.setDepth(depth + 21)
+      icon.setDepth(depth + 21)
     })
     bg.on('dragend', (pointer) => {
       bg.setDepth(depth)
-      label.setDepth(depth + 1)
-      rankText.setDepth(depth + 1)
+      icon.setDepth(depth + 1)
       onDragEnd?.(upgradeId, pointer)
     })
   }
@@ -99,30 +83,27 @@ export function createSealToken(scene, opts) {
   return {
     upgradeId,
     bg,
-    label,
-    rankText,
+    icon,
     home,
     setPosition(nx, ny) {
       home.x = nx
       home.y = ny
       bg.x = nx - SEAL_SIZE / 2
       bg.y = ny - SEAL_SIZE / 2
-      label.setPosition(nx, ny)
-      rankText.setPosition(nx + 10, ny + 10)
+      syncFollowers(nx, ny)
     },
     snapHome() {
       this.setPosition(home.x, home.y)
     },
     destroy() {
       bg.destroy()
-      label.destroy()
-      rankText.destroy()
+      icon.destroy()
     },
   }
 }
 
 /**
- * Slot de instalación (placeholder vacío o con rareza del sello).
+ * Slot de instalación (placeholder vacío).
  */
 export function createEquipSlot(scene, {
   x,
@@ -155,18 +136,10 @@ export function createEquipSlot(scene, {
       return Phaser.Geom.Rectangle.Contains(hit, px, py)
     },
     setFrame(rankOrNull) {
-      // Recrear no; usar tint/alpha. Para frame distinto destruimos y recreamos en panel.
       bg.setAlpha(rankOrNull ? 1 : 0.55)
     },
     destroy() {
       bg.destroy()
     },
   }
-}
-
-export function createEmptySlotPlaceholder(scene, x, y, depth = 1200) {
-  return createUiImage(scene, 'item_placeholder', x, y, {
-    displayWidth: SEAL_SIZE,
-    displayHeight: SEAL_SIZE,
-  }).setScrollFactor(0).setDepth(depth).setAlpha(0.5)
 }
