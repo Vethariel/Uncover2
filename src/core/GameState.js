@@ -12,27 +12,33 @@ import {
 } from '../config/miningTypes.js'
 import {
   buildFragmentPlan,
-  canCraft,
   canSmelt,
-  canUnlockRank2,
-  canUnlockRank3,
   clearFragmentBag,
   cloneFragmentBag,
-  craftUpgrade,
-  createDefaultRecipesKnown,
+  collectSmeltJob,
+  completeSealCraft,
+  consumeSealCraftCosts,
+  createEmptyEquippedSlots,
   createEmptyFragmentBag,
+  createEmptySeals,
   createEmptyUpgrades,
+  equipSeal,
   fortuneChance,
+  listAnvilRecipes,
+  migrateLegacyUpgrades,
   miningDurationFactor,
-  smeltBatch,
+  ranksFromEquipped,
+  startSmeltJob,
+  tickAnvilJob,
+  tickSmeltJob,
   transferFragmentBag,
+  unequipSeal,
+  unequippedSealIds,
   UPGRADE_IDS,
-  unlockRank2,
-  unlockRank3,
 } from '../config/crafting.js'
 
 const SAVE_KEY = 'uncover_save'
-const SAVE_VERSION = 4
+const SAVE_VERSION = 5
 const MOVE_SPEED_PER_RANK = 18
 
 export class GameState {
@@ -56,8 +62,14 @@ export class GameState {
     this.workshopRefined = createEmptyResources()
     this.runFragments = createEmptyFragmentBag()
     this.workshopFragments = createEmptyFragmentBag()
+    this.workshopSeals = createEmptySeals()
+    this.equippedSeals = createEmptyEquippedSlots()
+    /** @type {null | { material: string, remaining: number, duration: number, ready: boolean, refinedPending: number }} */
+    this.furnaceJob = null
+    /** @type {null | { upgradeId: string, targetRank: number, remaining: number, duration: number }} */
+    this.anvilJob = null
+    /** Compat: ranks efectivos desde slots equipados. */
     this.upgrades = createEmptyUpgrades()
-    this.recipesKnown = createDefaultRecipesKnown()
     this.hubUnlocked = false
     this.hubEntry = null
     /** Número de nivel Mov. I (1-based) para diálogo hub.advance/retry al entrar. */
@@ -109,6 +121,7 @@ export class GameState {
   }
 
   recomputeStatsFromUpgrades() {
+    this.upgrades = ranksFromEquipped(this.workshopSeals, this.equippedSeals)
     const u = this.upgrades
     this.maxBombs = PLAYER_MAX_BOMBS + (u.maxBombs ?? 0)
     this.bombRange = PLAYER_BOMB_RANGE + (u.bombRange ?? 0)
@@ -156,7 +169,7 @@ export class GameState {
 
   fragmentEligibility() {
     return {
-      r2UpgradeIds: UPGRADE_IDS.filter((id) => (this.recipesKnown[id] ?? 1) >= 2),
+      r2UpgradeIds: UPGRADE_IDS.filter((id) => (this.workshopSeals[id] ?? 0) >= 2),
     }
   }
 
@@ -165,39 +178,93 @@ export class GameState {
     return this.pendingFragmentPlan
   }
 
-  trySmelt(material) {
+  listAnvilRecipes() {
+    return listAnvilRecipes(
+      this.workshopSeals,
+      this.workshopRefined,
+      this.workshopFragments,
+      { busy: Boolean(this.anvilJob) },
+    )
+  }
+
+  unequippedSeals() {
+    return unequippedSealIds(this.workshopSeals, this.equippedSeals)
+  }
+
+  startSmelt(material) {
+    if (this.furnaceJob) return { ok: false, reason: 'busy' }
     if (!canSmelt(this.workshopCrude, material)) {
       return { ok: false, reason: 'insufficient' }
     }
-    return smeltBatch(this.workshopCrude, this.workshopRefined, material)
+    const result = startSmeltJob(this.workshopCrude, material)
+    if (!result.ok) return result
+    this.furnaceJob = result.job
+    return { ok: true, job: this.furnaceJob }
   }
 
-  tryCraft(upgradeId) {
-    if (!canCraft(this.workshopRefined, this.upgrades, this.recipesKnown, upgradeId)) {
-      return { ok: false, reason: 'blocked' }
-    }
-    const result = craftUpgrade(
-      this.workshopRefined,
-      this.upgrades,
-      this.recipesKnown,
-      upgradeId,
-    )
-    if (result.ok) this.recomputeStatsFromUpgrades()
+  collectSmelt() {
+    const result = collectSmeltJob(this.workshopRefined, this.furnaceJob)
+    if (!result.ok) return result
+    this.furnaceJob = null
     return result
   }
 
-  tryUnlockRank2(upgradeId) {
-    if (!canUnlockRank2(this.workshopFragments, this.recipesKnown, upgradeId)) {
-      return { ok: false, reason: 'blocked' }
-    }
-    return unlockRank2(this.workshopFragments, this.recipesKnown, upgradeId)
+  startCraft(upgradeId, targetRank) {
+    if (this.anvilJob) return { ok: false, reason: 'busy' }
+    const result = consumeSealCraftCosts(
+      this.workshopRefined,
+      this.workshopFragments,
+      upgradeId,
+      targetRank,
+    )
+    if (!result.ok) return result
+    this.anvilJob = result.job
+    return { ok: true, job: this.anvilJob }
   }
 
-  tryUnlockRank3(upgradeId) {
-    if (!canUnlockRank3(this.workshopFragments, this.recipesKnown, upgradeId)) {
-      return { ok: false, reason: 'blocked' }
+  equipSealAt(upgradeId, slotIndex) {
+    const result = equipSeal(
+      this.equippedSeals,
+      this.workshopSeals,
+      upgradeId,
+      slotIndex,
+    )
+    if (!result.ok) return result
+    this.equippedSeals = result.equipped
+    this.recomputeStatsFromUpgrades()
+    return { ok: true }
+  }
+
+  unequipSealAt(slotIndex) {
+    const result = unequipSeal(this.equippedSeals, slotIndex)
+    if (!result.ok) return result
+    this.equippedSeals = result.equipped
+    this.recomputeStatsFromUpgrades()
+    return { ok: true }
+  }
+
+  /**
+   * Avanza jobs del taller. Devuelve flags de eventos UI.
+   * @returns {{ smeltReady: boolean, anvilDone: boolean, crafted?: { upgradeId: string, targetRank: number } }}
+   */
+  tickWorkshopJobs(dt) {
+    const events = { smeltReady: false, anvilDone: false }
+    if (this.furnaceJob && !this.furnaceJob.ready) {
+      const wasReady = this.furnaceJob.ready
+      this.furnaceJob = tickSmeltJob(this.furnaceJob, dt)
+      if (!wasReady && this.furnaceJob.ready) events.smeltReady = true
     }
-    return unlockRank3(this.workshopFragments, this.recipesKnown, upgradeId)
+    if (this.anvilJob) {
+      const tick = tickAnvilJob(this.anvilJob, dt)
+      this.anvilJob = tick.job
+      if (tick.completed) {
+        completeSealCraft(this.workshopSeals, tick.upgradeId, tick.targetRank)
+        this.recomputeStatsFromUpgrades()
+        events.anvilDone = true
+        events.crafted = { upgradeId: tick.upgradeId, targetRank: tick.targetRank }
+      }
+    }
+    return events
   }
 
   nextLevel() {
@@ -326,8 +393,11 @@ export class GameState {
       workshopStorage: { ...this.workshopCrude },
       runFragments: cloneFragmentBag(this.runFragments),
       workshopFragments: cloneFragmentBag(this.workshopFragments),
+      workshopSeals: { ...this.workshopSeals },
+      equippedSeals: [...this.equippedSeals],
+      furnaceJob: this.furnaceJob ? { ...this.furnaceJob } : null,
+      anvilJob: this.anvilJob ? { ...this.anvilJob } : null,
       upgrades: { ...this.upgrades },
-      recipesKnown: { ...this.recipesKnown },
     }
     localStorage.setItem(SAVE_KEY, JSON.stringify(data))
   }
@@ -339,18 +409,29 @@ export class GameState {
     try {
       const data = JSON.parse(raw)
       this.currentLevelIndex = data.currentLevelIndex ?? 0
-      this.upgrades = {
-        ...createEmptyUpgrades(),
-        ...(data.upgrades ?? {}),
+
+      if (data.workshopSeals) {
+        this.workshopSeals = {
+          ...createEmptySeals(),
+          ...data.workshopSeals,
+        }
+        this.equippedSeals = Array.isArray(data.equippedSeals)
+          ? [
+            ...data.equippedSeals,
+            ...createEmptyEquippedSlots(),
+          ].slice(0, 4)
+          : createEmptyEquippedSlots()
+      } else {
+        const migrated = migrateLegacyUpgrades(
+          data.upgrades,
+          data.recipesKnown,
+        )
+        this.workshopSeals = migrated.seals
+        this.equippedSeals = migrated.equipped
       }
-      this.recipesKnown = {
-        ...createDefaultRecipesKnown(),
-        ...(data.recipesKnown ?? {}),
-      }
-      for (const id of UPGRADE_IDS) {
-        const owned = this.upgrades[id] ?? 0
-        this.recipesKnown[id] = Math.max(this.recipesKnown[id] ?? 1, owned, 1)
-      }
+
+      this.furnaceJob = data.furnaceJob ?? null
+      this.anvilJob = data.anvilJob ?? null
       this.recomputeStatsFromUpgrades()
       if (data.maxLives != null) this.maxLives = data.maxLives
       this.lives = this.maxLives

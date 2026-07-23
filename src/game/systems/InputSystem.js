@@ -7,6 +7,7 @@ import {
   TILE_DESTRUCTIBLE,
   TILE_PASS,
 } from '../../config/constants.js'
+import { positionFromTile } from '../entityTiles.js'
 import { isExtractingFragment } from './FragmentExtractSystem.js'
 
 function facingVector(facing) {
@@ -46,6 +47,12 @@ export class InputSystem {
       return
     }
 
+    // Debug: Y = teletransporte a la puerta de salida.
+    if (input.isJustDown('debugTeleportExit')) {
+      this.debugTeleportToExit(world, player)
+      return
+    }
+
     const mining = input.isDown('mine') && isMiningDestructible(world, player)
     const extracting = isExtractingFragment(world, player, input)
 
@@ -65,6 +72,22 @@ export class InputSystem {
     if (input.isJustDown('bomb')) {
       this.tryPlaceBomb(world, player)
     }
+  }
+
+  debugTeleportToExit(world, player) {
+    const door = world.exitDoor
+    if (!door) return
+    const tile = door.trigger ?? door.triggerTiles?.[0]
+    if (!tile) return
+
+    const pos = positionFromTile(tile.x, tile.y, world.tileSize, player.size)
+    player.posX = pos.posX
+    player.posY = pos.posY
+    player.tileX = pos.tileX
+    player.tileY = pos.tileY
+    player.desiredFacing = DIR_NONE
+    player.bombPlacement = null
+    world.activeMiningTarget = null
   }
 
   tryPlaceBomb(world, player) {

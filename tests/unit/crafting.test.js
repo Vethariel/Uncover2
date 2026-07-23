@@ -1,19 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildFragmentPlan,
-  canCraft,
-  canSmelt,
-  canUnlockRank2,
-  canUnlockRank3,
-  craftUpgrade,
-  createDefaultRecipesKnown,
+  canAffordSealCraft,
+  collectSmeltJob,
+  completeSealCraft,
+  consumeSealCraftCosts,
+  createEmptyEquippedSlots,
   createEmptyFragmentBag,
-  createEmptyUpgrades,
+  createEmptySeals,
+  equipSeal,
   fortuneChance,
+  isAnvilRecipeVisible,
+  listAnvilRecipes,
+  migrateLegacyUpgrades,
   miningDurationFactor,
+  ranksFromEquipped,
   smeltBatch,
-  unlockRank2,
-  unlockRank3,
+  canSmelt,
+  startSmeltJob,
+  tickAnvilJob,
+  tickSmeltJob,
+  unequipSeal,
+  unequippedSealIds,
 } from '../../src/config/crafting.js'
 import { createEmptyResources } from '../../src/config/miningTypes.js'
 
@@ -38,51 +46,132 @@ describe('crafting', () => {
     expect(crude.crystal).toBe(0)
   })
 
-  it('forja rango 1 y bloquea sin receta R2', () => {
+  it('job de fundición consume crudo y entrega al recoger', () => {
+    const crude = createEmptyResources()
     const refined = createEmptyResources()
-    const upgrades = createEmptyUpgrades()
-    const recipesKnown = createDefaultRecipesKnown()
-    refined.bronze = 6
+    crude.bronze = 3
+    const start = startSmeltJob(crude, 'bronze', () => 0)
+    expect(start.ok).toBe(true)
+    expect(crude.bronze).toBe(0)
+    expect(start.job.duration).toBe(10)
 
-    expect(craftUpgrade(refined, upgrades, recipesKnown, 'maxBombs').ok).toBe(true)
-    expect(upgrades.maxBombs).toBe(1)
-    expect(refined.bronze).toBe(3)
-    expect(canCraft(refined, upgrades, recipesKnown, 'maxBombs')).toBe(false)
-    expect(craftUpgrade(refined, upgrades, recipesKnown, 'maxBombs').reason).toBe('recipe_locked')
+    let job = tickSmeltJob(start.job, 5)
+    expect(job.ready).toBe(false)
+    job = tickSmeltJob(job, 5)
+    expect(job.ready).toBe(true)
+
+    expect(collectSmeltJob(refined, job).ok).toBe(true)
+    expect(refined.bronze).toBe(2)
   })
 
-  it('desbloquea R2 con 2 genéricos y permite forjar', () => {
+  it('receta R1 visible; R2 solo con fragmentos y sello R1', () => {
+    const seals = createEmptySeals()
     const fragments = createEmptyFragmentBag()
-    const recipesKnown = createDefaultRecipesKnown()
-    const upgrades = createEmptyUpgrades()
-    upgrades.maxBombs = 1
+    const refined = createEmptyResources()
+    refined.bronze = 10
+
+    expect(isAnvilRecipeVisible(seals, fragments, 'maxBombs', 1)).toBe(true)
+    expect(isAnvilRecipeVisible(seals, fragments, 'maxBombs', 2)).toBe(false)
+
+    seals.maxBombs = 1
+    expect(isAnvilRecipeVisible(seals, fragments, 'maxBombs', 1)).toBe(false)
+    expect(isAnvilRecipeVisible(seals, fragments, 'maxBombs', 2)).toBe(false)
+
     fragments.generic = 2
-
-    expect(canUnlockRank2(fragments, recipesKnown, 'maxBombs')).toBe(true)
-    expect(unlockRank2(fragments, recipesKnown, 'maxBombs')).toEqual({
-      ok: true,
-      rank: 2,
-      upgradeId: 'maxBombs',
-    })
-    expect(fragments.generic).toBe(0)
-    expect(recipesKnown.maxBombs).toBe(2)
-
-    const refined = createEmptyResources()
-    refined.bronze = 5
-    expect(craftUpgrade(refined, upgrades, recipesKnown, 'maxBombs').ok).toBe(true)
-    expect(upgrades.maxBombs).toBe(2)
+    expect(isAnvilRecipeVisible(seals, fragments, 'maxBombs', 2)).toBe(true)
+    expect(canAffordSealCraft(refined, fragments, 'maxBombs', 2)).toBe(true)
   })
 
-  it('desbloquea R3 con 3 especializados tras R2', () => {
+  it('forja one-shot R1→R2→R3 con costes al iniciar', () => {
+    const seals = createEmptySeals()
+    const refined = createEmptyResources()
     const fragments = createEmptyFragmentBag()
-    const recipesKnown = createDefaultRecipesKnown()
-    recipesKnown.pickSpeed = 2
-    fragments.specialized.pickSpeed = 3
+    refined.bronze = 20
+    fragments.generic = 2
+    fragments.specialized.maxBombs = 3
 
-    expect(canUnlockRank3(fragments, recipesKnown, 'pickSpeed')).toBe(true)
-    expect(unlockRank3(fragments, recipesKnown, 'pickSpeed').ok).toBe(true)
-    expect(recipesKnown.pickSpeed).toBe(3)
-    expect(fragments.specialized.pickSpeed).toBe(0)
+    const r1 = consumeSealCraftCosts(refined, fragments, 'maxBombs', 1)
+    expect(r1.ok).toBe(true)
+    expect(refined.bronze).toBe(17)
+    expect(completeSealCraft(seals, 'maxBombs', 1).ok).toBe(true)
+    expect(seals.maxBombs).toBe(1)
+
+    // R1 ya no visible
+    expect(isAnvilRecipeVisible(seals, fragments, 'maxBombs', 1)).toBe(false)
+
+    const r2 = consumeSealCraftCosts(refined, fragments, 'maxBombs', 2)
+    expect(r2.ok).toBe(true)
+    expect(fragments.generic).toBe(0)
+    expect(r2.job.duration).toBe(20)
+    completeSealCraft(seals, 'maxBombs', 2)
+    expect(seals.maxBombs).toBe(2)
+
+    const r3 = consumeSealCraftCosts(refined, fragments, 'maxBombs', 3)
+    expect(r3.ok).toBe(true)
+    expect(fragments.specialized.maxBombs).toBe(0)
+    expect(r3.job.duration).toBe(30)
+    completeSealCraft(seals, 'maxBombs', 3)
+    expect(seals.maxBombs).toBe(3)
+  })
+
+  it('equipa máx 4 tipos distintos; ranks solo desde slots', () => {
+    const seals = createEmptySeals()
+    seals.maxBombs = 2
+    seals.bombRange = 1
+    seals.pickSpeed = 1
+    seals.fortune = 1
+    seals.moveSpeed = 1
+    let equipped = createEmptyEquippedSlots()
+
+    expect(equipSeal(equipped, seals, 'maxBombs', 0).ok).toBe(true)
+    equipped = equipSeal(equipped, seals, 'maxBombs', 0).equipped
+    expect(equipSeal(equipped, seals, 'maxBombs', 1).reason).toBe('duplicate_type')
+
+    for (const [id, slot] of [
+      ['bombRange', 1],
+      ['pickSpeed', 2],
+      ['fortune', 3],
+    ]) {
+      const r = equipSeal(equipped, seals, id, slot)
+      expect(r.ok).toBe(true)
+      equipped = r.equipped
+    }
+
+    const ranks = ranksFromEquipped(seals, equipped)
+    expect(ranks.maxBombs).toBe(2)
+    expect(ranks.moveSpeed).toBe(0)
+    expect(unequippedSealIds(seals, equipped)).toEqual(['moveSpeed'])
+
+    equipped = unequipSeal(equipped, 0).equipped
+    expect(equipped[0]).toBeNull()
+    expect(unequippedSealIds(seals, equipped)).toContain('maxBombs')
+  })
+
+  it('lista de recetas marca affordable y tick de yunque completa', () => {
+    const seals = createEmptySeals()
+    const refined = createEmptyResources()
+    const fragments = createEmptyFragmentBag()
+    refined.bronze = 3
+    const list = listAnvilRecipes(seals, refined, fragments)
+    const bombs = list.find((r) => r.upgradeId === 'maxBombs' && r.targetRank === 1)
+    expect(bombs?.affordable).toBe(true)
+
+    const start = consumeSealCraftCosts(refined, fragments, 'maxBombs', 1)
+    let { job, completed } = tickAnvilJob(start.job, 5)
+    expect(completed).toBe(false)
+    ;({ job, completed } = tickAnvilJob(job, 5))
+    expect(completed).toBe(true)
+    expect(job).toBeNull()
+  })
+
+  it('migra upgrades legacy a sellos equipados', () => {
+    const { seals, equipped } = migrateLegacyUpgrades(
+      { maxBombs: 2, fortune: 1, bombRange: 0, pickSpeed: 0, moveSpeed: 0, maxLives: 0 },
+      { maxBombs: 2 },
+    )
+    expect(seals.maxBombs).toBe(2)
+    expect(seals.fortune).toBe(1)
+    expect(equipped.filter(Boolean)).toEqual(['maxBombs', 'fortune'])
   })
 
   it('plan N6 cae a genéricos si no hay elegibles R2', () => {

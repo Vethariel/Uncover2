@@ -15,6 +15,7 @@ export class InputAdapter {
       bomb: Phaser.Input.Keyboard.KeyCodes.SPACE,
       mine: Phaser.Input.Keyboard.KeyCodes.Q,
       debugMine: Phaser.Input.Keyboard.KeyCodes.T,
+      debugTeleportExit: Phaser.Input.Keyboard.KeyCodes.Y,
       interact: Phaser.Input.Keyboard.KeyCodes.E,
       enter: Phaser.Input.Keyboard.KeyCodes.ENTER,
       escape: Phaser.Input.Keyboard.KeyCodes.ESC,
@@ -63,6 +64,8 @@ export class InputAdapter {
         return Phaser.Input.Keyboard.JustDown(this.keys.interact)
       case 'debugMine':
         return Phaser.Input.Keyboard.JustDown(this.keys.debugMine)
+      case 'debugTeleportExit':
+        return Phaser.Input.Keyboard.JustDown(this.keys.debugTeleportExit)
       case 'mouse':
         return this.scene.input.activePointer.isDown && this.justPressed.has('pointer')
       default:

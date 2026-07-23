@@ -36,13 +36,14 @@ describe('GameState resources and progression', () => {
     state.currentLevelIndex = 1
     state.workshopCrude = { bronze: 5, iron: 0, crystal: 0 }
     state.workshopRefined = { bronze: 2, iron: 0, crystal: 0 }
-    state.upgrades.maxBombs = 1
+    state.workshopSeals.maxBombs = 1
+    state.equippedSeals[0] = 'maxBombs'
     state.hubUnlocked = true
 
     expect(state.routeAfterGameOver()).toBe('menu')
     expect(state.workshopCrude).toEqual({ bronze: 0, iron: 0, crystal: 0 })
     expect(state.workshopRefined).toEqual({ bronze: 0, iron: 0, crystal: 0 })
-    expect(state.upgrades.maxBombs).toBe(0)
+    expect(state.workshopSeals.maxBombs).toBe(0)
     expect(state.hubUnlocked).toBe(false)
     expect(state.currentLevelIndex).toBe(0)
     expect(state.hasSave()).toBe(false)
@@ -55,16 +56,17 @@ describe('GameState resources and progression', () => {
     state.runFragments.generic = 2
     state.workshopCrude = { bronze: 5, iron: 0, crystal: 0 }
     state.workshopFragments.generic = 1
-    state.upgrades.maxBombs = 1
-    state.recipesKnown.maxBombs = 2
+    state.workshopSeals.maxBombs = 1
+    state.equippedSeals[0] = 'maxBombs'
+    state.recomputeStatsFromUpgrades()
 
     expect(state.routeAfterGameOver()).toBe('workshop')
     expect(state.runResources).toEqual({ bronze: 0, iron: 0, crystal: 0 })
     expect(state.runFragments.generic).toBe(0)
     expect(state.workshopCrude).toEqual({ bronze: 5, iron: 0, crystal: 0 })
     expect(state.workshopFragments.generic).toBe(1)
+    expect(state.workshopSeals.maxBombs).toBe(1)
     expect(state.upgrades.maxBombs).toBe(1)
-    expect(state.recipesKnown.maxBombs).toBe(2)
     expect(state.currentLevelIndex).toBe(2)
     expect(state.hubEntry).toBe('retry')
   })
@@ -99,11 +101,12 @@ describe('GameState resources and progression', () => {
     expect(state.hubNarrativeLevel).toBe(3)
   })
 
-  it('aplica mejoras al jugador incluyendo vida máxima', () => {
+  it('aplica sellos equipados al jugador incluyendo vida máxima', () => {
     const state = new GameState()
-    state.upgrades.maxBombs = 1
-    state.upgrades.maxLives = 1
-    state.upgrades.moveSpeed = 1
+    state.workshopSeals.maxBombs = 1
+    state.workshopSeals.maxLives = 1
+    state.workshopSeals.moveSpeed = 1
+    state.equippedSeals = ['maxBombs', 'maxLives', 'moveSpeed', null]
     const player = {
       lives: 1,
       speed: 100,
@@ -121,40 +124,53 @@ describe('GameState resources and progression', () => {
     expect(player.speed).toBeGreaterThan(100)
   })
 
-  it('funde y forja desde GameState', () => {
+  it('funde con job y forja sellos desde GameState', () => {
     const state = new GameState()
     state.workshopCrude.bronze = 3
-    expect(state.trySmelt('bronze').ok).toBe(true)
+    expect(state.startSmelt('bronze').ok).toBe(true)
+    expect(state.workshopCrude.bronze).toBe(0)
+    expect(state.furnaceJob).toBeTruthy()
+
+    state.tickWorkshopJobs(state.furnaceJob.duration)
+    expect(state.furnaceJob.ready).toBe(true)
+    expect(state.collectSmelt().ok).toBe(true)
     expect(state.workshopRefined.bronze).toBe(2)
-    expect(state.tryCraft('maxBombs').ok).toBe(false)
+
     state.workshopRefined.bronze = 3
-    expect(state.tryCraft('maxBombs').ok).toBe(true)
+    expect(state.startCraft('maxBombs', 1).ok).toBe(true)
+    expect(state.workshopRefined.bronze).toBe(0)
+    state.tickWorkshopJobs(10)
+    expect(state.workshopSeals.maxBombs).toBe(1)
+    expect(state.anvilJob).toBeNull()
+
+    state.equipSealAt('maxBombs', 0)
     expect(state.upgrades.maxBombs).toBe(1)
   })
 
-  it('desbloquea R2/R3 desde el yunque', () => {
+  it('R2 requiere sello R1 + fragmentos; elegibilidad por sellos ≥2', () => {
     const state = new GameState()
-    state.upgrades.maxBombs = 1
+    state.workshopSeals.maxBombs = 1
     state.workshopFragments.generic = 2
-    expect(state.tryUnlockRank2('maxBombs').ok).toBe(true)
-    expect(state.recipesKnown.maxBombs).toBe(2)
-    expect(state.fragmentEligibility().r2UpgradeIds).toContain('maxBombs')
+    state.workshopRefined.bronze = 5
+    expect(state.listAnvilRecipes().some((r) => r.targetRank === 2)).toBe(true)
 
-    state.workshopFragments.specialized.maxBombs = 3
-    expect(state.tryUnlockRank3('maxBombs').ok).toBe(true)
-    expect(state.recipesKnown.maxBombs).toBe(3)
+    expect(state.startCraft('maxBombs', 2).ok).toBe(true)
+    state.tickWorkshopJobs(20)
+    expect(state.workshopSeals.maxBombs).toBe(2)
+    expect(state.fragmentEligibility().r2UpgradeIds).toContain('maxBombs')
   })
 
-  it('persiste crudo, refinado, fragmentos y upgrades', () => {
+  it('persiste sellos, equipo y jobs', () => {
     const state = new GameState()
     state.workshopCrude = { bronze: 7, iron: 3, crystal: 1 }
     state.workshopRefined = { bronze: 2, iron: 0, crystal: 1 }
     state.workshopFragments.generic = 2
     state.workshopFragments.specialized.fortune = 1
-    state.upgrades.fortune = 1
-    state.recipesKnown.fortune = 2
+    state.workshopSeals.fortune = 2
+    state.equippedSeals[0] = 'fortune'
     state.currentLevelIndex = 2
     state.hubUnlocked = true
+    state.recomputeStatsFromUpgrades()
     state.save()
 
     const loaded = new GameState()
@@ -163,9 +179,34 @@ describe('GameState resources and progression', () => {
     expect(loaded.workshopRefined).toEqual({ bronze: 2, iron: 0, crystal: 1 })
     expect(loaded.workshopFragments.generic).toBe(2)
     expect(loaded.workshopFragments.specialized.fortune).toBe(1)
-    expect(loaded.upgrades.fortune).toBe(1)
-    expect(loaded.recipesKnown.fortune).toBe(2)
+    expect(loaded.workshopSeals.fortune).toBe(2)
+    expect(loaded.equippedSeals[0]).toBe('fortune')
+    expect(loaded.upgrades.fortune).toBe(2)
     expect(loaded.hubUnlocked).toBe(true)
     expect(loaded.unlockedLevels).toBe(LEVELS.length)
+  })
+
+  it('migra save legacy upgrades → sellos', () => {
+    const store = new Map()
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => (store.has(key) ? store.get(key) : null),
+      setItem: (key, value) => store.set(key, String(value)),
+      removeItem: (key) => store.delete(key),
+    })
+    store.set('uncover_save', JSON.stringify({
+      saveVersion: 4,
+      currentLevelIndex: 2,
+      upgrades: { maxBombs: 1, fortune: 1 },
+      recipesKnown: { maxBombs: 2, fortune: 1 },
+      workshopCrude: { bronze: 1, iron: 0, crystal: 0 },
+      workshopRefined: { bronze: 0, iron: 0, crystal: 0 },
+      hubUnlocked: true,
+    }))
+
+    const loaded = new GameState()
+    expect(loaded.load()).toBe(true)
+    expect(loaded.workshopSeals.maxBombs).toBe(1)
+    expect(loaded.workshopSeals.fortune).toBe(1)
+    expect(loaded.equippedSeals.filter(Boolean)).toEqual(['maxBombs', 'fortune'])
   })
 })
