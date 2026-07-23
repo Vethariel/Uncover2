@@ -22,6 +22,9 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload() {
+    // Respeta el base de Vite (p. ej. /Uncover2/ en GitHub Pages).
+    this.load.setBaseURL(import.meta.env.BASE_URL)
+
     preloadMenuBackground(this.load)
     preloadUiAtlas(this.load)
     preloadIconsAtlas(this.load)

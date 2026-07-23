@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:pages": "VITE_BASE_PATH=/Uncover2/ vite build",
     "preview": "vite preview",
+    "preview:pages": "VITE_BASE_PATH=/Uncover2/ vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
   },
