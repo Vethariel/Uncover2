@@ -120,7 +120,7 @@ export class LifeSystem {
     this.onEnemyAttacked(world, enemy)
     if (enemy.hp > 0) {
       enemy.invulnerableTimer = enemy.invulnerableDuration
-      if (enemy.kind === 'golem_basic') {
+      if (enemy.kind === 'golem_basic' || enemy.kind === 'golem_advanced') {
         enemy.hurtAnimationTimer = GOLEM_HURT_ANIMATION_DURATION
       }
       world.events.push('enemyDamaged')

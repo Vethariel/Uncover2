@@ -112,8 +112,8 @@ export class GameScene extends Phaser.Scene {
     this._scanFacingDiscoveries()
 
     this.tilemapView.update(dt)
-    this.entityView.update()
     this.fogOfWarView.update(dt)
+    this.entityView.update()
     this.minimapView.update()
     this.hudView.update()
     this._updateChestPrompt()
@@ -342,8 +342,8 @@ export class GameScene extends Phaser.Scene {
       syncTileFromPosition(player, this.world.tileSize)
     }
 
-    this.entityView.update()
     this.fogOfWarView?.update(dt)
+    this.entityView.update()
     this.minimapView?.update()
     this.hudView?.update()
     this._syncCamera()
@@ -587,8 +587,8 @@ export class GameScene extends Phaser.Scene {
 
   _syncViews() {
     this.tilemapView?.update()
-    this.entityView?.update()
     this.fogOfWarView?.update()
+    this.entityView?.update()
     this.minimapView?.update()
     this.hudView?.update()
   }

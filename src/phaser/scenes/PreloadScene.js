@@ -59,6 +59,26 @@ export class PreloadScene extends Phaser.Scene {
       { frameWidth: 64, frameHeight: 64 },
     )
     this.load.spritesheet(
+      'golem2Idle',
+      'assets/sprites/golem2_idle.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
+      'golem2Walk',
+      'assets/sprites/golem2_walk.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
+      'golem2Hurt',
+      'assets/sprites/golem2_hurt.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
+      'golem2Death',
+      'assets/sprites/golem2_death.png',
+      { frameWidth: 64, frameHeight: 64 },
+    )
+    this.load.spritesheet(
       'golemWalk',
       'assets/sprites/golem_walk.png',
       { frameWidth: 64, frameHeight: 64 },

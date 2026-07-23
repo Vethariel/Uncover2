@@ -16,6 +16,7 @@ export class FogOfWarView {
     this.transitionFrom = new Map(world.lightLevels)
     this.transitionTo = new Map(world.lightLevels)
     this.transitionElapsed = LIGHT_TRANSITION_SECONDS
+    this.world.displayedLightLevels = this.displayedLightLevels
     this._draw()
   }
 
@@ -48,6 +49,7 @@ export class FogOfWarView {
       if (light > 0.01) this.displayedLightLevels.set(key, light)
     }
 
+    this.world.displayedLightLevels = this.displayedLightLevels
     this._draw()
   }
 

@@ -49,6 +49,8 @@ export class World {
     this.visibleTiles = new Set()
     this.discoveredTiles = new Set()
     this.lightLevels = new Map()
+    /** Luz suavizada (FogOfWarView) para tint de sprites alineado a la niebla. */
+    this.displayedLightLevels = new Map()
     this.visionViewport = null
     this.visionSourceSignature = ''
     this.visionRevision = 0
@@ -95,6 +97,7 @@ export class World {
     this.visibleTiles = new Set()
     this.discoveredTiles = new Set()
     this.lightLevels = new Map()
+    this.displayedLightLevels = new Map()
     this.visionViewport = null
     this.visionSourceSignature = ''
     this.visionRevision = 0

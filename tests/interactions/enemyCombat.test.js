@@ -15,12 +15,12 @@ const ai = new EnemyAISystem()
 
 describe('ciclo e IA de enemigos', () => {
   it('usa las velocidades y vidas del roster', () => {
-    expect(ENEMY_TYPES.golem_basic.speed).toBe(110)
+    expect(ENEMY_TYPES.golem_basic.speed).toBe(88)
     expect(ENEMY_TYPES.golem_basic.maxHp).toBe(2)
-    expect(ENEMY_TYPES.spirit.speed).toBe(75)
-    expect(ENEMY_TYPES.spirit.aggressiveSpeed).toBe(110)
+    expect(ENEMY_TYPES.spirit.speed).toBe(60)
+    expect(ENEMY_TYPES.spirit.aggressiveSpeed).toBe(88)
     expect(ENEMY_TYPES.spirit.maxHp).toBe(1)
-    expect(ENEMY_TYPES.golem_advanced.speed).toBe(72)
+    expect(ENEMY_TYPES.golem_advanced.speed).toBe(57.6)
     expect(ENEMY_TYPES.golem_advanced.maxHp).toBe(3)
     expect(ENEMY_TYPES.golem_advanced.respawnDelay).toBe(35)
   })
@@ -74,12 +74,12 @@ describe('ciclo e IA de enemigos', () => {
     )
 
     const spirit = world.enemies[0]
-    expect(spirit.speed).toBe(75)
+    expect(spirit.speed).toBe(60)
     world.explosions.push(new Explosion(2, 1, TILE_SIZE))
     ai.update(world, 0.016)
 
     expect(spirit.aggressive).toBe(true)
-    expect(spirit.speed).toBe(110)
+    expect(spirit.speed).toBe(88)
   })
 
   it('el espíritu atraviesa destructibles pero no bombas', () => {

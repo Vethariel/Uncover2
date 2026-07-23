@@ -27,10 +27,19 @@ import {
   syncGolemSprite,
 } from './golemIdle.js'
 import {
+  createGolem2Sprite,
+  syncGolem2Sprite,
+} from './golemAdvancedIdle.js'
+import {
   createSpiritSprite,
   syncSpiritSprite,
 } from './spiritIdle.js'
 import { enemyCorpseAlpha } from '../../config/enemyTypes.js'
+import {
+  enemyLightTint,
+  enemyTileLight,
+  multiplyTint,
+} from './enemyLighting.js'
 
 const MINE_FRAME_RATE = 8
 /** Golpe de pico: frame 4 en numeración 1–6 → índice Phaser 3 (0–5). */
@@ -221,7 +230,14 @@ export class EntityView {
   }
 
   _draw(kind, entity) {
-    if (kind === 'enemy' && (entity.kind === 'golem_basic' || entity.kind === 'spirit')) {
+    if (
+      kind === 'enemy'
+      && (
+        entity.kind === 'golem_basic'
+        || entity.kind === 'golem_advanced'
+        || entity.kind === 'spirit'
+      )
+    ) {
       return
     }
 
@@ -276,15 +292,19 @@ export class EntityView {
 
     for (const enemy of this.world.enemies ?? []) {
       const isGolem = enemy.kind === 'golem_basic'
+      const isGolem2 = enemy.kind === 'golem_advanced'
       const isSpirit = enemy.kind === 'spirit'
-      if (!isGolem && !isSpirit) continue
+      if (!isGolem && !isGolem2 && !isSpirit) continue
       active.add(enemy)
 
       let sprite = this.enemySprites.get(enemy)
       if (!sprite) {
+        const depth = levelActorDepth(enemy.posY + enemy.size)
         sprite = isGolem
-          ? createGolemSprite(this.scene, levelActorDepth(enemy.posY + enemy.size))
-          : createSpiritSprite(this.scene, levelActorDepth(enemy.posY + enemy.size))
+          ? createGolemSprite(this.scene, depth)
+          : isGolem2
+            ? createGolem2Sprite(this.scene, depth)
+            : createSpiritSprite(this.scene, depth)
         this.enemySprites.set(enemy, sprite)
       }
 
@@ -300,6 +320,7 @@ export class EntityView {
       this.enemyLastPos.set(enemy, { x: enemy.posX, y: enemy.posY })
 
       if (isGolem) syncGolemSprite(sprite, enemy, { moved })
+      else if (isGolem2) syncGolem2Sprite(sprite, enemy, { moved })
       else syncSpiritSprite(sprite, enemy, { moved })
 
       sprite.setDepth(levelActorDepth(enemy.posY + enemy.size))
@@ -318,13 +339,19 @@ export class EntityView {
       sprite.setVisible(!fogHidden && !flickerHidden && !gone)
       sprite.setAlpha(enemy.alive ? 1 : enemyCorpseAlpha(enemy))
 
-      if (!enemy.alive || hurtActive) {
-        sprite.clearTint()
+      // Luz del tile (suavizada como la niebla): baja sat/iluminación en penumbra.
+      const lightTint = enemyLightTint(enemyTileLight(this.world, enemy))
+      if (hurtActive) {
+        // Flash de daño: un poco más claro que el entorno, sin tint agresivo.
+        sprite.setTint(multiplyTint(lightTint, 0xe8e8e8))
+      } else if (!enemy.alive) {
+        sprite.setTint(multiplyTint(lightTint, 0xc8c0c0))
       } else if (enemy.aggressive) {
-        sprite.setTint(isSpirit ? 0xa8e6ff : 0xffd0a0)
+        const aggression = isSpirit ? 0xa8e6ff : 0xffd0a0
+        sprite.setTint(multiplyTint(lightTint, aggression))
         if (!sprite.anims.isPlaying) sprite.anims.resume()
       } else {
-        sprite.clearTint()
+        sprite.setTint(lightTint)
         if (!sprite.anims.isPlaying) sprite.anims.resume()
       }
     }
@@ -465,6 +492,7 @@ export class EntityView {
     else if (enemy.aggressive && enemy.kind === 'golem_basic') color = 0xb08d57
     else if (enemy.aggressive && enemy.kind === 'spirit') color = 0xa8e6ff
 
+    color = multiplyTint(enemyLightTint(enemyTileLight(this.world, enemy)), color)
     const alpha = enemy.alive ? 1 : enemyCorpseAlpha(enemy)
     this.graphics.fillStyle(color, alpha).fillRect(enemy.posX, enemy.posY, enemy.size, enemy.size)
     this.graphics.lineStyle(1, 0xffffff, 0.65 * alpha)

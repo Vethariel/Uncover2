@@ -43,7 +43,7 @@ export const GOLEM_ADVANCED_RESPAWN_DELAY = 35
 export const ENEMY_TYPES = {
   // Más rápido que el jugador; patrulla pasiva; daña solo si está agresivo.
   golem_basic: {
-    speed: 110,
+    speed: 88,
     size: 24,
     thinkInterval: 0.2,
     colorRole: 'golem_basic',
@@ -60,8 +60,8 @@ export const ENEMY_TYPES = {
 
   // Más lento en pasivo; se enfurece con explosiones cercanas; atraviesa destructibles.
   spirit: {
-    speed: 75,
-    aggressiveSpeed: 110,
+    speed: 60,
+    aggressiveSpeed: 88,
     size: 24,
     thinkInterval: 0.2,
     colorRole: 'spirit',
@@ -79,7 +79,7 @@ export const ENEMY_TYPES = {
 
   // Guardián persistente: persigue dentro de leash; 3 vidas; respawn lento.
   golem_advanced: {
-    speed: 72,
+    speed: 57.6,
     size: 24,
     thinkInterval: 0.35,
     colorRole: 'golem_advanced',
